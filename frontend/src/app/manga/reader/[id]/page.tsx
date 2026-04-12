@@ -47,7 +47,11 @@ export default function ReaderPage() {
   useEffect(() => {
     const fetchChapter = async () => {
       try {
-        const res = await fetch('http://localhost:3001/api/chapters/chapter-1');
+        // ERROR 2 FIX: Usar variable de entorno NEXT_PUBLIC_API_URL en lugar de URL hardcodeada.
+        // En .env.local define: NEXT_PUBLIC_API_URL=http://localhost:3001
+        // En producción define: NEXT_PUBLIC_API_URL=https://tu-backend.onrender.com
+        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+        const res = await fetch(`${API_URL}/api/chapters/chapter-1`);
         if (!res.ok) throw new Error('Error al conectar con el servidor.');
         const data = await res.json();
         

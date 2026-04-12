@@ -1,4 +1,5 @@
 'use client';
+// ERROR 3 FIX: Importamos useRef para loadedRef.
 import { useEffect, useRef } from 'react';
 
 interface ScrambledPageProps {
@@ -10,11 +11,26 @@ interface ScrambledPageProps {
 const CanvasPageRenderer = ({ imageUrl, scrambleMap, userId }: ScrambledPageProps) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
+  // ERROR 3 FIX: loadedRef como guardia de carga única por montaje.
+  // El token de imagen es de un solo uso; si React re-renderiza este componente
+  // (cosa común en StrictMode o cambios de estado del padre), el useEffect se volvería
+  // a ejecutar con el mismo imageUrl ya invalidado, recibiendo un 403.
+  // Con este ref marcamos que la URL ya fue cargada en ESTE montaje, evitando el re-fetch.
+  const loadedRef = useRef<string | null>(null);
+
   useEffect(() => {
+    // ERROR 3 FIX: Si la URL ya fue cargada en este montaje, no hacemos nada.
+    // loadedRef guarda la última URL cargada; si coincide, salimos temprano.
+    if (loadedRef.current === imageUrl) return;
+
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
+
+    // Marcamos la URL como "en proceso de carga" ANTES de iniciar la petición,
+    // para que cualquier re-render inmediato tampoco la dispare de nuevo.
+    loadedRef.current = imageUrl;
 
     const img = new Image();
     // Bloqueamos el contexto de lectura para que no lo exporten fácilmente

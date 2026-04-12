@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Upload, Save, Link as LinkIcon, LogOut, CheckCircle, BookOpen, Settings, Users, LayoutDashboard, Plus, Eye, Edit3, Archive, X, TrendingUp, BookMarked, ShieldCheck, UserPlus, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import CreateMangaForm from '@/components/CreateMangaForm';
 
 export default function AdminDashboard() {
   const [activeSection, setActiveSection] = useState<'upload' | 'mangas' | 'crew' | 'settings'>('upload');
@@ -523,37 +524,15 @@ export default function AdminDashboard() {
 
       {/* ===== MODAL NUEVA OBRA ===== */}
       {showNewObraModal && (
-        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-[#121215] border border-gray-200 dark:border-white/10 rounded-3xl w-full max-w-lg p-8 shadow-2xl animate-in zoom-in-95 duration-300">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-2xl font-bold dark:text-white">Nueva Obra</h3>
-              <button onClick={() => setShowNewObraModal(false)} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 text-gray-500">
-                <X size={20}/>
-              </button>
-            </div>
-            <div className="flex flex-col gap-4">
-              <div>
-                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 block tracking-wider">NOMBRE DE LA OBRA *</label>
-                <input value={newObra.title} onChange={e => setNewObra({...newObra, title: e.target.value})} placeholder="Ej: Solo Leveling..." className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 p-3.5 rounded-xl focus:border-rose-500 focus:outline-none dark:text-white text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 block tracking-wider">GÉNEROS</label>
-                <input value={newObra.genre} onChange={e => setNewObra({...newObra, genre: e.target.value})} placeholder="Ej: Acción, Fantasía..." className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 p-3.5 rounded-xl focus:border-rose-500 focus:outline-none dark:text-white text-sm" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 block tracking-wider">SINOPSIS</label>
-                <textarea value={newObra.description} onChange={e => setNewObra({...newObra, description: e.target.value})} rows={3} placeholder="Descripción corta de la trama..." className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 p-3.5 rounded-xl focus:border-rose-500 focus:outline-none dark:text-white text-sm resize-none" />
-              </div>
-              <div>
-                <label className="text-xs font-bold text-gray-500 dark:text-gray-400 mb-1.5 block tracking-wider">ESTADO INICIAL</label>
-                <select value={newObra.status} onChange={e => setNewObra({...newObra, status: e.target.value as any})} className="w-full bg-gray-50 dark:bg-black/50 border border-gray-200 dark:border-white/10 p-3.5 rounded-xl focus:border-rose-500 focus:outline-none dark:text-white text-sm">
-                  <option>Activo</option><option>Pausado</option><option>Completado</option>
-                </select>
-              </div>
-            </div>
-            <button onClick={addObra} className="w-full mt-6 bg-rose-600 hover:bg-rose-500 text-white font-bold py-4 rounded-2xl transition-all flex items-center justify-center gap-2">
-              <Plus size={18}/> Registrar Obra
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto w-full h-full">
+          <div className="relative w-full max-w-5xl mt-auto mb-auto animate-in zoom-in-95 duration-300">
+            <button 
+              onClick={() => setShowNewObraModal(false)} 
+              className="absolute top-6 right-6 z-50 p-2 bg-gray-100 dark:bg-black/50 rounded-full hover:bg-rose-100 dark:hover:bg-white/10 text-gray-500 transition-colors"
+            >
+              <X size={20}/>
             </button>
+            <CreateMangaForm />
           </div>
         </div>
       )}

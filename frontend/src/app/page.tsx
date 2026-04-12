@@ -3,10 +3,14 @@ import Link from 'next/link';
 import { ArrowRight, Flame, Sparkles } from 'lucide-react';
 import MangaCard from '@/components/MangaCard';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import AdminPanel from '@/components/AdminPanel';
 
 export default function Home() {
   return (
     <div className="min-h-screen pb-20 overflow-x-hidden">
+      {/* Panel de Login/Admin para el Scan */}
+      <AdminPanel />
+
       {/* Header Premium */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5 py-4 px-6 md:px-12 flex items-center justify-between shadow-sm dark:shadow-2xl transition-colors duration-300">
         <div className="flex items-center gap-3">
