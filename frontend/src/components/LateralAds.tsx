@@ -11,21 +11,18 @@ import AdsterraSkyscraper from './AdsterraSkyscraper';
 export default function LateralAds() {
   return (
     <>
-      {/* Lateral izquierdo */}
-      <div
-        className="hidden 2xl:flex fixed top-1/2 -translate-y-1/2 z-30 pointer-events-auto"
-        style={{ left: 'calc(50% - 680px)' }}
-      >
-        <AdsterraSkyscraper />
-      </div>
+      {/* Un solo componente — el script inyecta el iframe globalmente */}
+      <AdsterraSkyscraper />
 
-      {/* Lateral derecho */}
+      {/* Contenedores visuales (sin lógica de script) */}
       <div
-        className="hidden 2xl:flex fixed top-1/2 -translate-y-1/2 z-30 pointer-events-auto"
-        style={{ right: 'calc(50% - 680px)' }}
-      >
-        <AdsterraSkyscraper />
-      </div>
+        className="hidden 2xl:block fixed top-1/2 -translate-y-1/2 z-30"
+        style={{ left: 'calc(50% - 680px)', width: 160, minHeight: 300 }}
+      />
+      <div
+        className="hidden 2xl:block fixed top-1/2 -translate-y-1/2 z-30"
+        style={{ right: 'calc(50% - 680px)', width: 160, minHeight: 300 }}
+      />
     </>
   );
 }

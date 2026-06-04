@@ -1,14 +1,11 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { BookOpen, ChevronLeft, Play, Eye, Tag, Clock, Heart } from 'lucide-react';
 import { useFavorites } from '@/lib/favorites';
 import AdsterraBanner from '@/components/AdsterraBanner';
-
-const POPUNDER_SRC = 'https://pl29641064.effectivecpmnetwork.com/22/96/aa/2296aae2f6e7d670692ad60295e285d2.js';
-const AD_STORAGE_KEY = 'cs_chapter_ad_fired';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
@@ -22,7 +19,6 @@ interface Capitulo {
 
 export default function MangaDetailPage() {
   const { id } = useParams() as { id: string };
-  const router = useRouter();
 
   const [manga, setManga]         = useState<Manga | null>(null);
   const [caps, setCaps]           = useState<Capitulo[]>([]);
@@ -30,20 +26,6 @@ export default function MangaDetailPage() {
   const [error, setError]         = useState<string | null>(null);
   const [lastChapterId, setLast]  = useState<string | null>(null);
   const { isFav, toggle }         = useFavorites();
-
-  function handleChapterClick(e: React.MouseEvent<HTMLAnchorElement>, href: string) {
-    e.preventDefault();
-    if (!localStorage.getItem(AD_STORAGE_KEY)) {
-      localStorage.setItem(AD_STORAGE_KEY, '1');
-      if (!document.querySelector(`script[src="${POPUNDER_SRC}"]`)) {
-        const s = document.createElement('script');
-        s.src = POPUNDER_SRC;
-        s.async = true;
-        document.body.appendChild(s);
-      }
-    }
-    router.push(href);
-  }
 
   useEffect(() => {
     const saved = localStorage.getItem(`crimson_last_${id}`);
@@ -212,7 +194,6 @@ export default function MangaDetailPage() {
             <div className="flex flex-col gap-2">
               {caps.map(cap => (
                 <Link key={cap.id} href={`/manga/reader/${id}/chapter/${cap.id}`}
-                  onClick={e => handleChapterClick(e, `/manga/reader/${id}/chapter/${cap.id}`)}
                   className="flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/5 hover:border-rose-500/30 rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 transition group">
                   <div className="flex items-center gap-3">
                     <span className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-rose-500 group-hover:text-white transition">
