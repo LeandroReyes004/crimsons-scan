@@ -77,10 +77,10 @@ export default function MangaDetailPage() {
       </header>
 
       {/* Fondo degradado superior */}
-      <div className="h-48 bg-gradient-to-b from-rose-900/25 via-rose-900/10 to-transparent pointer-events-none"/>
+      <div className="h-36 sm:h-48 bg-gradient-to-b from-rose-900/25 via-rose-900/10 to-transparent pointer-events-none"/>
 
       {/* Contenido principal */}
-      <div className="max-w-5xl mx-auto px-6 -mt-40 pb-20">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-28 sm:-mt-40 pb-20">
 
         {/* Info del manga */}
         <div className="flex flex-col sm:flex-row gap-6 mb-10">
@@ -165,7 +165,7 @@ export default function MangaDetailPage() {
             <div className="flex flex-col gap-2">
               {caps.map(cap => (
                 <Link key={cap.id} href={`/manga/reader/${id}/chapter/${cap.id}`}
-                  className="flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/5 hover:border-rose-500/30 rounded-xl px-4 py-3.5 transition group">
+                  className="flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/5 hover:border-rose-500/30 rounded-xl px-3 sm:px-4 py-3 sm:py-3.5 transition group">
                   <div className="flex items-center gap-3">
                     <span className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-rose-500 group-hover:text-white transition">
                       {cap.numero}

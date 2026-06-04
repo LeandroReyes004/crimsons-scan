@@ -20,7 +20,7 @@ export default function ReaderControls({
   onPrevPage,
 }: ReaderControlsProps) {
   return (
-    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 bg-black/60 backdrop-blur-xl border border-white/10 px-6 py-4 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all hover:bg-black/70">
+    <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 sm:gap-4 bg-black/60 backdrop-blur-xl border border-white/10 px-3 sm:px-6 py-3 sm:py-4 rounded-2xl shadow-[0_8px_32px_rgba(0,0,0,0.5)] transition-all hover:bg-black/70 max-w-[calc(100vw-2rem)]">
       
       {/* Mode Switcher */}
       <div className="flex bg-white/5 p-1 rounded-xl">
@@ -50,7 +50,7 @@ export default function ReaderControls({
         </button>
       </div>
 
-      <div className="w-px h-8 bg-white/10 mx-2"></div>
+      <div className="hidden sm:block w-px h-8 bg-white/10 mx-1 sm:mx-2"></div>
 
       {/* Pagination Controls (Only visible in 'paged' mode) */}
       <div className={`flex items-center gap-3 transition-opacity duration-300 ${readingMode === 'paged' ? 'opacity-100 flex' : 'opacity-50 pointer-events-none'}`}>

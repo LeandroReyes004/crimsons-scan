@@ -43,22 +43,22 @@ export default function MangaCard({ id, title, imageUrl, chapter, chapterUrl, up
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0c] via-[#0a0a0c]/20 to-transparent"/>
       </div>
 
-      <div className="absolute bottom-0 left-0 w-full p-4 flex flex-col gap-1.5">
-        <h3 className="text-base font-bold text-white line-clamp-1 group-hover:text-rose-400 transition-colors drop-shadow-md">
+      <div className="absolute bottom-0 left-0 w-full p-3 sm:p-4 flex flex-col gap-1 sm:gap-1.5">
+        <h3 className="text-sm sm:text-base font-bold text-white line-clamp-2 group-hover:text-rose-400 transition-colors drop-shadow-md leading-tight">
           {title}
         </h3>
 
         {chapter != null ? (
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-1">
             <span
-              className="text-sm font-semibold text-rose-400 drop-shadow-md"
+              className="text-xs sm:text-sm font-semibold text-rose-400 drop-shadow-md truncate"
               onClick={e => { if (chapterUrl) { e.preventDefault(); window.location.href = chapterUrl; } }}
             >
               Cap. {chapter}
             </span>
             {updatedAt && (
-              <span className="text-xs text-gray-300 flex items-center gap-1 drop-shadow-md">
-                <Clock size={11}/> {timeAgo(updatedAt)}
+              <span className="text-[10px] sm:text-xs text-gray-300 flex items-center gap-0.5 drop-shadow-md shrink-0">
+                <Clock size={10}/> {timeAgo(updatedAt)}
               </span>
             )}
           </div>
@@ -67,7 +67,7 @@ export default function MangaCard({ id, title, imageUrl, chapter, chapterUrl, up
         )}
 
         {tags.length > 0 && (
-          <div className="flex gap-1.5 mt-0.5 flex-wrap">
+          <div className="hidden sm:flex gap-1.5 mt-0.5 flex-wrap">
             {tags.map(tag => (
               <span key={tag} className="text-[10px] uppercase tracking-wider bg-black/50 text-gray-200 px-2 py-0.5 rounded-md backdrop-blur-md">
                 {tag}

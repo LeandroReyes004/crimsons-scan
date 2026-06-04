@@ -7,7 +7,7 @@ import {
   LayoutDashboard, BookOpen, Clock, Users, LogOut, Plus, Check, X,
   ChevronRight, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
-  Layers, Trash2,
+  Layers, Trash2, Menu,
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
 
@@ -92,6 +92,7 @@ export default function AdminPage() {
   const [loginPass, setLoginPass] = useState('');
   const [loginErr, setLoginErr]   = useState('');
   const [loginLoading, setLoginLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen]   = useState(false);
 
   useEffect(() => {
     const u = getUser();
@@ -186,8 +187,16 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen flex bg-gray-50 dark:bg-[#07070a] text-gray-900 dark:text-gray-100 font-sans">
 
+      {/* ── Overlay mobile ──────────────────────────────── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* ── Sidebar ─────────────────────────────────────── */}
-      <aside className="w-60 shrink-0 bg-white dark:bg-[#0d0d10] border-r border-gray-200 dark:border-white/5 flex flex-col">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-60 bg-white dark:bg-[#0d0d10] border-r border-gray-200 dark:border-white/5 flex flex-col transform transition-transform duration-300 lg:static lg:translate-x-0 lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 px-5 flex items-center gap-2.5 border-b border-gray-200 dark:border-white/5">
           <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-600 to-orange-500 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-rose-500/30">CS</div>
           <div>
@@ -212,7 +221,7 @@ export default function AdminPage() {
           ] as const).filter(item => item.always || user.is_superadmin).map(item => (
             <button
               key={item.id}
-              onClick={() => setSection(item.id)}
+              onClick={() => { setSection(item.id); setSidebarOpen(false); }}
               className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
                 section === item.id
                   ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20'
@@ -239,10 +248,19 @@ export default function AdminPage() {
 
       {/* ── Main ────────────────────────────────────────── */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="h-16 bg-white dark:bg-[#0d0d10] border-b border-gray-200 dark:border-white/5 px-8 flex items-center justify-between shrink-0">
-          <h1 className="font-bold text-lg dark:text-white capitalize">{section}</h1>
+        <header className="h-16 bg-white dark:bg-[#0d0d10] border-b border-gray-200 dark:border-white/5 px-4 md:px-8 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <span className="text-sm text-gray-500">Hola, <strong className="text-rose-500">{user.username}</strong></span>
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="lg:hidden p-2 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition"
+              aria-label="Abrir menú"
+            >
+              <Menu size={20}/>
+            </button>
+            <h1 className="font-bold text-lg dark:text-white capitalize">{section}</h1>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-gray-500 hidden sm:inline">Hola, <strong className="text-rose-500">{user.username}</strong></span>
           </div>
         </header>
 

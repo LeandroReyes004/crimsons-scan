@@ -73,7 +73,7 @@ export default function CatalogoPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
 
         {/* Título y búsqueda */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
@@ -82,7 +82,7 @@ export default function CatalogoPage() {
             <p className="text-gray-500 text-sm mt-1">{filtered.length} obras disponibles</p>
           </div>
 
-          <div className="flex items-center gap-2 flex-1 md:max-w-md">
+          <div className="flex items-center gap-2 w-full md:flex-1 md:max-w-md">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
               <input

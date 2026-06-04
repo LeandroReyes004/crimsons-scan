@@ -53,7 +53,7 @@ export default function Home() {
 
       <main className="flex flex-col gap-12">
         {/* HERO BANNER SECTION */}
-        <section className="relative w-full h-[60vh] min-h-[500px] flex items-center">
+        <section className="relative w-full min-h-[60vh] md:h-[60vh] md:min-h-[500px] flex items-center">
           {/* Fondo desenfocado del banner */}
           <div className="absolute inset-0 z-0 overflow-hidden">
             <img 
@@ -66,13 +66,13 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-r from-slate-50 dark:from-[#0a0a0c] via-slate-50/80 dark:via-[#0a0a0c]/80 to-transparent"></div>
           </div>
 
-          <div className="relative z-10 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center gap-10">
+          <div className="relative z-10 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center gap-8 py-10 md:py-0">
             {/* Info del Proyecto Destacado */}
             <div className="flex-1 flex flex-col gap-6">
               <div className="inline-flex items-center gap-2 bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest w-fit">
                 <Sparkles size={14} /> Nueva Licencia
               </div>
-              <h2 className="text-5xl md:text-7xl font-extrabold tracking-tighter leading-[1.1] text-transparent bg-clip-text bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-500">
+              <h2 className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tighter leading-[1.1] text-transparent bg-clip-text bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-500">
                 Solo Leveling: <br/> <span className="text-rose-500">Ragnarok</span>
               </h2>
               <p className="text-lg text-gray-600 dark:text-gray-400 max-w-xl leading-relaxed">
@@ -83,7 +83,7 @@ export default function Home() {
               <div className="flex items-center gap-4 mt-2">
                 <Link 
                   href="/manga/reader/1" 
-                  className="flex items-center gap-2 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold py-4 px-8 rounded-full shadow-[0_10px_25px_rgba(225,29,72,0.3)] dark:shadow-[0_10px_25px_rgba(225,29,72,0.4)] hover:shadow-[0_15px_30px_rgba(225,29,72,0.5)] transition-all hover:-translate-y-1"
+                  className="flex items-center gap-2 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-full shadow-[0_10px_25px_rgba(225,29,72,0.3)] dark:shadow-[0_10px_25px_rgba(225,29,72,0.4)] hover:shadow-[0_15px_30px_rgba(225,29,72,0.5)] transition-all hover:-translate-y-1"
                 >
                   Continuar Viñeta <ArrowRight size={20} />
                 </Link>

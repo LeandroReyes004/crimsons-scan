@@ -81,27 +81,27 @@ export default function ChapterReaderPage() {
     <div className="min-h-screen bg-[#111] text-white font-sans pb-32 select-none">
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-6 flex items-center justify-between">
+      <header className="sticky top-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-3 sm:px-6 flex items-center justify-between">
         <Link href={`/manga/reader/${mangaId}`}
-          className="flex items-center gap-2 text-gray-400 hover:text-white transition text-sm font-medium">
-          <ChevronLeft size={18}/> Volver
+          className="flex items-center gap-1.5 text-gray-400 hover:text-white transition text-sm font-medium min-h-[44px] min-w-[44px] sm:min-w-0 justify-center sm:justify-start">
+          <ChevronLeft size={18}/> <span className="hidden sm:inline">Volver</span>
         </Link>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3">
           {capInfo && (
-            <span className="text-sm font-semibold text-gray-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
+            <span className="hidden sm:inline text-sm font-semibold text-gray-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 truncate max-w-[200px]">
               Cap. {capInfo.numero}{capInfo.titulo ? ` — ${capInfo.titulo}` : ''}
             </span>
           )}
           <button onClick={() => setReadingMode('webtoon')} title="Modo Webtoon"
-            className={`p-2 rounded-lg transition ${readingMode === 'webtoon' ? 'bg-rose-600 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-            <AlignJustify size={16}/>
+            className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition ${readingMode === 'webtoon' ? 'bg-rose-600 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
+            <AlignJustify size={18}/>
           </button>
           <button onClick={() => setReadingMode('paged')} title="Modo Paginado"
-            className={`p-2 rounded-lg transition ${readingMode === 'paged' ? 'bg-rose-600 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
-            <Layers size={16}/>
+            className={`min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg transition ${readingMode === 'paged' ? 'bg-rose-600 text-white' : 'text-gray-500 hover:text-white hover:bg-white/5'}`}>
+            <Layers size={18}/>
           </button>
           {readingMode === 'paged' && pages.length > 0 && (
-            <span className="text-sm text-gray-400 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
+            <span className="text-xs sm:text-sm text-gray-400 bg-white/5 px-2 sm:px-3 py-1.5 rounded-lg border border-white/10 tabular-nums">
               {currentPage + 1} / {pages.length}
             </span>
           )}

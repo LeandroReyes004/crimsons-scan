@@ -256,7 +256,7 @@ export default function UploaderPage() {
             ) : (
               <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
                 {capitulos.map((cap, i) => (
-                  <div key={cap.id} className={`flex items-center gap-4 px-5 py-4 ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
+                  <div key={cap.id} className={`flex items-center gap-3 px-4 py-3 sm:px-5 sm:py-4 ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
                     <div className={`p-2 rounded-xl ${
                       cap.estado === 'publicado' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500' :
                       cap.estado === 'rechazado' ? 'bg-red-50 dark:bg-red-500/10 text-red-500' :
@@ -316,7 +316,7 @@ export default function UploaderPage() {
                 {/* Info del capítulo */}
                 <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5">
                   <h3 className="font-bold dark:text-white mb-4 text-sm uppercase tracking-wide text-gray-500">Información del Capítulo</h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-gray-500">Número *</label>
                       <input type="number" step="0.1" value={capNumero}
@@ -330,7 +330,7 @@ export default function UploaderPage() {
                       <input type="text" value={capTitulo} onChange={e => setCapTitulo(e.target.value)} placeholder="Ej: El despertar"
                         className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"/>
                     </div>
-                    <div className="col-span-2 flex flex-col gap-1.5">
+                    <div className="sm:col-span-2 flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-gray-500">📅 Publicar en (vacío = ahora)</label>
                       <input type="datetime-local" value={fechaPub} onChange={e => setFechaPub(e.target.value)}
                         min={new Date().toISOString().slice(0,16)}
@@ -364,8 +364,8 @@ export default function UploaderPage() {
                   {pages.length > 0 && (
                     <div className="mt-4 flex flex-col gap-2">
                       {pages.map((page, i) => (
-                        <div key={i} className="flex items-center gap-3 bg-gray-50 dark:bg-black/20 rounded-xl px-3 py-2">
-                          <img src={page.preview} alt="" className="w-8 h-10 object-cover rounded-lg shrink-0"/>
+                        <div key={i} className="flex items-center gap-2 sm:gap-3 bg-gray-50 dark:bg-black/20 rounded-xl px-2.5 sm:px-3 py-2">
+                          <img src={page.preview} alt="" className="w-7 h-9 sm:w-8 sm:h-10 object-cover rounded-lg shrink-0"/>
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold dark:text-white truncate">{String(page.order).padStart(3,'0')} — {page.file.name}</p>
                             <p className="text-[10px] text-gray-400">{(page.file.size / 1024).toFixed(0)} KB</p>
