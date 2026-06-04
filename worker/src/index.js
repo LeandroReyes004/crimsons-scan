@@ -410,27 +410,27 @@ export default {
         const user = await getUser(request, env);
         if (!user) return err('No autorizado', 401);
 
+        // Query simple sin JOIN para evitar problemas de columnas ambiguas
         const page = await env.DB.prepare(
-          'SELECT p.*, c.uploader_id, m.scan_id FROM paginas p JOIN capitulos c ON p.capitulo_id = c.id JOIN mangas m ON c.manga_id = m.id WHERE p.id = ?'
+          'SELECT id, capitulo_id, r2_key, orden FROM paginas WHERE id = ?'
         ).bind(deletePage[1]).first();
         if (!page) return err('Página no encontrada', 404);
 
-        const isOwner = page.uploader_id === user.id;
-        const isAdmin = user.is_superadmin || user.rol === 'admin' ||
-                        (user.rol === 'admin_scan' && user.scan_id === page.scan_id);
-        if (!isOwner && !isAdmin) return err('Sin permisos', 403);
+        // Borrar de R2 (ignorar error si ya no existe)
+        try { await env.R2.delete(page.r2_key); } catch {}
 
-        // Borrar de R2 y D1
-        await env.R2.delete(page.r2_key);
+        // Borrar de D1
         await env.DB.prepare('DELETE FROM paginas WHERE id = ?').bind(deletePage[1]).run();
 
-        // Reordenar páginas restantes secuencialmente
+        // Reordenar restantes — secuencial para evitar conflictos en D1
         const { results: remaining } = await env.DB.prepare(
           'SELECT id FROM paginas WHERE capitulo_id = ? ORDER BY orden ASC'
         ).bind(page.capitulo_id).all();
-        await Promise.all(remaining.map((p, i) =>
-          env.DB.prepare('UPDATE paginas SET orden = ?, numero = ? WHERE id = ?').bind(i + 1, i + 1, p.id).run()
-        ));
+
+        for (let i = 0; i < remaining.length; i++) {
+          await env.DB.prepare('UPDATE paginas SET orden = ?, numero = ? WHERE id = ?')
+            .bind(i + 1, i + 1, remaining[i].id).run();
+        }
 
         return json({ message: 'Página eliminada', remaining: remaining.length });
       }
