@@ -37,6 +37,7 @@ export default function RootLayout({
   return (
     <html lang="es" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
+        <meta name="profiton-domain-verification" content="fc1082b69f555d513ea15de2bdef8e83f88a19279fe8bdff6d1676431b3aed7a" />
         <script
           async
           src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2103619293746404"
