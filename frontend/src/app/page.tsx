@@ -25,6 +25,11 @@ export default function Home() {
   }, []);
 
   const favMangas = mangas.filter(m => favorites.includes(m.id));
+  const featured  = mangas.length > 0
+    ? [...mangas].sort((a, b) => b.views_total - a.views_total)[0]
+    : null;
+  const API_URL   = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+  const featuredCover = featured?.cover_r2_key ? `${API_URL}/api/cover/${featured.id}` : null;
 
   const buildCard = (m: Manga, i: number) => {
     let tags: string[] = [];
@@ -98,37 +103,105 @@ export default function Home() {
 
       <main className="flex flex-col gap-12">
 
-        {/* HERO */}
+        {/* HERO — proyecto con más vistas */}
         <section className="relative w-full min-h-[60vh] md:h-[60vh] md:min-h-[500px] flex items-center">
+          {/* Fondo: portada desenfocada */}
           <div className="absolute inset-0 z-0 overflow-hidden">
-            <img src="/portada.jpg" alt="Hero Background" className="w-full h-full object-cover opacity-20 blur-sm scale-105"/>
+            <img
+              src={featuredCover || '/portada.jpg'}
+              alt=""
+              className="w-full h-full object-cover opacity-25 blur-sm scale-105 transition-all duration-700"
+            />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-[#0a0a0c] via-slate-50/50 dark:via-black/50 to-transparent"/>
             <div className="absolute inset-0 bg-gradient-to-r from-slate-50 dark:from-[#0a0a0c] via-slate-50/80 dark:via-[#0a0a0c]/80 to-transparent"/>
           </div>
+
           <div className="relative z-10 px-6 md:px-12 max-w-7xl mx-auto w-full flex flex-col md:flex-row items-center gap-8 py-10 md:py-0">
-            <div className="flex-1 flex flex-col gap-6">
-              <div className="inline-flex items-center gap-2 bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest w-fit">
-                <Sparkles size={14}/> Nueva Licencia
+            {featured ? (
+              <>
+                <div className="flex-1 flex flex-col gap-5">
+                  {/* Badge */}
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <div className="inline-flex items-center gap-2 bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-500/30 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest">
+                      <Sparkles size={12}/> Más popular
+                    </div>
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-semibold">
+                      {featured.views_total.toLocaleString()} vistas
+                    </span>
+                  </div>
+
+                  {/* Título */}
+                  <h2 className="text-3xl sm:text-5xl md:text-6xl font-extrabold tracking-tighter leading-[1.1] text-gray-900 dark:text-white">
+                    {featured.titulo}
+                  </h2>
+
+                  {/* Descripción */}
+                  {(featured as any).descripcion ? (
+                    <p className="text-base text-gray-600 dark:text-gray-400 max-w-xl leading-relaxed line-clamp-3">
+                      {(featured as any).descripcion}
+                    </p>
+                  ) : (
+                    <p className="text-base text-gray-500 dark:text-gray-400 max-w-xl">
+                      El proyecto más leído del scan. ¡No te lo pierdas!
+                    </p>
+                  )}
+
+                  {/* Info rápida */}
+                  <div className="flex items-center gap-3 flex-wrap text-xs text-gray-500 dark:text-gray-400">
+                    {featured.ultimo_capitulo != null && (
+                      <span className="bg-gray-100 dark:bg-white/10 px-2.5 py-1 rounded-full font-semibold">
+                        Cap. {featured.ultimo_capitulo}
+                      </span>
+                    )}
+                    <span className="capitalize bg-gray-100 dark:bg-white/10 px-2.5 py-1 rounded-full font-semibold">
+                      {featured.tipo}
+                    </span>
+                  </div>
+
+                  {/* Botones */}
+                  <div className="flex items-center gap-3 mt-1 flex-wrap">
+                    {featured.ultimo_capitulo_id ? (
+                      <Link href={`/manga/reader/${featured.id}/chapter/${featured.ultimo_capitulo_id}`}
+                        className="flex items-center gap-2 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold py-3 px-6 rounded-full shadow-[0_10px_25px_rgba(225,29,72,0.3)] hover:shadow-[0_15px_30px_rgba(225,29,72,0.5)] transition-all hover:-translate-y-0.5 active:scale-95">
+                        Leer ahora <ArrowRight size={18}/>
+                      </Link>
+                    ) : (
+                      <Link href={`/manga/reader/${featured.id}`}
+                        className="flex items-center gap-2 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold py-3 px-6 rounded-full shadow-[0_10px_25px_rgba(225,29,72,0.3)] transition-all active:scale-95">
+                        Ver obra <ArrowRight size={18}/>
+                      </Link>
+                    )}
+                    <Link href={`/manga/reader/${featured.id}`}
+                      className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-gray-300 hover:text-rose-500 transition-colors px-4 py-3">
+                      Ver detalles
+                    </Link>
+                  </div>
+                </div>
+
+                {/* Portada 3D */}
+                <div className="hidden md:block w-64 shrink-0">
+                  <Link href={`/manga/reader/${featured.id}`}
+                    className="block rotate-y-[-8deg] rotate-x-[3deg] rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border-2 border-white/10 transition-all duration-500 hover:rotate-y-0 hover:rotate-x-0 hover:scale-105">
+                    {featuredCover ? (
+                      <img src={featuredCover} alt={featured.titulo} className="w-full h-auto aspect-[3/4] object-cover"/>
+                    ) : (
+                      <div className="w-full aspect-[3/4] bg-gradient-to-br from-rose-900/40 to-gray-900 flex items-center justify-center">
+                        <span className="text-4xl font-black text-white/20">{featured.titulo.charAt(0)}</span>
+                      </div>
+                    )}
+                  </Link>
+                </div>
+              </>
+            ) : (
+              /* Skeleton mientras carga */
+              <div className="flex-1 flex flex-col gap-5 animate-pulse">
+                <div className="w-32 h-6 bg-gray-200 dark:bg-white/10 rounded-full"/>
+                <div className="w-3/4 h-14 bg-gray-200 dark:bg-white/10 rounded-xl"/>
+                <div className="w-full h-4 bg-gray-200 dark:bg-white/10 rounded-lg"/>
+                <div className="w-2/3 h-4 bg-gray-200 dark:bg-white/10 rounded-lg"/>
+                <div className="w-36 h-12 bg-rose-200 dark:bg-rose-500/20 rounded-full mt-2"/>
               </div>
-              <h2 className="text-3xl sm:text-5xl md:text-7xl font-extrabold tracking-tighter leading-[1.1] text-transparent bg-clip-text bg-gradient-to-br from-gray-900 to-gray-600 dark:from-white dark:to-gray-500">
-                Solo Leveling: <br/> <span className="text-rose-500">Ragnarok</span>
-              </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-400 max-w-xl leading-relaxed">
-                El legado continúa. Sung Suho debe despertar sus poderes dormidos para enfrentar a
-                los Monstruos Exteriores y salvar nuestro mundo.
-              </p>
-              <div className="flex items-center gap-4 mt-2">
-                <Link href="/manga/reader/1"
-                  className="flex items-center gap-2 bg-gradient-to-r from-rose-600 to-rose-500 hover:from-rose-500 hover:to-rose-400 text-white font-bold py-3 px-6 md:py-4 md:px-8 rounded-full shadow-[0_10px_25px_rgba(225,29,72,0.3)] hover:shadow-[0_15px_30px_rgba(225,29,72,0.5)] transition-all hover:-translate-y-1">
-                  Continuar Viñeta <ArrowRight size={20}/>
-                </Link>
-              </div>
-            </div>
-            <div className="hidden md:block w-72 shrink-0 perspective-1000">
-              <div className="rotate-y-[-10deg] rotate-x-[5deg] rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.7)] border-2 border-white/10 group cursor-pointer transition-all duration-500 hover:rotate-y-0 hover:rotate-x-0 hover:scale-105">
-                <img src="/portada.jpg" alt="Portada principal" className="w-full h-auto aspect-[3/4] object-cover"/>
-              </div>
-            </div>
+            )}
           </div>
         </section>
 
