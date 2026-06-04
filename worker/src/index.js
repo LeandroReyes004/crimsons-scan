@@ -485,36 +485,49 @@ export default {
           if (!cap) return err('No tenés permiso para publicar este capítulo', 403);
         }
 
+        // Primero obtener info básica (sin webhook_discord, para no fallar si la columna no existe)
         const capForWh = await env.DB.prepare(
-          `SELECT c.numero, c.titulo, c.manga_id, m.titulo as manga_titulo, m.scan_id,
-                  s.webhook_discord as scan_webhook
-           FROM capitulos c JOIN mangas m ON c.manga_id = m.id
-           LEFT JOIN scans s ON m.scan_id = s.id WHERE c.id = ?`
+          `SELECT c.numero, c.titulo, c.manga_id, m.titulo as manga_titulo, m.scan_id
+           FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?`
         ).bind(publishCap[1]).first();
 
+        // Publicar siempre, independiente del webhook
         await env.DB.prepare("UPDATE capitulos SET estado = 'publicado' WHERE id = ?")
           .bind(publishCap[1]).run();
 
-        const webhookUrl = capForWh?.scan_webhook || env.DISCORD_WEBHOOK_URL;
-        if (webhookUrl && capForWh) {
-          const capTitle = capForWh.titulo ? ` — ${capForWh.titulo}` : '';
-          const mangaUrl = `${env.FRONTEND_URL}/manga/reader/${capForWh.manga_id}`;
-          ctx.waitUntil(
-            fetch(webhookUrl, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                embeds: [{
-                  title: '📖 Nuevo capítulo publicado',
-                  description: `**${capForWh.manga_titulo}** — Capítulo ${capForWh.numero}${capTitle}\n\n[👁 Leer ahora](${mangaUrl})`,
-                  color: 0xe11d48,
-                  url: mangaUrl,
-                  footer: { text: "Crimson's Scan" },
-                  timestamp: new Date().toISOString(),
-                }]
-              })
-            }).catch(() => {})
-          );
+        // Enviar webhook de forma asíncrona y segura (nunca bloquea el publish)
+        if (capForWh) {
+          ctx.waitUntil((async () => {
+            try {
+              // Intentar obtener webhook del scan (puede fallar si la columna no existe aún)
+              let webhookUrl = env.DISCORD_WEBHOOK_URL;
+              try {
+                const scanWh = await env.DB.prepare(
+                  `SELECT s.webhook_discord FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
+                ).bind(capForWh.manga_id).first();
+                if (scanWh?.webhook_discord) webhookUrl = scanWh.webhook_discord;
+              } catch {}
+
+              if (!webhookUrl) return;
+
+              const capTitle = capForWh.titulo ? ` — ${capForWh.titulo}` : '';
+              const mangaUrl = `${env.FRONTEND_URL}/manga/reader/${capForWh.manga_id}`;
+              await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  embeds: [{
+                    title: '📖 Nuevo capítulo publicado',
+                    description: `**${capForWh.manga_titulo}** — Capítulo ${capForWh.numero}${capTitle}\n\n[👁 Leer ahora](${mangaUrl})`,
+                    color: 0xe11d48,
+                    url: mangaUrl,
+                    footer: { text: "Crimson's Scan" },
+                    timestamp: new Date().toISOString(),
+                  }]
+                })
+              });
+            } catch {}
+          })());
         }
 
         return json({ message: 'Capítulo publicado' });
