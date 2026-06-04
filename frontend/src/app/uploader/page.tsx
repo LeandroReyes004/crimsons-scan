@@ -291,19 +291,20 @@ export default function UploaderPage() {
   };
 
   const handleDeletePage = async (pageId: string) => {
-    if (!confirm('¿Eliminar esta página? No se puede deshacer.')) return;
     setDeletingId(pageId);
     try {
       const res = await fetch(`${API}/api/pages/${pageId}`, { method: 'DELETE', headers: authHeaders() });
       const d = await res.json();
-      if (!res.ok) throw new Error(d.error);
+      if (!res.ok) throw new Error(d.error || `Error ${res.status}`);
       // Recargar páginas
       if (editingCap) {
         const r = await fetch(`${API}/api/admin/chapters/${editingCap.id}/pages/list`, { headers: authHeaders() });
         const data = await r.json();
         setEditPages(data.pages || []);
       }
-    } catch (e: any) { alert(`Error: ${e.message}`); }
+    } catch (e: any) {
+      setEditMsg(`❌ No se pudo eliminar: ${e.message}`);
+    }
     finally { setDeletingId(null); }
   };
 
@@ -823,26 +824,25 @@ export default function UploaderPage() {
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {editPages.map(p => (
-                    <div key={p.id} className="relative group rounded-xl overflow-hidden aspect-[3/4] bg-gray-100 dark:bg-white/5">
+                    <div key={p.id} className="relative rounded-xl overflow-hidden aspect-[3/4] bg-gray-100 dark:bg-white/5">
                       <img
                         src={p.image_url}
                         alt={`Pág. ${p.orden}`}
                         className="w-full h-full object-cover"
                       />
-                      {/* Overlay con número y botón eliminar */}
-                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2">
-                        <span className="text-white text-xs font-bold">Pág. {p.orden}</span>
-                        <button
-                          onClick={() => handleDeletePage(p.id)}
-                          disabled={deletingId === p.id}
-                          className="bg-red-600 hover:bg-red-500 text-white p-1.5 rounded-lg transition active:scale-90 disabled:opacity-50">
-                          {deletingId === p.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
-                        </button>
-                      </div>
-                      {/* Número siempre visible (pequeño) */}
-                      <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+                      {/* Número siempre visible */}
+                      <div className="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md pointer-events-none">
                         {p.orden}
                       </div>
+                      {/* Botón eliminar siempre visible (funciona en móvil) */}
+                      <button
+                        onClick={() => handleDeletePage(p.id)}
+                        disabled={deletingId === p.id}
+                        className="absolute top-1 right-1 bg-red-600 hover:bg-red-500 active:bg-red-700 text-white p-1.5 rounded-lg shadow-lg transition active:scale-90 disabled:opacity-50">
+                        {deletingId === p.id
+                          ? <Loader2 size={13} className="animate-spin"/>
+                          : <Trash2 size={13}/>}
+                      </button>
                     </div>
                   ))}
                 </div>
