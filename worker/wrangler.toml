@@ -1,0 +1,22 @@
+name = "crimson-api"
+main = "src/index.js"
+compatibility_date = "2024-01-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "crimson-db"
+database_id = "1e4ce922-0d75-477e-bfc7-97468a4fdf6c"
+
+[[r2_buckets]]
+binding = "R2"
+bucket_name = "crimson-mangas"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "b0da4cd5c5894e4cbaa6d6e3137ca1b8"
+
+[vars]
+FRONTEND_URL = "https://scancrimson.com"
+
+# JWT_SECRET se configura como secret de Cloudflare:
+# wrangler secret put JWT_SECRET

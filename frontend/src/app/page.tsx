@@ -1,15 +1,28 @@
 'use client';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Flame, Sparkles } from 'lucide-react';
+import { ArrowRight, Flame, Sparkles, Settings } from 'lucide-react';
 import MangaCard from '@/components/MangaCard';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import AdminPanel from '@/components/AdminPanel';
+import { getUser } from '@/lib/auth';
+
+interface Manga { id: string; titulo: string; generos: string; estado: string; tipo: string; views_total: number; cover_r2_key: string | null; fecha_actualizacion: string; }
 
 export default function Home() {
+  const [user, setUser]     = useState<ReturnType<typeof getUser>>(null);
+  const [mangas, setMangas] = useState<Manga[]>([]);
+
+  useEffect(() => {
+    setUser(getUser());
+    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+    fetch(`${API}/api/mangas`)
+      .then(r => r.json())
+      .then(d => setMangas(d.mangas || []))
+      .catch(() => {});
+  }, []);
+
   return (
     <div className="min-h-screen pb-20 overflow-x-hidden">
-      {/* Panel de Login/Admin para el Scan */}
-      <AdminPanel />
 
       {/* Header Premium */}
       <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5 py-4 px-6 md:px-12 flex items-center justify-between shadow-sm dark:shadow-2xl transition-colors duration-300">
@@ -27,6 +40,14 @@ export default function Home() {
           <Link href="/discord" className="hover:text-[#5865F2] transition-colors">Discord</Link>
           <div className="w-px h-4 bg-gray-300 dark:bg-white/10 mx-2"></div>
           <ThemeToggle />
+          {user && (
+            <Link
+              href={(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') ? '/admin' : '/uploader'}
+              className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-rose-500 transition-colors px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30"
+            >
+              <Settings size={12}/> {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') ? 'Admin' : 'Uploader'}
+            </Link>
+          )}
         </nav>
       </header>
 
@@ -84,51 +105,35 @@ export default function Home() {
 
         {/* LATEST UPDATES SECTION */}
         <section className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-6">
-          <div className="flex items-center gap-3 border-b border-white/5 pb-4">
+          <div className="flex items-center gap-3 border-b border-gray-200 dark:border-white/5 pb-4">
             <Flame size={28} className="text-orange-500" />
             <h3 className="text-2xl font-bold">Últimas Actualizaciones</h3>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            <MangaCard 
-              id="1"
-              title="Tu Manga Subido" 
-              imageUrl="/portada.jpg" 
-              chapter="01" 
-              tags={['Acción', 'Fantasía']} 
-              isHot={true}
-            />
-            {/* Tarjetas Relleno Simuladas */}
-            <MangaCard 
-              id="2"
-              title="Demon Lord Origin" 
-              imageUrl="https://picsum.photos/400/600?random=1" 
-              chapter="55" 
-              tags={['Seinen', 'Magia']} 
-            />
-            <MangaCard 
-              id="3"
-              title="I Reincarnated as a Slime" 
-              imageUrl="https://picsum.photos/400/600?random=2" 
-              chapter="112" 
-              tags={['Isekai']} 
-            />
-            <MangaCard 
-              id="4"
-              title="The Beginning After The End" 
-              imageUrl="https://picsum.photos/400/600?random=3" 
-              chapter="175" 
-              tags={['Aventura', 'Webcomic']} 
-            />
-            <MangaCard 
-              id="5"
-              title="Omniscient Reader" 
-              imageUrl="https://picsum.photos/400/600?random=4" 
-              chapter="189" 
-              tags={['Supervivencia']} 
-              isHot={true}
-            />
-          </div>
+          {mangas.length === 0 ? (
+            <div className="flex flex-col items-center py-16 text-gray-400">
+              <p className="font-medium">Próximamente — el catálogo se está armando</p>
+              <p className="text-sm mt-1">Seguí nuestro Discord para las novedades</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+              {mangas.map((m, i) => {
+                let tags: string[] = [];
+                try { tags = JSON.parse(m.generos || '[]').slice(0, 2); } catch {}
+                return (
+                  <MangaCard
+                    key={m.id}
+                    id={m.id}
+                    title={m.titulo}
+                    imageUrl={m.cover_r2_key ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/api/cover/${m.id}` : `https://picsum.photos/400/600?random=${i}`}
+                    chapter="—"
+                    tags={tags}
+                    isHot={m.views_total > 1000}
+                  />
+                );
+              })}
+            </div>
+          )}
         </section>
       </main>
     </div>
