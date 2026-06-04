@@ -264,7 +264,7 @@ export default function AdminPage() {
           </div>
         </header>
 
-        <main className="flex-1 overflow-y-auto p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-8">
           {section === 'dashboard' && <SectionDashboard />}
           {section === 'mangas'    && <SectionMangas />}
           {section === 'revision'  && <SectionRevision />}
@@ -545,7 +545,7 @@ function SectionMangas() {
             </div>
           )}
           {data?.mangas?.map((m, i) => (
-            <div key={m.id} className={`flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/2 transition ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
+            <div key={m.id} className={`flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-4 hover:bg-gray-50 dark:hover:bg-white/2 transition ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
               <div className="w-10 h-14 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0 flex items-center justify-center text-gray-300">
                 <BookOpen size={16}/>
               </div>
@@ -667,9 +667,9 @@ function SectionRevision() {
 
                   <div className="flex gap-2 shrink-0 flex-wrap">
                     {editingId === cap.id ? (
-                      <div className="flex gap-2 items-center">
+                      <div className="flex flex-wrap gap-2 items-center w-full sm:w-auto">
                         <input type="datetime-local" value={newFecha} onChange={e => setNewFecha(e.target.value)}
-                          className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-2 py-1.5 rounded-lg text-xs dark:text-white focus:border-rose-500 outline-none"/>
+                          className="min-w-0 flex-1 sm:flex-none bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-2 py-1.5 rounded-lg text-xs dark:text-white focus:border-rose-500 outline-none"/>
                         <button onClick={() => reschedule(cap.id)} disabled={processing === cap.id}
                           className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
                           {processing === cap.id ? <Loader2 size={12} className="animate-spin"/> : 'Guardar'}
@@ -951,17 +951,18 @@ function SectionUsuarios() {
           )}
           {filtered.map((u, i) => (
             <div key={u.id} className={`${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
-              <div className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50 dark:hover:bg-white/2 transition">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-br from-rose-500 to-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
+              {/* Fila principal: avatar + info + badges */}
+              <div className="flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-gray-50 dark:hover:bg-white/2 transition">
+                <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-rose-500 to-orange-500 flex items-center justify-center text-white font-bold text-sm shadow-sm shrink-0">
                   {u.username.charAt(0).toUpperCase()}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="font-bold text-sm dark:text-white">{u.username}</p>
+                  <p className="font-bold text-sm dark:text-white truncate">{u.username}</p>
                   <p className="text-xs text-gray-400 truncate">{u.email}</p>
                 </div>
-                <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
+                <div className="flex items-center gap-1.5 shrink-0">
                   {u.scan_nombre && (
-                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-400 flex items-center gap-1">
+                    <span className="hidden sm:flex text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-400 items-center gap-1">
                       <Layers size={10}/> {u.scan_nombre}
                     </span>
                   )}
@@ -969,47 +970,52 @@ function SectionUsuarios() {
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${u.activo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-white/5'}`}>
                     {u.activo ? 'Activo' : 'Bloqueado'}
                   </span>
-                  {u.rol !== 'superadmin' && isSuperAdmin && (
-                    <>
-                      {/* Cambiar rol inline */}
-                      {editRolId === u.id ? (
-                        <div className="flex items-center gap-1">
-                          <select value={editRolVal} onChange={e => setEditRolVal(e.target.value)} autoFocus
-                            className="bg-gray-50 dark:bg-black/40 border border-rose-300 dark:border-rose-500/40 px-2 py-1 rounded-lg text-xs dark:text-white outline-none">
-                            <option value="uploader">Uploader</option>
-                            <option value="admin_scan">Admin Scan</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                          <button onClick={() => handleChangeRol(u.id)} disabled={editRolLoad}
-                            className="p-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-500 transition">
-                            {editRolLoad ? <Loader2 size={12} className="animate-spin"/> : <Check size={12}/>}
-                          </button>
-                          <button onClick={() => setEditRolId(null)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition">
-                            <X size={12}/>
-                          </button>
-                        </div>
-                      ) : (
-                        <button onClick={() => { setEditRolId(u.id); setEditRolVal(u.rol); setEditScanId(null); setResetingId(null); }}
-                          title="Cambiar rol" className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition">
-                          <Edit3 size={14}/>
-                        </button>
-                      )}
-                      <button onClick={() => { setEditScanId(editScanId === u.id ? null : u.id); setEditScanVal(u.scan_id || ''); setEditScanMsg(null); setEditRolId(null); }}
-                        title="Cambiar scan" className="p-1.5 rounded-lg text-gray-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition">
-                        <Layers size={14}/>
-                      </button>
-                      <button onClick={() => toggleActivo(u)} title={u.activo ? 'Bloquear' : 'Activar'}
-                        className={`p-1.5 rounded-lg transition ${u.activo ? 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'}`}>
-                        {u.activo ? <Ban size={14}/> : <Check size={14}/>}
-                      </button>
-                      <button onClick={() => { setResetingId(resetingId === u.id ? null : u.id); setNewPwd(''); setResetMsg(null); setEditScanId(null); setEditRolId(null); }}
-                        title="Resetear contraseña" className="p-1.5 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition">
-                        <ShieldCheck size={14}/>
-                      </button>
-                    </>
-                  )}
                 </div>
               </div>
+              {/* Fila de acciones (solo superadmin) */}
+              {u.rol !== 'superadmin' && isSuperAdmin && (
+                <div className="flex items-center gap-1.5 px-4 sm:px-5 pb-2 flex-wrap">
+                  {u.scan_nombre && (
+                    <span className="sm:hidden text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-400 flex items-center gap-1">
+                      <Layers size={10}/> {u.scan_nombre}
+                    </span>
+                  )}
+                  {editRolId === u.id ? (
+                    <div className="flex items-center gap-1 flex-wrap">
+                      <select value={editRolVal} onChange={e => setEditRolVal(e.target.value)} autoFocus
+                        className="bg-gray-50 dark:bg-black/40 border border-rose-300 dark:border-rose-500/40 px-2 py-1 rounded-lg text-xs dark:text-white outline-none">
+                        <option value="uploader">Uploader</option>
+                        <option value="admin_scan">Admin Scan</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                      <button onClick={() => handleChangeRol(u.id)} disabled={editRolLoad}
+                        className="p-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-500 transition">
+                        {editRolLoad ? <Loader2 size={12} className="animate-spin"/> : <Check size={12}/>}
+                      </button>
+                      <button onClick={() => setEditRolId(null)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition">
+                        <X size={12}/>
+                      </button>
+                    </div>
+                  ) : (
+                    <button onClick={() => { setEditRolId(u.id); setEditRolVal(u.rol); setEditScanId(null); setResetingId(null); }}
+                      title="Cambiar rol" className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition">
+                      <Edit3 size={14}/>
+                    </button>
+                  )}
+                  <button onClick={() => { setEditScanId(editScanId === u.id ? null : u.id); setEditScanVal(u.scan_id || ''); setEditScanMsg(null); setEditRolId(null); }}
+                    title="Cambiar scan" className="p-1.5 rounded-lg text-gray-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition">
+                    <Layers size={14}/>
+                  </button>
+                  <button onClick={() => toggleActivo(u)} title={u.activo ? 'Bloquear' : 'Activar'}
+                    className={`p-1.5 rounded-lg transition ${u.activo ? 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'}`}>
+                    {u.activo ? <Ban size={14}/> : <Check size={14}/>}
+                  </button>
+                  <button onClick={() => { setResetingId(resetingId === u.id ? null : u.id); setNewPwd(''); setResetMsg(null); setEditScanId(null); setEditRolId(null); }}
+                    title="Resetear contraseña" className="p-1.5 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition">
+                    <ShieldCheck size={14}/>
+                  </button>
+                </div>
+              )}
 
               {/* Panel cambiar scan */}
               {isSuperAdmin && editScanId === u.id && (

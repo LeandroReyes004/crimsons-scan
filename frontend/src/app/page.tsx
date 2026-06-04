@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Flame, Sparkles, Settings } from 'lucide-react';
+import { ArrowRight, Flame, Sparkles, Settings, Menu, X } from 'lucide-react';
 import MangaCard from '@/components/MangaCard';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getUser } from '@/lib/auth';
@@ -11,6 +11,7 @@ interface Manga { id: string; titulo: string; generos: string; estado: string; t
 export default function Home() {
   const [user, setUser]     = useState<ReturnType<typeof getUser>>(null);
   const [mangas, setMangas] = useState<Manga[]>([]);
+  const [mobileOpen, setMobileOpen] = useState(false);
 
   useEffect(() => {
     setUser(getUser());
@@ -25,7 +26,7 @@ export default function Home() {
     <div className="min-h-screen pb-20 overflow-x-hidden">
 
       {/* Header Premium */}
-      <header className="sticky top-0 z-50 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5 py-4 px-6 md:px-12 flex items-center justify-between shadow-sm dark:shadow-2xl transition-colors duration-300">
+      <header className="sticky top-0 z-50 relative bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5 py-4 px-6 md:px-12 flex items-center justify-between shadow-sm dark:shadow-2xl transition-colors duration-300">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-600 to-orange-500 shadow-[0_0_15px_rgba(225,29,72,0.5)] flex items-center justify-center font-bold text-white">
             CS
@@ -34,6 +35,7 @@ export default function Home() {
             Crimson<span className="text-rose-500">Scan</span>
           </h1>
         </div>
+        {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600 dark:text-gray-400">
           <Link href="/" className="text-gray-900 dark:text-white hover:text-rose-500 dark:hover:text-rose-400 transition-colors">Inicio</Link>
           <Link href="/catalogo" className="hover:text-gray-900 dark:hover:text-white transition-colors">Catálogo</Link>
@@ -49,6 +51,26 @@ export default function Home() {
             </Link>
           )}
         </nav>
+        {/* Mobile: theme toggle + hamburger */}
+        <div className="flex md:hidden items-center gap-2">
+          <ThemeToggle />
+          <button onClick={() => setMobileOpen(o => !o)} className="p-2 rounded-lg text-gray-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition">
+            {mobileOpen ? <X size={20}/> : <Menu size={20}/>}
+          </button>
+        </div>
+        {/* Mobile dropdown */}
+        {mobileOpen && (
+          <div className="absolute top-full left-0 right-0 z-50 bg-white/97 dark:bg-[#0a0a0c]/97 backdrop-blur-md border-b border-gray-200 dark:border-white/5 px-6 py-2 flex flex-col md:hidden shadow-xl">
+            <Link href="/" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-900 dark:text-white hover:text-rose-500 transition border-b border-gray-100 dark:border-white/5">Inicio</Link>
+            <Link href="/catalogo" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition border-b border-gray-100 dark:border-white/5">Catálogo</Link>
+            <Link href="/discord" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-[#5865F2] transition border-b border-gray-100 dark:border-white/5">Discord</Link>
+            {user && (
+              <Link href={(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') ? '/admin' : '/uploader'} onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-rose-500 transition flex items-center gap-1.5">
+                <Settings size={14}/> {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') ? 'Admin' : 'Uploader'}
+              </Link>
+            )}
+          </div>
+        )}
       </header>
 
       <main className="flex flex-col gap-12">
