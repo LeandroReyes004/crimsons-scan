@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 interface Props {
   imageUrl:    string;
   scrambleMap: number[];
@@ -7,24 +9,29 @@ interface Props {
 }
 
 const CanvasPageRenderer = ({ imageUrl }: Props) => {
+  const [nativeWidth, setNativeWidth] = useState<number | null>(null);
+
   return (
     <div
       className="w-full flex justify-center"
       onContextMenu={e => e.preventDefault()}
       onDragStart={e => e.preventDefault()}
     >
-      <div className="relative" style={{ maxWidth: '100%' }}>
+      <div
+        className="relative w-full"
+        style={{ maxWidth: nativeWidth ? `${nativeWidth}px` : '100%' }}
+      >
         <img
           src={imageUrl}
           alt=""
-          className="block"
+          className="w-full h-auto block"
+          onLoad={e => setNativeWidth(e.currentTarget.naturalWidth)}
           style={{
-            maxWidth:         '100%',
-            height:           'auto',
             userSelect:       'none',
             WebkitUserSelect: 'none',
             pointerEvents:    'none',
             touchAction:      'pan-y',
+            imageRendering:   'auto',
           } as React.CSSProperties}
           draggable={false}
         />
