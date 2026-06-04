@@ -499,13 +499,25 @@ export default {
         if (capForWh) {
           ctx.waitUntil((async () => {
             try {
-              // Intentar obtener webhook del scan (puede fallar si la columna no existe aún)
+              // 1. Buscar webhook del scan del manga
+              // 2. Si no, buscar webhook del scan del admin que publica
+              // 3. Fallback al global DISCORD_WEBHOOK_URL
               let webhookUrl = env.DISCORD_WEBHOOK_URL;
               try {
                 const scanWh = await env.DB.prepare(
-                  `SELECT s.webhook_discord FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
+                  `SELECT s.webhook_discord
+                   FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id
+                   WHERE m.id = ? AND s.webhook_discord IS NOT NULL`
                 ).bind(capForWh.manga_id).first();
-                if (scanWh?.webhook_discord) webhookUrl = scanWh.webhook_discord;
+                if (scanWh?.webhook_discord) {
+                  webhookUrl = scanWh.webhook_discord;
+                } else if (admin.scan_id) {
+                  // Fallback: webhook del scan del admin que pulsa Publicar
+                  const adminScanWh = await env.DB.prepare(
+                    `SELECT webhook_discord FROM scans WHERE id = ? AND webhook_discord IS NOT NULL`
+                  ).bind(admin.scan_id).first();
+                  if (adminScanWh?.webhook_discord) webhookUrl = adminScanWh.webhook_discord;
+                }
               } catch {}
 
               if (!webhookUrl) return;

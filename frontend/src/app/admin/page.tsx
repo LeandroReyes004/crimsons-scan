@@ -1330,7 +1330,16 @@ function SectionConfig({ scanId }: { scanId: string }) {
   const [saving, setSaving]   = useState(false);
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
-  const { data: scanData, loading } = useAPI<any>(`/api/scans/${scanId}/details`);
+  const { data: scanData, loading, refetch } = useAPI<any>(`/api/scans/${scanId}/details`);
+
+  // Nuevo miembro
+  const [showForm, setShowForm]   = useState(false);
+  const [newUser, setNewUser]     = useState('');
+  const [newEmail, setNewEmail]   = useState('');
+  const [newPwd, setNewPwd]       = useState('');
+  const [newRol, setNewRol]       = useState('uploader');
+  const [creating, setCreating]   = useState(false);
+  const [createMsg, setCreateMsg] = useState<string | null>(null);
 
   useEffect(() => {
     if (scanData?.scan?.webhook_discord) setWebhook(scanData.scan.webhook_discord);
@@ -1373,11 +1382,30 @@ function SectionConfig({ scanId }: { scanId: string }) {
     finally { setTesting(false); }
   };
 
+  const handleCreateMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setCreating(true); setCreateMsg(null);
+    try {
+      const res = await fetch(`${API}/api/auth/register`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: newUser, email: newEmail, password: newPwd, rol: newRol, scan_id: scanId }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setCreateMsg(`✅ Usuario "${newUser}" creado`);
+      setNewUser(''); setNewEmail(''); setNewPwd(''); setNewRol('uploader');
+      refetch();
+      setTimeout(() => { setShowForm(false); setCreateMsg(null); }, 1500);
+    } catch (e: any) { setCreateMsg(`❌ ${e.message}`); }
+    finally { setCreating(false); }
+  };
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300 max-w-xl">
       <div>
         <h2 className="text-2xl font-extrabold dark:text-white">Mi Scan</h2>
-        <p className="text-gray-500 text-sm mt-1">Configuración de notificaciones</p>
+        <p className="text-gray-500 text-sm mt-1">Miembros y notificaciones</p>
       </div>
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
@@ -1407,12 +1435,54 @@ function SectionConfig({ scanId }: { scanId: string }) {
               ))}
             </div>
 
-            {/* Lista de miembros */}
-            {scanData?.miembros?.length > 0 && (
-              <div>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Miembros del scan</p>
+            {/* Miembros del scan */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                  Miembros del scan ({scanData?.miembros?.length ?? 0})
+                </p>
+                <button onClick={() => { setShowForm(f => !f); setCreateMsg(null); }}
+                  className="flex items-center gap-1.5 text-xs font-bold text-rose-500 hover:text-rose-400 transition">
+                  <Plus size={13}/> Agregar miembro
+                </button>
+              </div>
+
+              {/* Formulario nuevo miembro */}
+              {showForm && (
+                <form onSubmit={handleCreateMember} className="bg-gray-50 dark:bg-black/20 rounded-xl p-4 mb-3 flex flex-col gap-3 border border-gray-200 dark:border-white/10 animate-in slide-in-from-top-1 duration-200">
+                  <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Nuevo miembro</p>
+                  {createMsg && (
+                    <div className={`p-2 rounded-lg text-xs font-medium ${createMsg.startsWith('✅') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
+                      {createMsg}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2">
+                    <input value={newUser} onChange={e => setNewUser(e.target.value)} required placeholder="Username" className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none"/>
+                    <input value={newEmail} onChange={e => setNewEmail(e.target.value)} required type="email" placeholder="Email" className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none"/>
+                    <input value={newPwd} onChange={e => setNewPwd(e.target.value)} required type="password" placeholder="Contraseña" className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none"/>
+                    <select value={newRol} onChange={e => setNewRol(e.target.value)} className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none">
+                      <option value="uploader">Uploader</option>
+                      <option value="admin_scan">Admin Scan</option>
+                    </select>
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="submit" disabled={creating}
+                      className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-lg text-sm font-bold disabled:opacity-50 transition">
+                      {creating ? <Loader2 size={14} className="animate-spin"/> : <UserPlus size={14}/>}
+                      {creating ? 'Creando...' : 'Crear'}
+                    </button>
+                    <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition">
+                      Cancelar
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {scanData?.miembros?.length === 0 ? (
+                <p className="text-xs text-gray-400 italic py-2">Sin miembros aún — agregá el primero</p>
+              ) : (
                 <div className="flex flex-col gap-2">
-                  {scanData.miembros.map((m: any) => (
+                  {scanData?.miembros?.map((m: any) => (
                     <div key={m.id} className="flex items-center gap-3 bg-gray-50 dark:bg-white/5 rounded-xl px-3 py-2.5">
                       <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-500 to-orange-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
                         {m.username.charAt(0).toUpperCase()}
@@ -1429,8 +1499,8 @@ function SectionConfig({ scanId }: { scanId: string }) {
                     </div>
                   ))}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
           <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Webhook de Discord</p>
