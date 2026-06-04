@@ -24,7 +24,7 @@ export default function UploaderPage() {
     const u = getUser();
     setUser(u);
     setMounted(true);
-    if (!u || (u.rol !== 'uploader' && u.rol !== 'admin')) router.push('/');
+    if (!u || (u.rol !== 'uploader' && u.rol !== 'admin' && u.rol !== 'admin_scan' && !u.is_superadmin)) router.push('/');
   }, [router]);
 
   const [mangas, setMangas]         = useState<Manga[]>([]);
