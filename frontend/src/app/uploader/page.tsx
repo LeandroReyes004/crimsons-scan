@@ -333,7 +333,7 @@ export default function UploaderPage() {
                           <div className="flex items-center gap-1 shrink-0">
                             {page.status === 'uploading' && <Loader2 size={14} className="animate-spin text-blue-500"/>}
                             {page.status === 'done'      && <Check size={14} className="text-emerald-500"/>}
-                            {page.status === 'error'     && <X size={14} className="text-red-500" title={page.error}/>}
+                            {page.status === 'error'     && <span title={page.error}><X size={14} className="text-red-500"/></span>}
                             {page.status === 'pending'   && <>
                               <button onClick={() => moveUp(i)} className="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-white transition"><ArrowUp size={12}/></button>
                               <button onClick={() => moveDown(i)} className="p-1 rounded text-gray-400 hover:text-gray-700 dark:hover:text-white transition"><ArrowDown size={12}/></button>
