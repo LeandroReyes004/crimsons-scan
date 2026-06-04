@@ -5,7 +5,6 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { BookOpen, ChevronLeft, Play, Eye, Tag, Clock, Heart } from 'lucide-react';
 import { useFavorites } from '@/lib/favorites';
-import AdsterraBanner from '@/components/AdsterraBanner';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
@@ -218,8 +217,6 @@ export default function MangaDetailPage() {
           )}
         </div>
 
-        {/* Banner al pie */}
-        <AdsterraBanner />
       </div>
     </div>
   );
