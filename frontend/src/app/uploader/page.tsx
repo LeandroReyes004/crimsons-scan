@@ -53,6 +53,14 @@ export default function UploaderPage() {
   const [editSaving, setEditSaving]   = useState(false);
   const [editMsg, setEditMsg]         = useState<string | null>(null);
 
+  // Páginas del capítulo en edición
+  const [editPages, setEditPages]     = useState<{id:string; orden:number; filename:string; image_url:string}[]>([]);
+  const [loadingPages, setLoadingPages] = useState(false);
+  const [deletingId, setDeletingId]   = useState<string | null>(null);
+  const [addingPages, setAddingPages] = useState(false);
+  const [addProgress, setAddProgress] = useState(0);
+  const editFileRef = useRef<HTMLInputElement>(null);
+
   // Upload individual
   const [capNumero, setCapNumero]   = useState('');
   const [capTitulo, setCapTitulo]   = useState('');
@@ -265,13 +273,60 @@ export default function UploaderPage() {
     loadChapters(selectedManga);
   };
 
-  const openEdit = (cap: Capitulo) => {
+  const openEdit = async (cap: Capitulo) => {
     setEditingCap(cap);
     setEditNumero(String(cap.numero));
     setEditTitulo(cap.titulo || '');
     setEditFecha('');
     setEditMsg(null);
+    setEditPages([]);
     setView('edit');
+    // Cargar páginas existentes
+    setLoadingPages(true);
+    try {
+      const res = await fetch(`${API}/api/admin/chapters/${cap.id}/pages/list`, { headers: authHeaders() });
+      const d = await res.json();
+      setEditPages(d.pages || []);
+    } finally { setLoadingPages(false); }
+  };
+
+  const handleDeletePage = async (pageId: string) => {
+    if (!confirm('¿Eliminar esta página? No se puede deshacer.')) return;
+    setDeletingId(pageId);
+    try {
+      const res = await fetch(`${API}/api/pages/${pageId}`, { method: 'DELETE', headers: authHeaders() });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      // Recargar páginas
+      if (editingCap) {
+        const r = await fetch(`${API}/api/admin/chapters/${editingCap.id}/pages/list`, { headers: authHeaders() });
+        const data = await r.json();
+        setEditPages(data.pages || []);
+      }
+    } catch (e: any) { alert(`Error: ${e.message}`); }
+    finally { setDeletingId(null); }
+  };
+
+  const handleAddPages = async (files: FileList | null) => {
+    if (!files || !editingCap) return;
+    setAddingPages(true);
+    const arr = Array.from(files).filter(f => ALLOWED_TYPES.includes(f.type));
+    const startOrden = editPages.length + 1;
+    for (let i = 0; i < arr.length; i++) {
+      const fd = new FormData();
+      fd.append('capitulo_id', editingCap.id);
+      fd.append('numero', String(startOrden + i));
+      fd.append('image', arr[i]);
+      await fetch(`${API}/api/upload/page`, { method: 'POST', headers: authHeaders(), body: fd });
+      setAddProgress(Math.round(((i + 1) / arr.length) * 100));
+    }
+    // Recargar
+    const r = await fetch(`${API}/api/admin/chapters/${editingCap.id}/pages/list`, { headers: authHeaders() });
+    const data = await r.json();
+    setEditPages(data.pages || []);
+    setAddingPages(false);
+    setAddProgress(0);
+    if (editFileRef.current) editFileRef.current.value = '';
   };
 
   const handleSaveEdit = async () => {
@@ -735,15 +790,63 @@ export default function UploaderPage() {
               </div>
             </div>
 
-            <div className="flex gap-3">
-              <button onClick={handleSaveEdit} disabled={editSaving || !editNumero}
-                className="flex-1 bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white font-extrabold py-4 rounded-2xl transition-all shadow-lg shadow-rose-600/20 disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.98]">
-                {editSaving ? <><Loader2 size={18} className="animate-spin"/> Guardando...</> : <><Check size={18}/> Guardar cambios</>}
-              </button>
-              <button onClick={() => setView('chapters')}
-                className="px-5 py-4 rounded-2xl text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition border border-gray-200 dark:border-white/10">
-                Cancelar
-              </button>
+            <button onClick={handleSaveEdit} disabled={editSaving || !editNumero}
+              className="w-full bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white font-extrabold py-4 rounded-2xl transition-all shadow-lg shadow-rose-600/20 disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.98]">
+              {editSaving ? <><Loader2 size={18} className="animate-spin"/> Guardando...</> : <><Check size={18}/> Guardar cambios</>}
+            </button>
+
+            {/* Gestión de páginas */}
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
+                  Páginas ({editPages.length})
+                </p>
+                <div className="flex items-center gap-2">
+                  {addingPages && <span className="text-xs text-blue-500 font-medium">{addProgress}%</span>}
+                  <button onClick={() => editFileRef.current?.click()} disabled={addingPages}
+                    className="flex items-center gap-1.5 text-xs font-bold text-rose-500 hover:text-rose-400 disabled:opacity-50 transition">
+                    {addingPages ? <Loader2 size={13} className="animate-spin"/> : <Plus size={13}/>}
+                    {addingPages ? 'Agregando...' : 'Agregar páginas'}
+                  </button>
+                </div>
+              </div>
+              <input ref={editFileRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden"
+                onChange={e => handleAddPages(e.target.files)}/>
+
+              {loadingPages ? (
+                <div className="flex justify-center py-6"><Loader2 size={24} className="animate-spin text-rose-500"/></div>
+              ) : editPages.length === 0 ? (
+                <div className="flex flex-col items-center py-8 text-gray-400">
+                  <ImageIcon size={28} className="mb-2 opacity-30"/>
+                  <p className="text-sm">Sin páginas</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
+                  {editPages.map(p => (
+                    <div key={p.id} className="relative group rounded-xl overflow-hidden aspect-[3/4] bg-gray-100 dark:bg-white/5">
+                      <img
+                        src={p.image_url}
+                        alt={`Pág. ${p.orden}`}
+                        className="w-full h-full object-cover"
+                      />
+                      {/* Overlay con número y botón eliminar */}
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-2">
+                        <span className="text-white text-xs font-bold">Pág. {p.orden}</span>
+                        <button
+                          onClick={() => handleDeletePage(p.id)}
+                          disabled={deletingId === p.id}
+                          className="bg-red-600 hover:bg-red-500 text-white p-1.5 rounded-lg transition active:scale-90 disabled:opacity-50">
+                          {deletingId === p.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
+                        </button>
+                      </div>
+                      {/* Número siempre visible (pequeño) */}
+                      <div className="absolute bottom-1 left-1 bg-black/60 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md">
+                        {p.orden}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         )}

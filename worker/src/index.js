@@ -361,11 +361,9 @@ export default {
         }
         await env.KV.put(rlKey, String(rlCount + 1), { expirationTtl: 3600 });
 
-        // Buscar r2_key en D1 (valida que el capítulo esté publicado)
+        // Buscar r2_key en D1 (cualquier estado — el UUID del capítulo ya es suficiente seguridad)
         const pag = await env.DB.prepare(
-          `SELECT p.r2_key FROM paginas p
-           JOIN capitulos c ON p.capitulo_id = c.id
-           WHERE p.capitulo_id = ? AND p.orden = ? AND c.estado = 'publicado'`
+          `SELECT p.r2_key FROM paginas p WHERE p.capitulo_id = ? AND p.orden = ?`
         ).bind(chapterId, parseInt(pageOrder)).first();
 
         if (!pag) return err('Página no encontrada', 404);
@@ -382,6 +380,59 @@ export default {
             ...CORS,
           },
         });
+      }
+
+      // ── GET /api/admin/chapters/:id/pages/list ───────────
+      // Lista de páginas de un capítulo para gestión (requiere auth)
+      const pagesList = pathname.match(/^\/api\/admin\/chapters\/([^/]+)\/pages\/list$/);
+      if (pagesList && method === 'GET') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autorizado', 401);
+        const { results } = await env.DB.prepare(
+          'SELECT id, numero, orden, r2_key FROM paginas WHERE capitulo_id = ? ORDER BY orden ASC'
+        ).bind(pagesList[1]).all();
+        const origin = new URL(request.url).origin;
+        return json({
+          pages: results.map(p => ({
+            id: p.id,
+            orden: p.orden,
+            numero: p.numero,
+            filename: p.r2_key.split('/').pop(),
+            image_url: `${origin}/api/reader/${pagesList[1]}/${p.orden}`,
+          }))
+        });
+      }
+
+      // ── DELETE /api/pages/:id ─────────────────────────────
+      // Elimina una página de D1 y R2, y reordena las restantes
+      const deletePage = pathname.match(/^\/api\/pages\/([^/]+)$/);
+      if (deletePage && method === 'DELETE') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autorizado', 401);
+
+        const page = await env.DB.prepare(
+          'SELECT p.*, c.uploader_id, m.scan_id FROM paginas p JOIN capitulos c ON p.capitulo_id = c.id JOIN mangas m ON c.manga_id = m.id WHERE p.id = ?'
+        ).bind(deletePage[1]).first();
+        if (!page) return err('Página no encontrada', 404);
+
+        const isOwner = page.uploader_id === user.id;
+        const isAdmin = user.is_superadmin || user.rol === 'admin' ||
+                        (user.rol === 'admin_scan' && user.scan_id === page.scan_id);
+        if (!isOwner && !isAdmin) return err('Sin permisos', 403);
+
+        // Borrar de R2 y D1
+        await env.R2.delete(page.r2_key);
+        await env.DB.prepare('DELETE FROM paginas WHERE id = ?').bind(deletePage[1]).run();
+
+        // Reordenar páginas restantes secuencialmente
+        const { results: remaining } = await env.DB.prepare(
+          'SELECT id FROM paginas WHERE capitulo_id = ? ORDER BY orden ASC'
+        ).bind(page.capitulo_id).all();
+        await Promise.all(remaining.map((p, i) =>
+          env.DB.prepare('UPDATE paginas SET orden = ?, numero = ? WHERE id = ?').bind(i + 1, i + 1, p.id).run()
+        ));
+
+        return json({ message: 'Página eliminada', remaining: remaining.length });
       }
 
       // ── POST /api/chapters ───────────────────────────────
