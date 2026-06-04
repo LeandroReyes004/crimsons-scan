@@ -309,10 +309,13 @@ export default {
         await env.KV.put(rlKey, String(rlCount + 1), { expirationTtl: 3600 });
 
         // ── Referer check ─────────────────────────────────
-        const referer     = request.headers.get('Referer') || '';
-        const frontendUrl = env.FRONTEND_URL || 'https://scancrimson.com';
-        const isLocalDev  = referer.includes('localhost:3000');
-        if (referer && !referer.startsWith(frontendUrl) && !isLocalDev) {
+        const referer = request.headers.get('Referer') || '';
+        const allowed = [
+          env.FRONTEND_URL || 'https://scancrimson.com',
+          'https://crimsons-scan.vercel.app',
+          'http://localhost:3000',
+        ];
+        if (referer && !allowed.some(o => referer.startsWith(o))) {
           return err('Acceso denegado — origen no autorizado', 403);
         }
 
