@@ -57,15 +57,25 @@ export default function UploaderPage() {
     setView('chapters');
   }, []);
 
+  const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+
   const handleFiles = (files: FileList | null) => {
     if (!files) return;
-    const newPages: PageFile[] = Array.from(files).map((file, i) => ({
-      file,
-      preview: URL.createObjectURL(file),
-      order:   pages.length + i + 1,
-      status:  'pending',
-    }));
-    setPages(prev => [...prev, ...newPages]);
+    const valid: PageFile[] = [];
+    const rejected: string[] = [];
+    Array.from(files).forEach((file, i) => {
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        rejected.push(file.name);
+        return;
+      }
+      if (file.size > 10 * 1024 * 1024) {
+        rejected.push(`${file.name} (supera 10MB)`);
+        return;
+      }
+      valid.push({ file, preview: URL.createObjectURL(file), order: pages.length + i + 1, status: 'pending' });
+    });
+    if (rejected.length > 0) alert(`Archivos rechazados (solo JPG, PNG, WebP hasta 10MB):\n${rejected.join('\n')}`);
+    setPages(prev => [...prev, ...valid]);
   };
 
   const moveUp   = (i: number) => { if (i === 0) return; const a = [...pages]; [a[i-1], a[i]] = [a[i], a[i-1]]; setPages(a.map((p,j) => ({ ...p, order: j+1 }))); };
@@ -107,10 +117,11 @@ export default function UploaderPage() {
         try {
           const res = await fetch(`${API}/api/upload/page`, { method: 'POST', headers: authHeaders(), body: fd });
           const d   = await res.json();
-          if (!res.ok) throw new Error(d.error);
+          if (!res.ok) throw new Error(d.error || 'Error al subir la imagen');
           setPages(prev => prev.map((p, j) => j === i ? { ...p, status: 'done' } : p));
         } catch (e: any) {
-          setPages(prev => prev.map((p, j) => j === i ? { ...p, status: 'error', error: e.message } : p));
+          const msg = e.message?.includes('fetch') ? 'Sin conexión al servidor' : e.message;
+          setPages(prev => prev.map((p, j) => j === i ? { ...p, status: 'error', error: msg } : p));
         }
       }
 
@@ -153,7 +164,7 @@ export default function UploaderPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {user.rol === 'admin' && (
+          {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') && (
             <Link href="/admin" className="text-xs text-gray-500 hover:text-rose-500 transition flex items-center gap-1 px-3 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10">
               Panel Admin
             </Link>

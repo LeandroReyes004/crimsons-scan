@@ -125,7 +125,7 @@ export default {
       // ── POST /api/auth/login ─────────────────────────────
       if (pathname === '/api/auth/login' && method === 'POST') {
         const { username, password } = await request.json();
-        if (!username || !password) return err('Faltan credenciales');
+        if (!username || !password) return err('Ingresá tu usuario y contraseña');
 
         const user = await env.DB.prepare(
           `SELECT u.*, s.nombre as scan_nombre
@@ -154,14 +154,14 @@ export default {
       // ── POST /api/auth/register (solo admin puede crear usuarios) ──
       if (pathname === '/api/auth/register' && method === 'POST') {
         const admin = await requireAdmin(request, env);
-        if (!admin) return err('Solo el admin puede crear usuarios', 401);
+        if (!admin) return err('No tenés permisos para crear usuarios', 403);
 
         const { username, email, password, rol, scan_id } = await request.json();
-        if (!username || !email || !password) return err('Faltan campos');
+        if (!username || !email || !password) return err('Completá todos los campos requeridos');
 
         const exists = await env.DB.prepare('SELECT id FROM usuarios WHERE username = ? OR email = ?')
           .bind(username, email).first();
-        if (exists) return err('El usuario o email ya existe');
+        if (exists) return err('Ese usuario o email ya está registrado');
 
         const id   = crypto.randomUUID();
         const hash = await hashPassword(password);
@@ -353,7 +353,16 @@ export default {
         if (!user) return err('No autorizado', 401);
 
         const { manga_id, numero, titulo } = await request.json();
-        if (!manga_id || numero === undefined) return err('Faltan manga_id y numero');
+        if (!manga_id || numero === undefined) return err('Faltó indicar el manga y el número de capítulo');
+
+        // Validar que el usuario pertenece al scan del manga
+        if (!user.is_superadmin && user.rol !== 'admin') {
+          const manga = await env.DB.prepare('SELECT scan_id FROM mangas WHERE id = ?').bind(manga_id).first();
+          if (!manga) return err('La obra no fue encontrada', 404);
+          if (manga.scan_id && manga.scan_id !== user.scan_id) {
+            return err('No tenés permiso para subir a esta obra', 403);
+          }
+        }
 
         const id = crypto.randomUUID();
         await env.DB.prepare(
@@ -398,12 +407,19 @@ export default {
           'SELECT c.*, m.id as mid FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?'
         ).bind(capitulo_id).first();
 
-        if (!cap) return err('Capítulo no encontrado', 404);
-        if (cap.uploader_id !== user.id && user.rol !== 'admin') {
-          return err('No tenés permiso para este capítulo', 403);
+        if (!cap) return err('El capítulo no existe o no tenés acceso', 404);
+        const isAdminUser = user.rol === 'admin' || user.is_superadmin;
+        if (cap.uploader_id !== user.id && !isAdminUser) {
+          return err('No tenés permiso para subir páginas a este capítulo', 403);
         }
 
-        const ext    = file.name.split('.').pop().toLowerCase();
+        // Validar tipo de archivo
+        const allowed_exts = ['jpg', 'jpeg', 'png', 'webp'];
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (!allowed_exts.includes(ext)) {
+          return err('Solo se permiten imágenes JPG, PNG o WebP', 400);
+        }
+
         const capNum = String(cap.numero).replace('.', '-').padStart(3, '0');
         const r2_key = `scancrimson.com/chapters/${cap.manga_id}/cap-${capNum}/${String(numero).padStart(3, '0')}.${ext}`;
 
@@ -674,10 +690,19 @@ export default {
       }
 
       // ── GET /api/admin/mangas/:id/chapters ───────────────
+      // Accesible por admin, admin_scan (de ese scan) y el uploader dueño
       const adminChaps = pathname.match(/^\/api\/admin\/mangas\/([^/]+)\/chapters$/);
       if (adminChaps && method === 'GET') {
-        const admin = await requireAdmin(request, env);
-        if (!admin) return err('No autorizado', 401);
+        const user = await getUser(request, env);
+        if (!user) return err('Necesitás iniciar sesión para continuar', 401);
+
+        // Verificar que el usuario tiene acceso a este manga
+        if (!user.is_superadmin && user.rol !== 'admin') {
+          const manga = await env.DB.prepare('SELECT scan_id FROM mangas WHERE id = ?').bind(adminChaps[1]).first();
+          if (manga?.scan_id && manga.scan_id !== user.scan_id) {
+            return err('No tenés acceso a esta obra', 403);
+          }
+        }
 
         const { results } = await env.DB.prepare(
           `SELECT c.*, u.username as uploader_username,
@@ -691,11 +716,11 @@ export default {
         return json({ capitulos: results });
       }
 
-      return err('Ruta no encontrada', 404);
+      return err('Página no encontrada', 404);
 
     } catch (e) {
       console.error(e);
-      return err(`Error interno: ${e.message}`, 500);
+      return err('Ocurrió un error inesperado. Intentá de nuevo más tarde.', 500);
     }
   },
 };

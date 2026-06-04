@@ -119,9 +119,13 @@ export default function ChapterReaderPage() {
 
         {error && (
           <div className="bg-red-950/40 text-red-400 p-6 rounded-2xl border border-red-900/30 flex flex-col items-center gap-2 mt-12">
-            <span className="text-2xl">⚠️</span>
-            <p className="font-medium text-center">{error}</p>
-            <Link href={`/manga/reader/${mangaId}`} className="text-sm text-rose-400 hover:underline mt-1">
+            <span className="text-3xl">⚠️</span>
+            <p className="font-bold text-center">No se pudo cargar el capítulo</p>
+            <p className="text-sm text-center text-red-300/70">{error}</p>
+            <button onClick={() => window.location.reload()} className="mt-2 text-sm bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-xl transition">
+              Reintentar
+            </button>
+            <Link href={`/manga/reader/${mangaId}`} className="text-sm text-gray-500 hover:text-gray-300 mt-1">
               Volver al manga
             </Link>
           </div>
