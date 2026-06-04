@@ -198,13 +198,21 @@ export default {
         const isAdmin = caller && (caller.rol === 'admin' || caller.is_superadmin);
         const isScanMember = caller && !isAdmin && caller.scan_id;
 
-        const query_all = `SELECT m.*, s.nombre as scan_nombre
-             FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id
-             ORDER BY m.fecha_actualizacion DESC`;
-        const query_scan = `SELECT m.*, s.nombre as scan_nombre
-             FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id
-             WHERE m.scan_id = ?
-             ORDER BY m.fecha_actualizacion DESC`;
+        const query_all = `
+          SELECT m.*, s.nombre as scan_nombre,
+            (SELECT numero FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_capitulo,
+            (SELECT id     FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_capitulo_id,
+            (SELECT fecha_publicacion FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_cap_fecha
+          FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id
+          ORDER BY ultimo_cap_fecha DESC NULLS LAST, m.fecha_actualizacion DESC`;
+        const query_scan = `
+          SELECT m.*, s.nombre as scan_nombre,
+            (SELECT numero FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_capitulo,
+            (SELECT id     FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_capitulo_id,
+            (SELECT fecha_publicacion FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_cap_fecha
+          FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id
+          WHERE m.scan_id = ?
+          ORDER BY ultimo_cap_fecha DESC NULLS LAST, m.fecha_actualizacion DESC`;
 
         // Miembro del scan: solo ve los de su scan
         // Admin o público sin auth: ve todos

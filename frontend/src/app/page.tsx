@@ -6,7 +6,7 @@ import MangaCard from '@/components/MangaCard';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getUser } from '@/lib/auth';
 
-interface Manga { id: string; titulo: string; generos: string; estado: string; tipo: string; views_total: number; cover_r2_key: string | null; fecha_actualizacion: string; }
+interface Manga { id: string; titulo: string; generos: string; estado: string; tipo: string; views_total: number; cover_r2_key: string | null; fecha_actualizacion: string; ultimo_capitulo: number | null; ultimo_capitulo_id: string | null; ultimo_cap_fecha: string | null; }
 
 export default function Home() {
   const [user, setUser]     = useState<ReturnType<typeof getUser>>(null);
@@ -126,7 +126,9 @@ export default function Home() {
                     id={m.id}
                     title={m.titulo}
                     imageUrl={m.cover_r2_key ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/api/cover/${m.id}` : `https://picsum.photos/400/600?random=${i}`}
-                    chapter="—"
+                    chapter={m.ultimo_capitulo != null ? String(m.ultimo_capitulo) : null}
+                    chapterUrl={m.ultimo_capitulo_id ? `/manga/reader/${m.id}/chapter/${m.ultimo_capitulo_id}` : null}
+                    updatedAt={m.ultimo_cap_fecha}
                     tags={tags}
                     isHot={m.views_total > 1000}
                   />
