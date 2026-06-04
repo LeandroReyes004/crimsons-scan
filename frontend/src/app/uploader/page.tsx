@@ -33,13 +33,16 @@ export default function UploaderPage() {
   const [view, setView]             = useState<'mangas' | 'chapters' | 'upload'>('mangas');
 
   // Estado subida
-  const [capNumero, setCapNumero]   = useState('');
-  const [capTitulo, setCapTitulo]   = useState('');
-  const [pages, setPages]           = useState<PageFile[]>([]);
-  const [uploading, setUploading]   = useState(false);
-  const [capId, setCapId]           = useState<string | null>(null);
-  const [done, setDone]             = useState(false);
-  const fileInputRef                = useRef<HTMLInputElement>(null);
+  const [capNumero, setCapNumero]     = useState('');
+  const [capTitulo, setCapTitulo]     = useState('');
+  const [fechaPub, setFechaPub]       = useState('');
+  const [pages, setPages]             = useState<PageFile[]>([]);
+  const [uploading, setUploading]     = useState(false);
+  const [capId, setCapId]             = useState<string | null>(null);
+  const [capEstado, setCapEstado]     = useState<string | null>(null);
+  const [done, setDone]               = useState(false);
+  const [dupError, setDupError]       = useState('');
+  const fileInputRef                  = useRef<HTMLInputElement>(null);
 
   // Cargar mangas
   useEffect(() => {
@@ -84,22 +87,37 @@ export default function UploaderPage() {
 
   const handleUpload = async () => {
     if (!capNumero || pages.length === 0 || !selectedManga) return;
+    setDupError('');
+
+    // Verificar duplicado en el cliente
+    const num = parseFloat(capNumero);
+    if (capitulos.some(c => c.numero === num)) {
+      setDupError(`Ya existe el capítulo ${num}. Usá otro número.`);
+      return;
+    }
+
     setUploading(true);
     setDone(false);
 
     try {
-      // 1. Crear capítulo
+      // 1. Crear capítulo con fecha de publicación opcional
       let currentCapId = capId;
       if (!currentCapId) {
         const res = await fetch(`${API}/api/chapters`, {
           method: 'POST',
           headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ manga_id: selectedManga.id, numero: parseFloat(capNumero), titulo: capTitulo || null }),
+          body: JSON.stringify({
+            manga_id:          selectedManga.id,
+            numero:            num,
+            titulo:            capTitulo || null,
+            fecha_publicacion: fechaPub || null,
+          }),
         });
         const d = await res.json();
         if (!res.ok) throw new Error(d.error);
         currentCapId = d.capituloId;
         setCapId(currentCapId);
+        setCapEstado(d.estado);
       }
 
       // 2. Subir página por página (en secuencia para mostrar progreso)
@@ -133,7 +151,8 @@ export default function UploaderPage() {
   };
 
   const resetUpload = () => {
-    setPages([]); setCapNumero(''); setCapTitulo(''); setCapId(null); setDone(false);
+    setPages([]); setCapNumero(''); setCapTitulo(''); setFechaPub('');
+    setCapId(null); setCapEstado(null); setDone(false); setDupError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
@@ -300,13 +319,23 @@ export default function UploaderPage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-gray-500">Número *</label>
-                      <input type="number" step="0.1" value={capNumero} onChange={e => setCapNumero(e.target.value)} placeholder="Ej: 1 o 1.5"
-                        className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"/>
+                      <input type="number" step="0.1" value={capNumero}
+                        onChange={e => { setCapNumero(e.target.value); setDupError(''); }}
+                        placeholder="Ej: 1 o 1.5"
+                        className={`bg-gray-50 dark:bg-black/30 border px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition ${dupError ? 'border-red-400' : 'border-gray-200 dark:border-white/10'}`}/>
+                      {dupError && <p className="text-xs text-red-500 font-medium">{dupError}</p>}
                     </div>
                     <div className="flex flex-col gap-1.5">
                       <label className="text-xs font-bold text-gray-500">Título (opcional)</label>
                       <input type="text" value={capTitulo} onChange={e => setCapTitulo(e.target.value)} placeholder="Ej: El despertar"
                         className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"/>
+                    </div>
+                    <div className="col-span-2 flex flex-col gap-1.5">
+                      <label className="text-xs font-bold text-gray-500">📅 Publicar en (vacío = ahora)</label>
+                      <input type="datetime-local" value={fechaPub} onChange={e => setFechaPub(e.target.value)}
+                        min={new Date().toISOString().slice(0,16)}
+                        className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"/>
+                      <p className="text-[10px] text-gray-400">Si elegís una fecha futura, el capítulo se publica automáticamente en esa fecha.</p>
                     </div>
                   </div>
                 </div>
@@ -371,13 +400,45 @@ export default function UploaderPage() {
                   </div>
                 )}
 
-                <button
-                  onClick={handleUpload}
-                  disabled={uploading || !capNumero || pages.length === 0}
-                  className="w-full bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white font-extrabold py-4 rounded-2xl transition-all shadow-lg shadow-rose-600/20 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-3"
-                >
-                  {uploading ? <><Loader2 size={20} className="animate-spin"/> Subiendo...</> : <><Upload size={20}/> Enviar a Revisión</>}
-                </button>
+                {done && capId && selectedManga && (
+                  <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 rounded-2xl p-5 flex flex-col items-center gap-3 animate-in fade-in duration-300">
+                    <CheckCircle size={32} className="text-emerald-500"/>
+                    <div className="text-center">
+                      <p className="font-bold dark:text-white">
+                        {capEstado === 'programado' ? '¡Capítulo programado!' : '¡Capítulo publicado!'}
+                      </p>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {capEstado === 'programado'
+                          ? `Se publicará automáticamente el ${new Date(fechaPub).toLocaleString('es')}`
+                          : 'Ya está disponible para los lectores'}
+                      </p>
+                    </div>
+                    <div className="flex gap-3 mt-1">
+                      <Link href={`/manga/reader/${selectedManga.id}/chapter/${capId}`} target="_blank"
+                        className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition">
+                        👁 Ver capítulo
+                      </Link>
+                      <button onClick={resetUpload}
+                        className="text-sm font-bold text-gray-500 hover:text-rose-500 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-white/10 hover:border-rose-300 transition">
+                        Subir otro
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!done && (
+                  <button
+                    onClick={handleUpload}
+                    disabled={uploading || !capNumero || pages.length === 0}
+                    className="w-full bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white font-extrabold py-4 rounded-2xl transition-all shadow-lg shadow-rose-600/20 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-3"
+                  >
+                    {uploading
+                      ? <><Loader2 size={20} className="animate-spin"/> Subiendo...</>
+                      : fechaPub
+                        ? <><Clock size={20}/> Programar publicación</>
+                        : <><Upload size={20}/> Publicar ahora</>}
+                  </button>
+                )}
               </div>
             )}
           </div>

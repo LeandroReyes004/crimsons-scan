@@ -7,7 +7,7 @@ import {
   LayoutDashboard, BookOpen, Clock, Users, LogOut, Plus, Check, X,
   ChevronRight, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
-  Layers,
+  Layers, Trash2,
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
 
@@ -69,6 +69,7 @@ function Badge({ estado }: { estado: string }) {
     uploader:    'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
     lector:      'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400',
     superadmin:  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
+    programado:  'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400',
   };
   const labels: Record<string, string> = {
     admin_scan: 'Admin Scan',
@@ -205,7 +206,7 @@ export default function AdminPage() {
           {([
             { id: 'dashboard', icon: <LayoutDashboard size={16}/>, label: 'Dashboard',  always: true },
             { id: 'mangas',    icon: <BookOpen size={16}/>,        label: 'Mangas',     always: true },
-            { id: 'revision',  icon: <Clock size={16}/>,           label: 'Revisión',   always: true },
+            { id: 'revision',  icon: <Clock size={16}/>,           label: 'Agenda',     always: true },
             { id: 'scans',     icon: <Layers size={16}/>,          label: 'Scans',      always: false },
             { id: 'usuarios',  icon: <Users size={16}/>,           label: 'Usuarios',   always: false },
           ] as const).filter(item => item.always || user.is_superadmin).map(item => (
@@ -561,30 +562,43 @@ function SectionMangas() {
 }
 
 // ============================================================
-//  SECCIÓN: REVISIÓN
+//  SECCIÓN: AGENDA DE PUBLICACIONES
 // ============================================================
-function SectionRevision() {
-  const { data, loading, refetch } = useAPI<{ pendientes: Capitulo[] }>('/api/admin/pending');
-  const [rejecting, setRejecting] = useState<string | null>(null);
-  const [nota, setNota]           = useState('');
-  const [processing, setProcessing] = useState<string | null>(null);
+interface CapAgenda { id: string; numero: number; titulo: string | null; estado: string; fecha_publicacion: string | null; fecha_subida: string; manga_titulo: string; manga_id: string; uploader_username: string; }
 
-  const handleApprove = async (id: string) => {
+function SectionRevision() {
+  const { data, loading, refetch } = useAPI<{ capitulos: CapAgenda[] }>('/api/admin/scheduled');
+  const [processing, setProcessing] = useState<string | null>(null);
+  const [editingId, setEditingId]   = useState<string | null>(null);
+  const [newFecha, setNewFecha]     = useState('');
+
+  const publishNow = async (id: string) => {
     setProcessing(id);
-    await fetch(`${API}/api/chapters/${id}/publish`, { method: 'PUT', headers: authHeaders() });
+    await fetch(`${API}/api/chapters/${id}/reschedule`, {
+      method: 'PUT',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fecha_publicacion: null }),
+    });
     refetch();
     setProcessing(null);
   };
 
-  const handleReject = async (id: string) => {
+  const reschedule = async (id: string) => {
     setProcessing(id);
-    await fetch(`${API}/api/chapters/${id}/reject`, {
+    await fetch(`${API}/api/chapters/${id}/reschedule`, {
       method: 'PUT',
       headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-      body: JSON.stringify({ nota }),
+      body: JSON.stringify({ fecha_publicacion: newFecha || null }),
     });
-    setRejecting(null);
-    setNota('');
+    setEditingId(null);
+    refetch();
+    setProcessing(null);
+  };
+
+  const deleteChapter = async (id: string) => {
+    if (!confirm('¿Eliminar este capítulo? Esta acción no se puede deshacer.')) return;
+    setProcessing(id);
+    await fetch(`${API}/api/chapters/${id}`, { method: 'DELETE', headers: authHeaders() });
     refetch();
     setProcessing(null);
   };
@@ -593,8 +607,8 @@ function SectionRevision() {
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-extrabold dark:text-white">Cola de Revisión</h2>
-          <p className="text-gray-500 text-sm mt-1">{data?.pendientes?.length ?? 0} capítulos esperando aprobación</p>
+          <h2 className="text-2xl font-extrabold dark:text-white">Agenda de Publicaciones</h2>
+          <p className="text-gray-500 text-sm mt-1">{data?.capitulos?.length ?? 0} capítulos en espera</p>
         </div>
         <button onClick={refetch} className="flex items-center gap-2 text-sm text-gray-500 hover:text-rose-500 transition">
           <RefreshCw size={15}/> Actualizar
@@ -603,67 +617,68 @@ function SectionRevision() {
 
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
-      ) : data?.pendientes?.length === 0 ? (
+      ) : data?.capitulos?.length === 0 ? (
         <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center py-16 text-gray-400">
           <Check size={40} className="mb-3 text-emerald-400"/>
-          <p className="font-medium">Todo al día — no hay capítulos pendientes</p>
+          <p className="font-medium">No hay capítulos programados</p>
+          <p className="text-sm mt-1">Los capítulos subidos aparecen aquí antes de publicarse</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
-          {data?.pendientes?.map(cap => (
-            <div key={cap.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 shadow-sm">
-              <div className="flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge estado={cap.estado}/>
-                    <span className="text-xs text-gray-400">{new Date(cap.fecha_subida).toLocaleDateString('es')}</span>
-                  </div>
-                  <p className="font-bold dark:text-white">{cap.manga_titulo}</p>
-                  <p className="text-sm text-gray-500">
-                    Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''} · por <strong className="text-rose-400">{cap.uploader_username}</strong>
-                  </p>
-                  {cap.notas_admin && (
-                    <div className="mt-2 flex items-start gap-2 bg-amber-50 dark:bg-amber-500/10 text-amber-700 dark:text-amber-400 text-xs p-2 rounded-lg">
-                      <AlertCircle size={12} className="mt-0.5 shrink-0"/> {cap.notas_admin}
+          {data?.capitulos?.map(cap => {
+            const esProgramado = cap.estado === 'programado' && cap.fecha_publicacion;
+            const fechaLocal = cap.fecha_publicacion ? new Date(cap.fecha_publicacion) : null;
+            const yaVencio = fechaLocal && fechaLocal < new Date();
+            return (
+              <div key={cap.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 shadow-sm">
+                <div className="flex items-start justify-between gap-4 flex-wrap">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <Badge estado={cap.estado}/>
+                      {esProgramado && !yaVencio && (
+                        <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 px-2 py-0.5 rounded-full font-semibold flex items-center gap-1">
+                          <Clock size={10}/> {fechaLocal!.toLocaleString('es', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
+                        </span>
+                      )}
                     </div>
-                  )}
-                </div>
+                    <p className="font-bold dark:text-white">{cap.manga_titulo}</p>
+                    <p className="text-sm text-gray-500">
+                      Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''} · por <strong className="text-rose-400">{cap.uploader_username}</strong>
+                    </p>
+                  </div>
 
-                {/* Botones acción */}
-                {rejecting === cap.id ? (
-                  <div className="flex flex-col gap-2 w-56 shrink-0">
-                    <textarea
-                      value={nota}
-                      onChange={e => setNota(e.target.value)}
-                      placeholder="Motivo del rechazo..."
-                      rows={2}
-                      className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2 rounded-xl text-xs dark:text-white resize-none focus:border-rose-500 outline-none"
-                    />
-                    <div className="flex gap-2">
-                      <button onClick={() => handleReject(cap.id)} disabled={processing === cap.id}
-                        className="flex-1 bg-red-600 hover:bg-red-500 text-white text-xs font-bold py-2 rounded-xl flex items-center justify-center gap-1 transition">
-                        {processing === cap.id ? <Loader2 size={12} className="animate-spin"/> : <Ban size={12}/>} Rechazar
-                      </button>
-                      <button onClick={() => setRejecting(null)} className="px-3 py-2 rounded-xl text-xs text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition">
-                        <X size={12}/>
-                      </button>
-                    </div>
+                  <div className="flex gap-2 shrink-0 flex-wrap">
+                    {editingId === cap.id ? (
+                      <div className="flex gap-2 items-center">
+                        <input type="datetime-local" value={newFecha} onChange={e => setNewFecha(e.target.value)}
+                          className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-2 py-1.5 rounded-lg text-xs dark:text-white focus:border-rose-500 outline-none"/>
+                        <button onClick={() => reschedule(cap.id)} disabled={processing === cap.id}
+                          className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold px-3 py-1.5 rounded-lg transition">
+                          {processing === cap.id ? <Loader2 size={12} className="animate-spin"/> : 'Guardar'}
+                        </button>
+                        <button onClick={() => setEditingId(null)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5"><X size={12}/></button>
+                      </div>
+                    ) : (
+                      <>
+                        <button onClick={() => publishNow(cap.id)} disabled={processing === cap.id}
+                          className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold px-3 py-2 rounded-xl transition disabled:opacity-50">
+                          {processing === cap.id ? <Loader2 size={12} className="animate-spin"/> : <Check size={12}/>} Publicar ahora
+                        </button>
+                        <button onClick={() => { setEditingId(cap.id); setNewFecha(cap.fecha_publicacion?.slice(0,16) || ''); }}
+                          className="flex items-center gap-1.5 bg-blue-100 dark:bg-blue-500/10 text-blue-700 dark:text-blue-400 text-xs font-bold px-3 py-2 rounded-xl transition hover:bg-blue-200 dark:hover:bg-blue-500/20">
+                          <Clock size={12}/> Reprogramar
+                        </button>
+                        <button onClick={() => deleteChapter(cap.id)} disabled={processing === cap.id}
+                          className="p-2 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition">
+                          <Trash2 size={14}/>
+                        </button>
+                      </>
+                    )}
                   </div>
-                ) : (
-                  <div className="flex gap-2 shrink-0">
-                    <button onClick={() => handleApprove(cap.id)} disabled={processing === cap.id}
-                      className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold px-4 py-2 rounded-xl transition disabled:opacity-50">
-                      {processing === cap.id ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>} Aprobar
-                    </button>
-                    <button onClick={() => setRejecting(cap.id)}
-                      className="flex items-center gap-1.5 bg-red-100 hover:bg-red-200 dark:bg-red-500/10 dark:hover:bg-red-500/20 text-red-600 dark:text-red-400 text-sm font-bold px-4 py-2 rounded-xl transition">
-                      <X size={14}/> Rechazar
-                    </button>
-                  </div>
-                )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

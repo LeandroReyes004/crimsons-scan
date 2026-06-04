@@ -114,6 +114,16 @@ function contentType(key) {
 //  ROUTER PRINCIPAL
 // ============================================================
 export default {
+  // Cron: cada 5 min publica capítulos cuya fecha llegó
+  async scheduled(event, env, ctx) {
+    ctx.waitUntil(
+      env.DB.prepare(
+        `UPDATE capitulos SET estado = 'publicado'
+         WHERE estado = 'programado' AND fecha_publicacion <= datetime('now')`
+      ).run()
+    );
+  },
+
   async fetch(request, env) {
     const { pathname } = new URL(request.url);
     const method = request.method;
@@ -350,9 +360,9 @@ export default {
       // ── POST /api/chapters ───────────────────────────────
       if (pathname === '/api/chapters' && method === 'POST') {
         const user = await getUser(request, env);
-        if (!user) return err('No autorizado', 401);
+        if (!user) return err('Necesitás iniciar sesión para continuar', 401);
 
-        const { manga_id, numero, titulo } = await request.json();
+        const { manga_id, numero, titulo, fecha_publicacion } = await request.json();
         if (!manga_id || numero === undefined) return err('Faltó indicar el manga y el número de capítulo');
 
         // Validar que el usuario pertenece al scan del manga
@@ -364,12 +374,24 @@ export default {
           }
         }
 
+        // Prevenir número de capítulo duplicado
+        const dup = await env.DB.prepare(
+          'SELECT id FROM capitulos WHERE manga_id = ? AND numero = ?'
+        ).bind(manga_id, numero).first();
+        if (dup) return err(`Ya existe el capítulo ${numero} para esta obra. Usá otro número.`, 409);
+
+        // Determinar estado y fecha de publicación
+        const ahora = new Date().toISOString();
+        const esFuturo = fecha_publicacion && fecha_publicacion > ahora;
+        const estado   = esFuturo ? 'programado' : 'publicado';
+        const fechaPub = fecha_publicacion || ahora;
+
         const id = crypto.randomUUID();
         await env.DB.prepare(
-          'INSERT INTO capitulos (id, manga_id, numero, titulo, uploader_id) VALUES (?, ?, ?, ?, ?)'
-        ).bind(id, manga_id, numero, titulo || null, user.id).run();
+          'INSERT INTO capitulos (id, manga_id, numero, titulo, uploader_id, estado, fecha_publicacion) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).bind(id, manga_id, numero, titulo || null, user.id, estado, fechaPub).run();
 
-        return json({ capituloId: id }, 201);
+        return json({ capituloId: id, estado, fecha_publicacion: fechaPub }, 201);
       }
 
       // ── PUT /api/chapters/:id/publish ────────────────────
@@ -539,24 +561,56 @@ export default {
         });
       }
 
-      // ── GET /api/admin/pending ───────────────────────────
-      if (pathname === '/api/admin/pending' && method === 'GET') {
+      // ── GET /api/admin/scheduled ─────────────────────────
+      // Lista capítulos programados o en borrador
+      if (pathname === '/api/admin/scheduled' && method === 'GET') {
         const admin = await requireAdmin(request, env);
-        if (!admin) return err('No autorizado', 401);
+        if (!admin) return err('Necesitás iniciar sesión para continuar', 401);
 
-        const base = `SELECT c.id, c.numero, c.titulo, c.estado, c.notas_admin, c.fecha_subida,
+        const base = `SELECT c.id, c.numero, c.titulo, c.estado, c.fecha_publicacion, c.fecha_subida,
                 m.titulo as manga_titulo, m.id as manga_id,
                 u.username as uploader_username
          FROM capitulos c
          JOIN mangas m ON c.manga_id = m.id
-         JOIN usuarios u ON c.uploader_id = u.id
-         WHERE c.estado = 'borrador'`;
+         LEFT JOIN usuarios u ON c.uploader_id = u.id
+         WHERE c.estado IN ('programado', 'borrador')`;
 
         const { results } = isScanAdmin(admin) && admin.scan_id
-          ? await env.DB.prepare(`${base} AND m.scan_id = ? ORDER BY c.fecha_subida ASC`).bind(admin.scan_id).all()
-          : await env.DB.prepare(`${base} ORDER BY c.fecha_subida ASC`).all();
+          ? await env.DB.prepare(`${base} AND m.scan_id = ? ORDER BY c.fecha_publicacion ASC`).bind(admin.scan_id).all()
+          : await env.DB.prepare(`${base} ORDER BY c.fecha_publicacion ASC`).all();
 
-        return json({ pendientes: results });
+        return json({ capitulos: results });
+      }
+
+      // ── PUT /api/chapters/:id/reschedule ─────────────────
+      // Cambiar fecha de publicación o publicar ahora
+      const reschedule = pathname.match(/^\/api\/chapters\/([^/]+)\/reschedule$/);
+      if (reschedule && method === 'PUT') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('Sin permisos', 403);
+
+        const { fecha_publicacion } = await request.json();
+        const ahora = new Date().toISOString();
+        const esFuturo = fecha_publicacion && fecha_publicacion > ahora;
+        const estado = esFuturo ? 'programado' : 'publicado';
+        const fechaPub = fecha_publicacion || ahora;
+
+        await env.DB.prepare(
+          'UPDATE capitulos SET estado = ?, fecha_publicacion = ? WHERE id = ?'
+        ).bind(estado, fechaPub, reschedule[1]).run();
+
+        return json({ estado, fecha_publicacion: fechaPub });
+      }
+
+      // ── DELETE /api/chapters/:id ──────────────────────────
+      const deleteCap = pathname.match(/^\/api\/chapters\/([^/]+)$/);
+      if (deleteCap && method === 'DELETE') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('Sin permisos', 403);
+
+        await env.DB.prepare('DELETE FROM paginas WHERE capitulo_id = ?').bind(deleteCap[1]).run();
+        await env.DB.prepare('DELETE FROM capitulos WHERE id = ?').bind(deleteCap[1]).run();
+        return json({ message: 'Capítulo eliminado' });
       }
 
       // ── PUT /api/chapters/:id/reject ─────────────────────

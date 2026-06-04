@@ -2,6 +2,9 @@ name = "crimson-api"
 main = "src/index.js"
 compatibility_date = "2024-01-01"
 
+[triggers]
+crons = ["*/5 * * * *"]
+
 [[d1_databases]]
 binding = "DB"
 database_name = "crimson-db"
