@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Upload, BookOpen, ChevronLeft, LogOut, Plus, Check, X, Loader2,
   AlertCircle, ImageIcon, Clock, CheckCircle, XCircle, Trash2, ArrowUp, ArrowDown,
-  Package, FileArchive, ChevronDown, ChevronUp,
+  Package, FileArchive, Edit3,
 } from 'lucide-react';
 import { getUser, authHeaders, logout } from '@/lib/auth';
 
@@ -43,7 +43,15 @@ export default function UploaderPage() {
   const [mangas, setMangas]          = useState<Manga[]>([]);
   const [selectedManga, setSelected] = useState<Manga | null>(null);
   const [capitulos, setCapitulos]    = useState<Capitulo[]>([]);
-  const [view, setView]              = useState<'mangas' | 'chapters' | 'upload' | 'batch'>('mangas');
+  const [view, setView]              = useState<'mangas' | 'chapters' | 'upload' | 'batch' | 'edit'>('mangas');
+
+  // Edición de capítulo
+  const [editingCap, setEditingCap]   = useState<Capitulo | null>(null);
+  const [editNumero, setEditNumero]   = useState('');
+  const [editTitulo, setEditTitulo]   = useState('');
+  const [editFecha, setEditFecha]     = useState('');
+  const [editSaving, setEditSaving]   = useState(false);
+  const [editMsg, setEditMsg]         = useState<string | null>(null);
 
   // Upload individual
   const [capNumero, setCapNumero]   = useState('');
@@ -257,6 +265,37 @@ export default function UploaderPage() {
     loadChapters(selectedManga);
   };
 
+  const openEdit = (cap: Capitulo) => {
+    setEditingCap(cap);
+    setEditNumero(String(cap.numero));
+    setEditTitulo(cap.titulo || '');
+    setEditFecha('');
+    setEditMsg(null);
+    setView('edit');
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingCap) return;
+    setEditSaving(true); setEditMsg(null);
+    try {
+      const res = await fetch(`${API}/api/chapters/${editingCap.id}`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          numero: parseFloat(editNumero),
+          titulo: editTitulo || null,
+          fecha_publicacion: editFecha || undefined,
+        }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setEditMsg('✅ Capítulo actualizado');
+      if (selectedManga) loadChapters(selectedManga);
+      setTimeout(() => setView('chapters'), 1200);
+    } catch (e: any) { setEditMsg(`❌ ${e.message}`); }
+    finally { setEditSaving(false); }
+  };
+
   const donePages  = pages.filter(p => p.status === 'done').length;
   const progress   = pages.length > 0 ? Math.round((donePages / pages.length) * 100) : 0;
 
@@ -273,7 +312,7 @@ export default function UploaderPage() {
       <header className="sticky top-0 z-40 bg-white dark:bg-[#0d0d10] border-b border-gray-200 dark:border-white/5 h-14 px-4 flex items-center justify-between shadow-sm gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {view !== 'mangas' && (
-            <button onClick={() => { setView(view === 'upload' || view === 'batch' ? 'chapters' : 'mangas'); resetUpload(); setBatchChapters([]); setBatchDone(false); }}
+            <button onClick={() => { setView(view === 'upload' || view === 'batch' || view === 'edit' ? 'chapters' : 'mangas'); resetUpload(); setBatchChapters([]); setBatchDone(false); setEditingCap(null); }}
               className="p-2 rounded-lg text-gray-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition shrink-0">
               <ChevronLeft size={18}/>
             </button>
@@ -281,7 +320,7 @@ export default function UploaderPage() {
           <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-600 to-orange-500 flex items-center justify-center text-white font-black text-xs shrink-0">CS</div>
           <div className="min-w-0">
             <p className="font-bold text-sm dark:text-white leading-tight truncate">
-              {view === 'mangas' ? 'Mis Proyectos' : view === 'chapters' ? selectedManga?.titulo : view === 'batch' ? 'Subir por lotes' : 'Subir Capítulo'}
+              {view === 'mangas' ? 'Mis Proyectos' : view === 'chapters' ? selectedManga?.titulo : view === 'batch' ? 'Subir por lotes' : view === 'edit' ? `Editar Cap. ${editingCap?.numero}` : 'Subir Capítulo'}
             </p>
             <p className="text-[10px] text-gray-400 truncate">{user.username}</p>
           </div>
@@ -367,6 +406,10 @@ export default function UploaderPage() {
                       )}
                     </div>
                     <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${cap.estado === 'publicado' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : cap.estado === 'programado' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : cap.estado === 'rechazado' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'}`}>{cap.estado}</span>
+                    <button onClick={() => openEdit(cap)}
+                      className="p-2 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition shrink-0 active:scale-90">
+                      <Edit3 size={14}/>
+                    </button>
                   </div>
                 ))}
               </div>
@@ -633,6 +676,75 @@ export default function UploaderPage() {
                 )}
               </>
             )}
+          </div>
+        )}
+
+        {/* ── Editar capítulo ── */}
+        {view === 'edit' && editingCap && (
+          <div className="animate-in fade-in duration-300 flex flex-col gap-4">
+
+            {editMsg && (
+              <div className={`p-4 rounded-2xl text-sm font-medium ${editMsg.startsWith('✅') ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20' : 'bg-red-50 dark:bg-red-500/10 text-red-700 dark:text-red-400 border border-red-200 dark:border-red-500/20'}`}>
+                {editMsg}
+              </div>
+            )}
+
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-4">
+                Editando capítulo de: <span className="text-rose-500">{selectedManga?.titulo}</span>
+              </p>
+
+              <div className="flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Número *</label>
+                    <input
+                      type="number" step="0.1" inputMode="decimal"
+                      value={editNumero} onChange={e => setEditNumero(e.target.value)}
+                      className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 rounded-xl text-base dark:text-white focus:border-rose-500 outline-none"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Título (opcional)</label>
+                    <input
+                      type="text" value={editTitulo} onChange={e => setEditTitulo(e.target.value)}
+                      placeholder="Sin título"
+                      className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 rounded-xl text-base dark:text-white focus:border-rose-500 outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* Reprogramar publicación (solo si no está publicado aún) */}
+                {editingCap.estado !== 'publicado' && (
+                  <div className="flex flex-col gap-1.5">
+                    <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">📅 Reprogramar publicación (opcional)</label>
+                    <input
+                      type="datetime-local" value={editFecha} onChange={e => setEditFecha(e.target.value)}
+                      min={new Date().toISOString().slice(0,16)}
+                      className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none"
+                    />
+                  </div>
+                )}
+
+                {/* Info actual */}
+                <div className="bg-gray-50 dark:bg-white/5 rounded-xl px-4 py-3 flex flex-wrap gap-3 text-xs text-gray-500">
+                  <span>Estado actual: <strong className="dark:text-white">{editingCap.estado}</strong></span>
+                  <span>Páginas: <strong className="dark:text-white">{editingCap.num_paginas ?? 0}</strong></span>
+                  <span>Subido: <strong className="dark:text-white">{new Date(editingCap.fecha_subida).toLocaleDateString('es')}</strong></span>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button onClick={handleSaveEdit} disabled={editSaving || !editNumero}
+                className="flex-1 bg-gradient-to-r from-rose-600 to-orange-500 hover:from-rose-500 hover:to-orange-400 text-white font-extrabold py-4 rounded-2xl transition-all shadow-lg shadow-rose-600/20 disabled:opacity-40 flex items-center justify-center gap-2 active:scale-[0.98]">
+                {editSaving ? <><Loader2 size={18} className="animate-spin"/> Guardando...</> : <><Check size={18}/> Guardar cambios</>}
+              </button>
+              <button onClick={() => setView('chapters')}
+                className="px-5 py-4 rounded-2xl text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition border border-gray-200 dark:border-white/10">
+                Cancelar
+              </button>
+            </div>
           </div>
         )}
       </main>

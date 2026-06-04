@@ -684,6 +684,46 @@ export default {
         return json({ estado, fecha_publicacion: fechaPub });
       }
 
+      // ── PUT /api/chapters/:id ────────────────────────────
+      // Editar número, título y fecha de publicación de un capítulo
+      const editCap = pathname.match(/^\/api\/chapters\/([^/]+)$/);
+      if (editCap && method === 'PUT') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autorizado', 401);
+
+        const cap = await env.DB.prepare(
+          'SELECT c.*, m.scan_id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?'
+        ).bind(editCap[1]).first();
+        if (!cap) return err('Capítulo no encontrado', 404);
+
+        // Solo el uploader del cap, su admin_scan o superadmin pueden editar
+        const isOwner    = cap.uploader_id === user.id;
+        const isAdminOf  = user.is_superadmin || user.rol === 'admin' ||
+                           (user.rol === 'admin_scan' && user.scan_id === cap.scan_id);
+        if (!isOwner && !isAdminOf) return err('Sin permisos', 403);
+
+        const { numero, titulo, fecha_publicacion } = await request.json();
+
+        // Si cambia el número, verificar que no duplique
+        if (numero !== undefined && numero !== cap.numero) {
+          const dup = await env.DB.prepare(
+            'SELECT id FROM capitulos WHERE manga_id = ? AND numero = ? AND id != ?'
+          ).bind(cap.manga_id, numero, editCap[1]).first();
+          if (dup) return err(`Ya existe el capítulo ${numero}`, 409);
+        }
+
+        await env.DB.prepare(
+          `UPDATE capitulos SET numero = ?, titulo = ?, fecha_publicacion = ? WHERE id = ?`
+        ).bind(
+          numero ?? cap.numero,
+          titulo !== undefined ? (titulo || null) : cap.titulo,
+          fecha_publicacion !== undefined ? (fecha_publicacion || null) : cap.fecha_publicacion,
+          editCap[1]
+        ).run();
+
+        return json({ message: 'Capítulo actualizado' });
+      }
+
       // ── DELETE /api/chapters/:id ──────────────────────────
       const deleteCap = pathname.match(/^\/api\/chapters\/([^/]+)$/);
       if (deleteCap && method === 'DELETE') {
