@@ -108,7 +108,7 @@ export default function ChapterReaderPage() {
         </div>
       </header>
 
-      <main className="max-w-3xl mx-auto flex flex-col items-center mt-6 px-2">
+      <main className={`flex flex-col items-center mt-0 ${readingMode === 'webtoon' ? 'w-full max-w-[900px] mx-auto' : 'max-w-4xl mx-auto px-2'}`}>
 
         {loading && (
           <div className="flex flex-col items-center gap-4 mt-24">

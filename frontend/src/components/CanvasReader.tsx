@@ -9,29 +9,29 @@ interface Props {
 const CanvasPageRenderer = ({ imageUrl }: Props) => {
   return (
     <div
-      className="relative w-full flex justify-center"
+      className="w-full"
       onContextMenu={e => e.preventDefault()}
       onDragStart={e => e.preventDefault()}
     >
-      <img
-        src={imageUrl}
-        alt=""
-        className="max-w-full shadow-xl border border-gray-800 block"
-        style={{
-          userSelect:       'none',
-          WebkitUserSelect: 'none',
-          pointerEvents:    'none',
-          touchAction:      'pan-y',
-          draggable:        false,
-        } as React.CSSProperties}
-        draggable={false}
-      />
-      <div
-        className="absolute inset-0 z-10"
-        onContextMenu={e => e.preventDefault()}
-        onDragStart={e => e.preventDefault()}
-        style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
-      />
+      <div className="relative w-full">
+        <img
+          src={imageUrl}
+          alt=""
+          className="w-full h-auto block"
+          style={{
+            userSelect:       'none',
+            WebkitUserSelect: 'none',
+            pointerEvents:    'none',
+            touchAction:      'pan-y',
+          } as React.CSSProperties}
+          draggable={false}
+        />
+        <div
+          className="absolute inset-0 z-10 select-none"
+          onContextMenu={e => e.preventDefault()}
+          onDragStart={e => e.preventDefault()}
+        />
+      </div>
     </div>
   );
 };
