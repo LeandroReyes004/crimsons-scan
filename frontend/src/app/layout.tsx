@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import Script from 'next/script';
 import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import LateralAds from '@/components/LateralAds';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -44,6 +45,7 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           {children}
+          <LateralAds />
         </ThemeProvider>
         <Script
           src="https://pl29641064.effectivecpmnetwork.com/22/96/aa/2296aae2f6e7d670692ad60295e285d2.js"
