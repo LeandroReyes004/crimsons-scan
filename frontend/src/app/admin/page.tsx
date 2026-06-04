@@ -7,13 +7,13 @@ import {
   LayoutDashboard, BookOpen, Clock, Users, LogOut, Plus, Check, X,
   ChevronRight, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
-  Layers, Trash2, Menu,
+  Layers, Trash2, Menu, Settings,
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
-type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans';
+type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'config';
 
 // ── Tipos ──────────────────────────────────────────────────
 interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; }
@@ -213,12 +213,13 @@ export default function AdminPage() {
 
         <nav className="flex-1 p-3 flex flex-col gap-1 mt-2">
           {([
-            { id: 'dashboard', icon: <LayoutDashboard size={16}/>, label: 'Dashboard',  always: true },
-            { id: 'mangas',    icon: <BookOpen size={16}/>,        label: 'Mangas',     always: true },
-            { id: 'revision',  icon: <Clock size={16}/>,           label: 'Agenda',     always: true },
-            { id: 'scans',     icon: <Layers size={16}/>,          label: 'Scans',      always: false },
-            { id: 'usuarios',  icon: <Users size={16}/>,           label: 'Usuarios',   always: false },
-          ] as const).filter(item => item.always || user.is_superadmin).map(item => (
+            { id: 'dashboard', icon: <LayoutDashboard size={16}/>, label: 'Dashboard', show: true },
+            { id: 'mangas',    icon: <BookOpen size={16}/>,        label: 'Mangas',    show: true },
+            { id: 'revision',  icon: <Clock size={16}/>,           label: 'Agenda',    show: true },
+            { id: 'scans',     icon: <Layers size={16}/>,          label: 'Scans',     show: !!user.is_superadmin },
+            { id: 'usuarios',  icon: <Users size={16}/>,           label: 'Usuarios',  show: !!user.is_superadmin },
+            { id: 'config',    icon: <Settings size={16}/>,        label: 'Mi Scan',   show: !user.is_superadmin && (user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id },
+          ] as const).filter(item => item.show).map(item => (
             <button
               key={item.id}
               onClick={() => { setSection(item.id); setSidebarOpen(false); }}
@@ -270,6 +271,7 @@ export default function AdminPage() {
           {section === 'revision'  && <SectionRevision />}
           {section === 'scans'     && <SectionScans />}
           {section === 'usuarios'  && <SectionUsuarios />}
+          {section === 'config'    && <SectionConfig scanId={user.scan_id!} />}
         </main>
       </div>
     </div>
@@ -1314,6 +1316,130 @@ function SectionScans() {
             );
           })}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ============================================================
+//  SECCIÓN: CONFIGURACIÓN DEL SCAN (webhook Discord)
+// ============================================================
+function SectionConfig({ scanId }: { scanId: string }) {
+  const [webhook, setWebhook] = useState('');
+  const [saved, setSaved]     = useState<string | null>(null);
+  const [saving, setSaving]   = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testMsg, setTestMsg] = useState<string | null>(null);
+  const { data: scanData, loading } = useAPI<any>(`/api/scans/${scanId}/details`);
+
+  useEffect(() => {
+    if (scanData?.scan?.webhook_discord) setWebhook(scanData.scan.webhook_discord);
+  }, [scanData]);
+
+  const handleSave = async () => {
+    setSaving(true); setSaved(null);
+    try {
+      const res = await fetch(`${API}/api/admin/scans/${scanId}/webhook`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ webhook_discord: webhook || null }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setSaved('✅ Webhook guardado');
+    } catch (e: any) { setSaved(`❌ ${e.message}`); }
+    finally { setSaving(false); }
+  };
+
+  const handleTest = async () => {
+    if (!webhook) return;
+    setTesting(true); setTestMsg(null);
+    try {
+      const res = await fetch(webhook, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          embeds: [{
+            title: '✅ Webhook configurado correctamente',
+            description: `El bot de **${scanData?.scan?.nombre || 'tu scan'}** está listo para notificaciones.`,
+            color: 0xe11d48,
+            footer: { text: "Crimson's Scan" },
+            timestamp: new Date().toISOString(),
+          }]
+        }),
+      });
+      setTestMsg(res.ok ? '✅ Mensaje enviado al Discord' : '❌ URL inválida o sin permisos');
+    } catch { setTestMsg('❌ No se pudo conectar con Discord'); }
+    finally { setTesting(false); }
+  };
+
+  return (
+    <div className="flex flex-col gap-6 animate-in fade-in duration-300 max-w-xl">
+      <div>
+        <h2 className="text-2xl font-extrabold dark:text-white">Mi Scan</h2>
+        <p className="text-gray-500 text-sm mt-1">Configuración de notificaciones</p>
+      </div>
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
+      ) : (
+        <>
+          <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Tu scan</p>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/20 to-rose-500/20 flex items-center justify-center text-violet-500 text-xl font-black">
+                {scanData?.scan?.nombre?.charAt(0) || '?'}
+              </div>
+              <div>
+                <p className="font-bold dark:text-white">{scanData?.scan?.nombre}</p>
+                <p className="text-xs text-gray-400">{scanData?.scan?.descripcion || 'Sin descripción'}</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { label: 'Obras',    value: scanData?.mangas?.length ?? 0 },
+                { label: 'Miembros', value: scanData?.miembros?.length ?? 0 },
+                { label: 'Vistas',   value: (scanData?.totalViews ?? 0).toLocaleString() },
+              ].map(s => (
+                <div key={s.label} className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center">
+                  <p className="font-extrabold text-lg dark:text-white">{s.value}</p>
+                  <p className="text-[10px] text-gray-400 uppercase tracking-wider">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5">
+            <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Webhook de Discord</p>
+            <p className="text-xs text-gray-500 mb-4">
+              Cuando se publique un capítulo de tu scan, el bot notifica automáticamente al canal.
+              En Discord: Canal → Editar → Integraciones → Webhooks → Nuevo webhook.
+            </p>
+            {saved   && <div className={`mb-3 p-3 rounded-xl text-sm font-medium ${saved.startsWith('✅')   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>{saved}</div>}
+            {testMsg && <div className={`mb-3 p-3 rounded-xl text-sm font-medium ${testMsg.startsWith('✅') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>{testMsg}</div>}
+            <div className="flex flex-col gap-1.5 mb-4">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">URL del Webhook</label>
+              <input
+                value={webhook}
+                onChange={e => { setWebhook(e.target.value); setSaved(null); }}
+                placeholder="https://discord.com/api/webhooks/..."
+                className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition font-mono"
+              />
+            </div>
+            <div className="flex gap-3 flex-wrap">
+              <button onClick={handleSave} disabled={saving}
+                className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition">
+                {saving ? <Loader2 size={16} className="animate-spin"/> : <Check size={16}/>}
+                {saving ? 'Guardando...' : 'Guardar'}
+              </button>
+              {webhook && (
+                <button onClick={handleTest} disabled={testing}
+                  className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition">
+                  {testing ? <Loader2 size={16} className="animate-spin"/> : null}
+                  {testing ? 'Enviando...' : '🧪 Probar'}
+                </button>
+              )}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

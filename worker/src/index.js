@@ -110,6 +110,46 @@ function contentType(key) {
   return 'image/jpeg';
 }
 
+// ── Tokens de página firmados con HMAC (sin KV) ────────────
+// Elimina el problema de consistencia eventual de KV.
+// El token codifica r2_key + expiración, firmado con JWT_SECRET.
+async function makePageToken(r2_key, secret) {
+  const expiry  = Date.now() + 10 * 60 * 1000; // 10 min
+  const payload = btoa(JSON.stringify({ r: r2_key, e: expiry }))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const sig    = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
+  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return `${payload}.${sigB64}`;
+}
+
+async function verifyPageToken(token, secret) {
+  try {
+    const dot = token.lastIndexOf('.');
+    if (dot === -1) return null;
+    const payload = token.slice(0, dot);
+    const sigB64  = token.slice(dot + 1);
+    const key = await crypto.subtle.importKey(
+      'raw', new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
+    );
+    const sigBytes = Uint8Array.from(
+      atob(sigB64.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)
+    );
+    const valid = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(payload));
+    if (!valid) return null;
+    const { r: r2_key, e: expiry } = JSON.parse(
+      atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+    );
+    if (Date.now() > expiry) return null;
+    return r2_key;
+  } catch { return null; }
+}
+
 // ============================================================
 //  ROUTER PRINCIPAL
 // ============================================================
@@ -305,12 +345,7 @@ export default {
         const origin   = new URL(request.url).origin;
 
         const pages = await Promise.all(paginas.map(async (pag) => {
-          const token = crypto.randomUUID().replace(/-/g, '');
-          await env.KV.put(
-            `token:${token}`,
-            JSON.stringify({ r2_key: pag.r2_key, ip: clientIp }),
-            { expirationTtl: 300 } // 5 minutos
-          );
+          const token = await makePageToken(pag.r2_key, env.JWT_SECRET);
           return {
             id:           pag.id,
             numero:       pag.numero,
@@ -379,16 +414,9 @@ export default {
           return err('Acceso denegado — origen no autorizado', 403);
         }
 
-        // ── Validar y quemar token ────────────────────────
-        const raw = await env.KV.get(`token:${token}`);
-        if (!raw) return err('Token expirado o ya utilizado', 403);
-        const { r2_key, ip } = JSON.parse(raw);
-        await env.KV.delete(`token:${token}`); // quemar ANTES de async ops
-
-        // ── Validar IP ────────────────────────────────────
-        if (ip !== 'unknown' && ip !== clientIp) {
-          return err('Acceso denegado — IP no coincide', 403);
-        }
+        // ── Verificar token HMAC (sin KV, sin problemas de consistencia) ─
+        const r2_key = await verifyPageToken(token, env.JWT_SECRET);
+        if (!r2_key) return err('Token expirado o inválido', 403);
 
         const object = await env.R2.get(r2_key);
         if (!object) return err('Imagen no encontrada en storage', 404);
@@ -458,18 +486,21 @@ export default {
         }
 
         const capForWh = await env.DB.prepare(
-          `SELECT c.numero, c.titulo, c.manga_id, m.titulo as manga_titulo
-           FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?`
+          `SELECT c.numero, c.titulo, c.manga_id, m.titulo as manga_titulo, m.scan_id,
+                  s.webhook_discord as scan_webhook
+           FROM capitulos c JOIN mangas m ON c.manga_id = m.id
+           LEFT JOIN scans s ON m.scan_id = s.id WHERE c.id = ?`
         ).bind(publishCap[1]).first();
 
         await env.DB.prepare("UPDATE capitulos SET estado = 'publicado' WHERE id = ?")
           .bind(publishCap[1]).run();
 
-        if (env.DISCORD_WEBHOOK_URL && capForWh) {
+        const webhookUrl = capForWh?.scan_webhook || env.DISCORD_WEBHOOK_URL;
+        if (webhookUrl && capForWh) {
           const capTitle = capForWh.titulo ? ` — ${capForWh.titulo}` : '';
           const mangaUrl = `${env.FRONTEND_URL}/manga/reader/${capForWh.manga_id}`;
           ctx.waitUntil(
-            fetch(env.DISCORD_WEBHOOK_URL, {
+            fetch(webhookUrl, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
@@ -752,6 +783,21 @@ export default {
         return json({ message: 'Scan actualizado' });
       }
 
+      // ── PUT /api/admin/scans/:id/webhook ─────────────────
+      const editWebhook = pathname.match(/^\/api\/admin\/scans\/([^/]+)\/webhook$/);
+      if (editWebhook && method === 'PUT') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('No autorizado', 401);
+        // Admin de scan solo puede editar su propio scan
+        if (isScanAdmin(admin) && admin.scan_id !== editWebhook[1]) {
+          return err('Solo podés configurar tu propio scan', 403);
+        }
+        const { webhook_discord } = await request.json();
+        await env.DB.prepare('UPDATE scans SET webhook_discord = ? WHERE id = ?')
+          .bind(webhook_discord || null, editWebhook[1]).run();
+        return json({ message: 'Webhook actualizado' });
+      }
+
       // ── GET /api/admin/uploaders ─────────────────────────
       if (pathname === '/api/admin/uploaders' && method === 'GET') {
         const admin = await requireAdmin(request, env);
@@ -767,12 +813,14 @@ export default {
         const admin = await requireAdmin(request, env);
         if (!admin) return err('No autorizado', 401);
 
-        const { results } = await env.DB.prepare(
-          `SELECT u.id, u.username, u.email, u.rol, u.activo, u.fecha_registro, u.ultimo_acceso,
-                  u.scan_id, s.nombre as scan_nombre
-           FROM usuarios u LEFT JOIN scans s ON u.scan_id = s.id
-           ORDER BY u.fecha_registro DESC`
-        ).all();
+        // Admin de scan: solo ve usuarios de su propio scan
+        const base = `SELECT u.id, u.username, u.email, u.rol, u.activo, u.fecha_registro,
+                             u.ultimo_acceso, u.scan_id, s.nombre as scan_nombre
+                      FROM usuarios u LEFT JOIN scans s ON u.scan_id = s.id`;
+
+        const { results } = isScanAdmin(admin) && admin.scan_id
+          ? await env.DB.prepare(`${base} WHERE u.scan_id = ? ORDER BY u.fecha_registro DESC`).bind(admin.scan_id).all()
+          : await env.DB.prepare(`${base} ORDER BY u.fecha_registro DESC`).all();
 
         return json({ usuarios: results });
       }
