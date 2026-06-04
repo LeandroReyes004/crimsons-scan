@@ -712,6 +712,11 @@ function SectionUsuarios() {
   // Cambiar scan
   const [editScanId, setEditScanId]   = useState<string | null>(null);
   const [editScanVal, setEditScanVal] = useState('');
+
+  // Cambiar rol
+  const [editRolId, setEditRolId]     = useState<string | null>(null);
+  const [editRolVal, setEditRolVal]   = useState('');
+  const [editRolLoad, setEditRolLoad] = useState(false);
   const [editScanMsg, setEditScanMsg] = useState<string | null>(null);
   const [editScanLoad, setEditScanLoad] = useState(false);
 
@@ -779,6 +784,24 @@ function SectionUsuarios() {
       body: JSON.stringify({ rol: u.rol, activo: !u.activo }),
     });
     refetch();
+  };
+
+  const handleChangeRol = async (userId: string) => {
+    const u = data?.usuarios?.find(x => x.id === userId);
+    if (!u) return;
+    setEditRolLoad(true);
+    try {
+      const res = await fetch(`${API}/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rol: editRolVal, activo: u.activo }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      refetch();
+      setTimeout(() => setEditRolId(null), 800);
+    } catch (e: any) { alert(`Error: ${e.message}`); }
+    finally { setEditRolLoad(false); }
   };
 
   const handleChangeScan = async (userId: string) => {
@@ -870,8 +893,9 @@ function SectionUsuarios() {
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Rol</label>
               <select value={rol} onChange={e => setRol(e.target.value)}
                 className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
-                <option value="uploader">Ayudante / Uploader</option>
+                <option value="uploader">Uploader / Ayudante</option>
                 <option value="admin_scan">Admin de Scan</option>
+                {isSuperAdmin && <option value="admin">Admin</option>}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
@@ -929,7 +953,30 @@ function SectionUsuarios() {
                   </span>
                   {u.rol !== 'superadmin' && isSuperAdmin && (
                     <>
-                      <button onClick={() => { setEditScanId(editScanId === u.id ? null : u.id); setEditScanVal(u.scan_id || ''); setEditScanMsg(null); }}
+                      {/* Cambiar rol inline */}
+                      {editRolId === u.id ? (
+                        <div className="flex items-center gap-1">
+                          <select value={editRolVal} onChange={e => setEditRolVal(e.target.value)} autoFocus
+                            className="bg-gray-50 dark:bg-black/40 border border-rose-300 dark:border-rose-500/40 px-2 py-1 rounded-lg text-xs dark:text-white outline-none">
+                            <option value="uploader">Uploader</option>
+                            <option value="admin_scan">Admin Scan</option>
+                            <option value="admin">Admin</option>
+                          </select>
+                          <button onClick={() => handleChangeRol(u.id)} disabled={editRolLoad}
+                            className="p-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-500 transition">
+                            {editRolLoad ? <Loader2 size={12} className="animate-spin"/> : <Check size={12}/>}
+                          </button>
+                          <button onClick={() => setEditRolId(null)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-white/5 transition">
+                            <X size={12}/>
+                          </button>
+                        </div>
+                      ) : (
+                        <button onClick={() => { setEditRolId(u.id); setEditRolVal(u.rol); setEditScanId(null); setResetingId(null); }}
+                          title="Cambiar rol" className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition">
+                          <Edit3 size={14}/>
+                        </button>
+                      )}
+                      <button onClick={() => { setEditScanId(editScanId === u.id ? null : u.id); setEditScanVal(u.scan_id || ''); setEditScanMsg(null); setEditRolId(null); }}
                         title="Cambiar scan" className="p-1.5 rounded-lg text-gray-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition">
                         <Layers size={14}/>
                       </button>
@@ -937,7 +984,7 @@ function SectionUsuarios() {
                         className={`p-1.5 rounded-lg transition ${u.activo ? 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'}`}>
                         {u.activo ? <Ban size={14}/> : <Check size={14}/>}
                       </button>
-                      <button onClick={() => { setResetingId(resetingId === u.id ? null : u.id); setNewPwd(''); setResetMsg(null); setEditScanId(null); }}
+                      <button onClick={() => { setResetingId(resetingId === u.id ? null : u.id); setNewPwd(''); setResetMsg(null); setEditScanId(null); setEditRolId(null); }}
                         title="Resetear contraseña" className="p-1.5 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition">
                         <ShieldCheck size={14}/>
                       </button>
