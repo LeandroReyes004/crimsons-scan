@@ -6,6 +6,7 @@ import MangaCard from '@/components/MangaCard';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getUser } from '@/lib/auth';
 import { useFavorites } from '@/lib/favorites';
+import AdsterraBanner from '@/components/AdsterraBanner';
 
 interface Manga { id: string; titulo: string; generos: string; estado: string; tipo: string; views_total: number; cover_r2_key: string | null; fecha_actualizacion: string; ultimo_capitulo: number | null; ultimo_capitulo_id: string | null; ultimo_cap_fecha: string | null; }
 
@@ -203,6 +204,11 @@ export default function Home() {
               </div>
             )}
           </div>
+        </section>
+
+        {/* Banner publicitario */}
+        <section className="max-w-7xl mx-auto w-full px-6 md:px-12">
+          <AdsterraBanner />
         </section>
 
         {/* FAVORITOS */}
