@@ -1,110 +1,80 @@
 'use client';
-// ERROR 3 FIX: Importamos useRef para loadedRef.
+
 import { useEffect, useRef } from 'react';
 
-interface ScrambledPageProps {
-  imageUrl: string; 
-  scrambleMap: number[]; // Ej: [3, 1, 0, 5, 2, 4, 8, 7, 6] (las posiciones originales)
-  userId: string; // Para inyectar la marca de agua dinámica
+interface Props {
+  imageUrl:    string;
+  scrambleMap: number[];
+  userId:      string;
 }
 
-const CanvasPageRenderer = ({ imageUrl, scrambleMap, userId }: ScrambledPageProps) => {
+const CanvasPageRenderer = ({ imageUrl, scrambleMap, userId }: Props) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-
-  // ERROR 3 FIX: loadedRef como guardia de carga única por montaje.
-  // El token de imagen es de un solo uso; si React re-renderiza este componente
-  // (cosa común en StrictMode o cambios de estado del padre), el useEffect se volvería
-  // a ejecutar con el mismo imageUrl ya invalidado, recibiendo un 403.
-  // Con este ref marcamos que la URL ya fue cargada en ESTE montaje, evitando el re-fetch.
   const loadedRef = useRef<string | null>(null);
 
   useEffect(() => {
-    // ERROR 3 FIX: Si la URL ya fue cargada en este montaje, no hacemos nada.
-    // loadedRef guarda la última URL cargada; si coincide, salimos temprano.
     if (loadedRef.current === imageUrl) return;
-
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const ctx = canvas.getContext('2d');
+    const ctx = canvas.getContext('2d', { willReadFrequently: false });
     if (!ctx) return;
 
-    // Marcamos la URL como "en proceso de carga" ANTES de iniciar la petición,
-    // para que cualquier re-render inmediato tampoco la dispare de nuevo.
     loadedRef.current = imageUrl;
 
     const img = new Image();
-    // Bloqueamos el contexto de lectura para que no lo exporten fácilmente
-    img.crossOrigin = "anonymous";
+    img.crossOrigin = 'anonymous';
     img.src = imageUrl;
 
     img.onload = () => {
-      // Configuramos el Canvas a tamaño original
-      canvas.width = img.width;
+      canvas.width  = img.width;
       canvas.height = img.height;
 
-      // Supongamos una cuadrícula de 3x3 por simplicidad
-      const cols = 3;
-      const rows = 3;
-      const tileWidth = img.width / cols;
-      const tileHeight = img.height / rows;
+      // Dibujar imagen completa sin seams — la protección es el token, no el scramble visual
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = 'high';
+      ctx.drawImage(img, 0, 0, img.width, img.height);
 
-      // Dibujar rearmando la imagen según el scrambleMap
-      for (let i = 0; i < scrambleMap.length; i++) {
-        // Posición actual de la ficha en la imagen revuelta
-        const col = i % cols;
-        const row = Math.floor(i / cols);
-        
-        const currentX = Math.floor(col * tileWidth);
-        const currentY = Math.floor(row * tileHeight);
-        const nextX = Math.floor((col + 1) * tileWidth);
-        const nextY = Math.floor((row + 1) * tileHeight);
-        
-        const strictTileW = nextX - currentX;
-        const strictTileH = nextY - currentY;
-
-        // Posición original de donde venía ("donde debe ir")
-        const originalPos = scrambleMap[i];
-        const origCol = originalPos % cols;
-        const origRow = Math.floor(originalPos / cols);
-        
-        const destX = Math.floor(origCol * tileWidth);
-        const destY = Math.floor(origRow * tileHeight);
-        const destNextX = Math.floor((origCol + 1) * tileWidth);
-        const destNextY = Math.floor((origRow + 1) * tileHeight);
-        
-        const strictDestW = destNextX - destX;
-        const strictDestH = destNextY - destY;
-
-        // Evitar el suavizado de bordes para que no se vea la rejilla
-        ctx.imageSmoothingEnabled = false;
-
-        // Sobredibujamos 1 pixel extra (0.5 o 1) si es necesario (overscan), pero con el floor/ceil usualmente basta
-        // Le damos un pequeño "ajuste" sumándole 0.5 pixeles a la dimensión de dibujo para tapar microfisuras del anti-aliasing del navegador
-        ctx.drawImage(img, currentX, currentY, strictTileW, strictTileH, destX, destY, strictDestW + 0.5, strictDestH + 0.5);
+      // Marca de agua invisible — dinámica por usuario
+      ctx.save();
+      ctx.globalAlpha = 0.025;
+      ctx.fillStyle   = '#ffffff';
+      ctx.font        = '14px monospace';
+      for (let y = 80; y < canvas.height; y += 200) {
+        for (let x = 40; x < canvas.width; x += 300) {
+          ctx.fillText(`Crimson Scan · ${userId}`, x, y);
+        }
       }
+      ctx.restore();
 
-      // 💧 Inyectar Marca de Agua Dinámica Invisible / Estilizada
-      ctx.font = '16px Arial';
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.03)'; // Casi invisible
-      // Agregarla en múltiples partes para evitar recortes simples
-      ctx.fillText(`Crimson Scan - UID: ${userId} - IPs Tracked`, 50, 50);
-      ctx.fillText(`Crimson Scan - UID: ${userId} - IPs Tracked`, canvas.width / 2, canvas.height - 50);
-
-      // Bloquear click derecho en el canvas (Anti-guardado simple)
-      canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+      // Bloquear context menu del canvas
+      canvas.addEventListener('contextmenu', e => e.preventDefault(), { passive: false });
     };
   }, [imageUrl, scrambleMap, userId]);
 
   return (
-    <div className="relative w-full flex justify-center">
-      {/* Disable pointer events at CSS level partially, but allow canvas actions if needed */}
-      <canvas 
-        ref={canvasRef} 
-        className="max-w-full select-none shadow-xl border border-gray-800" 
-        style={{ pointerEvents: 'auto' }} 
+    <div
+      className="relative w-full flex justify-center"
+      onContextMenu={e => e.preventDefault()}
+      onDragStart={e => e.preventDefault()}
+    >
+      <canvas
+        ref={canvasRef}
+        className="max-w-full shadow-xl border border-gray-800"
+        style={{
+          userSelect:         'none',
+          WebkitUserSelect:   'none',
+          pointerEvents:      'none',   // bloquea drag, copy, devtools pick
+          touchAction:        'pan-y',
+        }}
+        draggable={false}
       />
-      {/* Overlay transparente para bloquear interacción táctil prolongada de guardar */}
-      <div className="absolute inset-0 z-10" onContextMenu={(e) => e.preventDefault()}></div>
+      {/* Overlay para capturar long-press en móvil sin exponer el canvas */}
+      <div
+        className="absolute inset-0 z-10"
+        onContextMenu={e => e.preventDefault()}
+        onDragStart={e => e.preventDefault()}
+        style={{ userSelect: 'none', WebkitUserSelect: 'none' }}
+      />
     </div>
   );
 };

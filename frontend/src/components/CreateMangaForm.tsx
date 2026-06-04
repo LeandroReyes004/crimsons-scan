@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { authHeaders } from '@/lib/auth';
 import { ImagePlus, Loader2, Save, X, Check } from 'lucide-react';
 import { MANGA_TYPES, DEMOGRAPHICS, CONTENT_RATINGS, GENRES } from '@/lib/constants';
 
@@ -31,16 +31,12 @@ export default function CreateMangaForm() {
     if (!file) return;
     setIsUploadingImage(true);
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-      
       const formData = new FormData();
       formData.append('cover', file);
 
       const res = await fetch('/api/mangas/cover-upload', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${session?.access_token}`
-        },
+        headers: authHeaders(),
         body: formData,
       });
 
@@ -70,8 +66,6 @@ export default function CreateMangaForm() {
     setIsSaving(true);
 
     try {
-      const { data: { session } } = await supabase.auth.getSession();
-
       const payload = {
         title,
         description,
@@ -85,7 +79,7 @@ export default function CreateMangaForm() {
       const res = await fetch('/api/mangas', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${session?.access_token}`,
+          ...authHeaders(),
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(payload)

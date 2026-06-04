@@ -1,209 +1,194 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
-import CanvasPageRenderer from '@/components/CanvasReader';
-import ReaderControls from '@/components/ReaderControls';
-
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
+import Link from 'next/link';
+import { BookOpen, ChevronLeft, Play, Eye, Tag, Clock } from 'lucide-react';
 
-interface PageData {
-  id: number;
-  image_url: string;
-  scramble_map: number[];
+const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+
+interface Manga {
+  id: string; titulo: string; titulo_alt: string | null; descripcion: string | null;
+  generos: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number;
+}
+interface Capitulo {
+  id: string; numero: number; titulo: string | null; views: number; fecha_subida: string;
 }
 
-export default function ReaderPage() {
-  const params = useParams();
-  const mangaId = params?.id || '1';
+export default function MangaDetailPage() {
+  const { id } = useParams() as { id: string };
 
-  const [pages, setPages] = useState<PageData[]>([]);
+  const [manga, setManga]     = useState<Manga | null>(null);
+  const [caps, setCaps]       = useState<Capitulo[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError]     = useState<string | null>(null);
 
-  // States del Lector
-  const [readingMode, setReadingMode] = useState<'webtoon' | 'paged'>('webtoon');
-  const [currentPageIndex, setCurrentPageIndex] = useState(0);
-
-  // Recuperar historial de memoria
   useEffect(() => {
-    const savedMode = localStorage.getItem('crimson_manga_mode');
-    const savedPage = localStorage.getItem(`crimson_manga_${mangaId}_page`);
-    
-    if (savedMode === 'webtoon' || savedMode === 'paged') {
-      setReadingMode(savedMode);
-    }
-    if (savedPage && !isNaN(parseInt(savedPage))) {
-      setCurrentPageIndex(parseInt(savedPage));
-    }
-  }, [mangaId]);
+    if (!id) return;
+    fetch(`${API}/api/mangas/${id}`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.error) throw new Error(d.error);
+        setManga(d.manga);
+        setCaps(d.capitulos || []);
+      })
+      .catch(e => setError(e.message))
+      .finally(() => setLoading(false));
+  }, [id]);
 
-  // Guardar historial en tiempo real
-  useEffect(() => {
-    localStorage.setItem('crimson_manga_mode', readingMode);
-    localStorage.setItem(`crimson_manga_${mangaId}_page`, currentPageIndex.toString());
-  }, [readingMode, currentPageIndex, mangaId]);
+  if (loading) return (
+    <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center">
+      <div className="w-10 h-10 border-4 border-rose-600 border-t-transparent rounded-full animate-spin"/>
+    </div>
+  );
 
-  // Carga inicial
-  useEffect(() => {
-    const fetchChapter = async () => {
-      try {
-        // ERROR 2 FIX: Usar variable de entorno NEXT_PUBLIC_API_URL en lugar de URL hardcodeada.
-        // En .env.local define: NEXT_PUBLIC_API_URL=http://localhost:3001
-        // En producción define: NEXT_PUBLIC_API_URL=https://tu-backend.onrender.com
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const res = await fetch(`${API_URL}/api/chapters/chapter-1`);
-        if (!res.ok) throw new Error('Error al conectar con el servidor.');
-        const data = await res.json();
-        
-        if (data.error) throw new Error(data.error);
-        if (data.pages && data.pages.length === 0) throw new Error("No hay imágenes en el backend.");
+  if (error || !manga) return (
+    <div className="min-h-screen bg-[#0a0a0c] flex flex-col items-center justify-center gap-4 text-gray-400">
+      <BookOpen size={48} className="opacity-30"/>
+      <p className="font-medium">{error || 'Manga no encontrado'}</p>
+      <Link href="/" className="text-rose-500 hover:underline text-sm">Volver al inicio</Link>
+    </div>
+  );
 
-        setPages(data.pages);
-      } catch (err: any) {
-        setError(err.message);
-      } finally {
-        setLoading(false);
-      }
-    };
+  let generos: string[] = [];
+  try { generos = JSON.parse(manga.generos || '[]'); } catch {}
 
-    fetchChapter();
-  }, []);
+  const estadoColor: Record<string, string> = {
+    en_curso:   'bg-blue-500/20 text-blue-400 border-blue-500/30',
+    completado: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30',
+    pausado:    'bg-gray-500/20 text-gray-400 border-gray-500/30',
+  };
+  const estadoLabel: Record<string, string> = { en_curso: 'En curso', completado: 'Completado', pausado: 'Pausado' };
 
-  // Navegación Pagina a Pagina
-  const goToNextPage = useCallback(() => {
-    if (currentPageIndex < pages.length - 1) {
-      setCurrentPageIndex(prev => prev + 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [currentPageIndex, pages.length]);
-
-  const goToPrevPage = useCallback(() => {
-    if (currentPageIndex > 0) {
-      setCurrentPageIndex(prev => prev - 1);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }
-  }, [currentPageIndex]);
-
-  // Soporte para teclado intercativo
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (readingMode !== 'paged') return;
-      if (e.key === 'ArrowRight') goToNextPage();
-      if (e.key === 'ArrowLeft') goToPrevPage();
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [goToNextPage, goToPrevPage, readingMode]);
-
-  // Determinar qué páginas mostrar según el modo
-  const visiblePages = useMemo(() => {
-    if (readingMode === 'webtoon') return pages;
-    if (pages.length > 0) return [pages[currentPageIndex]];
-    return [];
-  }, [pages, readingMode, currentPageIndex]);
-
+  const coverUrl = manga.cover_r2_key
+    ? `${API}/api/cover/${manga.id}`
+    : null;
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-white selection:bg-rose-600/30 font-sans pb-32">
-      {/* Header Premium */}
-      <header className="sticky top-0 z-40 bg-[#0a0a0c]/80 backdrop-blur-md border-b border-white/5 py-4 px-6 flex items-center justify-between shadow-2xl">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-600 to-orange-500 shadow-[0_0_15px_rgba(225,29,72,0.5)] flex items-center justify-center font-bold">
-            CS
-          </div>
-          <h1 className="text-xl font-bold tracking-tight text-white/90">
-            Crimson<span className="text-rose-500">Scan</span>
-          </h1>
-        </div>
-        <div className="text-sm font-medium text-gray-400 bg-white/5 px-4 py-2 rounded-full border border-white/5">
-          Capítulo 1
-        </div>
+    <div className="min-h-screen bg-[#0a0a0c] text-white font-sans">
+
+      {/* Header */}
+      <header className="sticky top-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-6 flex items-center gap-3">
+        <Link href="/" className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition">
+          <ChevronLeft size={20}/>
+        </Link>
+        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-600 to-orange-500 flex items-center justify-center text-white font-black text-xs">CS</div>
+        <span className="font-bold text-white/90">Crimson<span className="text-rose-500">Scan</span></span>
       </header>
 
-      <main className="max-w-3xl mx-auto flex flex-col items-center mt-12 px-4 transition-all duration-500">
-        
-        {loading && (
-          <div className="flex flex-col items-center gap-4 mt-24 animate-pulse">
-            <div className="w-12 h-12 rounded-full border-4 border-t-rose-500 border-rose-900 animate-spin"></div>
-            <p className="text-gray-400 font-medium tracking-widest text-sm uppercase">Cargando tokens seguros...</p>
-          </div>
-        )}
-        
-        {error && (
-          <div className="bg-red-950/40 text-red-400 p-6 rounded-2xl border border-red-900/50 flex flex-col items-center gap-2 mt-12 shadow-2xl">
-            <span className="text-2xl">⚠️</span>
-            <p className="font-medium text-center">{error}</p>
-          </div>
-        )}
+      {/* Fondo degradado superior */}
+      <div className="h-48 bg-gradient-to-b from-rose-900/25 via-rose-900/10 to-transparent pointer-events-none"/>
 
-        <div className={`w-full flex flex-col items-center ${readingMode === 'webtoon' ? 'gap-0' : 'gap-4'}`}>
-          {pages.map((page, index) => {
-            // Evaluamos si debe estar visible
-            const isVisible = readingMode === 'webtoon' || index === currentPageIndex;
-            
-            return (
-              <div 
-                key={page.id} 
-                className={`relative w-full flex justify-center transition-all duration-500 ${!isVisible ? 'hidden' : 'animate-in fade-in slide-in-from-bottom-4'}`}
-              >
-                <CanvasPageRenderer 
-                  imageUrl={page.image_url} 
-                  scrambleMap={page.scramble_map} 
-                  userId="VIP_User_128A" 
+      {/* Contenido principal */}
+      <div className="max-w-5xl mx-auto px-6 -mt-40 pb-20">
+
+        {/* Info del manga */}
+        <div className="flex flex-col sm:flex-row gap-6 mb-10">
+
+          {/* Portada */}
+          <div className="w-36 sm:w-44 shrink-0 mx-auto sm:mx-0">
+            <div className="rounded-2xl overflow-hidden shadow-2xl shadow-black/70 border border-white/10 aspect-[3/4] bg-gradient-to-br from-rose-900/40 to-gray-900 flex items-center justify-center">
+              {coverUrl ? (
+                <img
+                  src={coverUrl}
+                  alt={manga.titulo}
+                  className="w-full h-full object-cover"
+                  onError={e => { e.currentTarget.style.display = 'none'; }}
                 />
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Sección de Comentarios Integrada */}
-        <div className="w-full mt-24 pt-12 border-t border-white/5 pb-20">
-          <h3 className="text-2xl font-bold mb-8 flex items-center gap-3 text-white">
-            <span className="w-2 h-8 bg-rose-500 rounded-full"></span> Comentarios de la Comunidad (38)
-          </h3>
-          
-          <div className="bg-black/20 p-6 rounded-2xl border border-white/5 mb-8">
-            <textarea 
-              className="w-full bg-black/40 text-gray-200 p-4 rounded-xl border border-white/10 focus:border-rose-500 focus:outline-none transition-colors"
-              rows={3}
-              placeholder="¿Qué te pareció este capítulo?"
-            ></textarea>
-            <div className="flex justify-end mt-4">
-              <button className="bg-rose-600 hover:bg-rose-500 text-white font-bold py-2 px-6 rounded-lg transition-colors">
-                Publicar
-              </button>
+              ) : (
+                <BookOpen size={40} className="text-gray-600"/>
+              )}
             </div>
           </div>
 
-          {/* Placeholder Comentario */}
-          <div className="flex gap-4 p-6 bg-white/5 rounded-2xl border border-white/5">
-            <div className="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-500 rounded-full flex-shrink-0 border-2 border-white/10"></div>
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-bold text-rose-400">CrimsonFan99</span>
-                <span className="text-xs text-gray-500">Hace 2 horas</span>
-              </div>
-              <p className="text-gray-300 leading-relaxed">
-                ¡Wow, la calidad del edit es increíble! Gracias por la rápida traducción muchachos. 
-                De todo el canvas rendering y seguridad, ni una sola línea cortada o bleeding, se pasaron ❤️
-              </p>
+          {/* Datos */}
+          <div className="flex-1 flex flex-col gap-3 pt-2">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className={`text-xs font-bold px-2.5 py-1 rounded-full border ${estadoColor[manga.estado] || estadoColor.pausado}`}>
+                {estadoLabel[manga.estado] || manga.estado}
+              </span>
+              <span className="text-xs text-gray-500 capitalize">{manga.tipo}</span>
             </div>
+
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">{manga.titulo}</h1>
+            {manga.titulo_alt && <p className="text-gray-400 text-sm">{manga.titulo_alt}</p>}
+
+            {manga.descripcion && (
+              <p className="text-gray-300 text-sm leading-relaxed">{manga.descripcion}</p>
+            )}
+
+            {generos.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {generos.map(g => (
+                  <span key={g} className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-full bg-white/5 text-gray-400 border border-white/10">
+                    <Tag size={9}/> {g}
+                  </span>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-4 text-sm text-gray-400">
+              <span className="flex items-center gap-1.5"><Eye size={13}/> {manga.views_total.toLocaleString()} vistas</span>
+              <span className="flex items-center gap-1.5"><BookOpen size={13}/> {caps.length} caps</span>
+            </div>
+
+            {caps.length > 0 && (
+              <div className="flex gap-3 mt-1">
+                <Link href={`/manga/reader/${id}/chapter/${caps[caps.length - 1].id}`}
+                  className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-rose-600/30 text-sm">
+                  <Play size={14} fill="white"/> Leer desde inicio
+                </Link>
+                {caps.length > 1 && (
+                  <Link href={`/manga/reader/${id}/chapter/${caps[0].id}`}
+                    className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-white font-bold px-5 py-2.5 rounded-xl transition border border-white/10 text-sm">
+                    Último cap.
+                  </Link>
+                )}
+              </div>
+            )}
           </div>
         </div>
-      </main>
 
-      {/* Solo se muestran los controles si ya se cargaron páginas */}
-      {pages.length > 0 && (
-        <ReaderControls 
-          readingMode={readingMode}
-          setReadingMode={setReadingMode}
-          currentPage={currentPageIndex + 1}
-          totalPages={pages.length}
-          onNextPage={goToNextPage}
-          onPrevPage={goToPrevPage}
-        />
-      )}
+        {/* Lista capítulos */}
+        <div>
+          <h2 className="text-lg font-extrabold text-white mb-4 flex items-center gap-3">
+            <span className="w-1 h-5 bg-rose-500 rounded-full shrink-0"/>
+            Capítulos
+          </h2>
+
+          {caps.length === 0 ? (
+            <div className="bg-white/5 rounded-2xl p-10 flex flex-col items-center text-gray-500 border border-white/5">
+              <Clock size={28} className="mb-3 opacity-40"/>
+              <p className="font-medium text-sm">Aún no hay capítulos publicados</p>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-2">
+              {caps.map(cap => (
+                <Link key={cap.id} href={`/manga/reader/${id}/chapter/${cap.id}`}
+                  className="flex items-center justify-between bg-white/5 hover:bg-white/10 border border-white/5 hover:border-rose-500/30 rounded-xl px-4 py-3.5 transition group">
+                  <div className="flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center font-bold text-sm shrink-0 group-hover:bg-rose-500 group-hover:text-white transition">
+                      {cap.numero}
+                    </span>
+                    <div>
+                      <p className="font-semibold text-sm text-white/90 group-hover:text-white">
+                        Capítulo {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}
+                      </p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {new Date(cap.fecha_subida).toLocaleDateString('es', { day:'2-digit', month:'short', year:'numeric' })}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 text-gray-500 shrink-0">
+                    <span className="text-xs flex items-center gap-1"><Eye size={11}/>{cap.views}</span>
+                    <Play size={14} className="opacity-0 group-hover:opacity-100 text-rose-400 transition"/>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   );
 }

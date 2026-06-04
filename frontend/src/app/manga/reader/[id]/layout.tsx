@@ -1,18 +1,14 @@
 import { Metadata } from 'next';
 
-export async function generateMetadata({ params }: { params: { id: string } }): Promise<Metadata> {
-  // En un caso real: buscaríamos datos del manga por ID en la BD
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   return {
-    title: `Leer Capítulo ${params.id} | Crimson's Scan`,
-    description: `Lee el último capítulo del manga con máxima calidad y traducción por nuestro staff.`,
+    title: `Crimson's Scan — Lector`,
+    description: `Lee manga con la mejor calidad y traducción por nuestro staff.`,
     openGraph: {
-      title: `Solo Leveling - Capítulo ${params.id} | Crimson's Scan`,
+      title: `Crimson's Scan — Lector`,
       description: 'Disfruta de la mejor calidad visual en nuestro lector oficial.',
       images: ['/portada.jpg'],
     },
-    twitter: {
-      card: 'summary_large_image',
-    }
   };
 }
 
