@@ -133,17 +133,23 @@ async function verifyPageToken(token, secret) {
     if (dot === -1) return null;
     const payload = token.slice(0, dot);
     const sigB64  = token.slice(dot + 1);
+
+    // Reponer padding base64 que se quitó al crear el token
+    const addPad = s => s + '='.repeat((4 - s.length % 4) % 4);
+
     const key = await crypto.subtle.importKey(
       'raw', new TextEncoder().encode(secret),
       { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
     );
     const sigBytes = Uint8Array.from(
-      atob(sigB64.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0)
+      atob(addPad(sigB64.replace(/-/g, '+').replace(/_/g, '/'))),
+      c => c.charCodeAt(0)
     );
     const valid = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(payload));
     if (!valid) return null;
+
     const { r: r2_key, e: expiry } = JSON.parse(
-      atob(payload.replace(/-/g, '+').replace(/_/g, '/'))
+      atob(addPad(payload.replace(/-/g, '+').replace(/_/g, '/')))
     );
     if (Date.now() > expiry) return null;
     return r2_key;
