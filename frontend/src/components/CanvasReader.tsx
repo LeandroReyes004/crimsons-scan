@@ -9,16 +9,18 @@ interface Props {
 const CanvasPageRenderer = ({ imageUrl }: Props) => {
   return (
     <div
-      className="w-full"
+      className="w-full flex justify-center"
       onContextMenu={e => e.preventDefault()}
       onDragStart={e => e.preventDefault()}
     >
-      <div className="relative w-full">
+      <div className="relative" style={{ maxWidth: '100%' }}>
         <img
           src={imageUrl}
           alt=""
-          className="w-full h-auto block"
+          className="block"
           style={{
+            maxWidth:         '100%',
+            height:           'auto',
             userSelect:       'none',
             WebkitUserSelect: 'none',
             pointerEvents:    'none',

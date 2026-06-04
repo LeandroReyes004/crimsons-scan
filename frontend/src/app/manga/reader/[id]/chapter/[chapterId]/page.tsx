@@ -78,7 +78,7 @@ export default function ChapterReaderPage() {
   }, [pages, readingMode, currentPage]);
 
   return (
-    <div className="min-h-screen bg-[#0a0a0c] text-white font-sans pb-32 select-none">
+    <div className="min-h-screen bg-[#111] text-white font-sans pb-32 select-none">
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-6 flex items-center justify-between">
