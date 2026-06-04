@@ -335,14 +335,13 @@ export default {
 
         return new Response(object.body, {
           headers: {
-            'Content-Type':                  contentType(r2_key),
-            'Content-Disposition':           'inline',
-            'Cache-Control':                 'no-store, no-cache, must-revalidate',
-            'Pragma':                        'no-cache',
-            'X-Content-Type-Options':        'nosniff',
-            'Referrer-Policy':               'strict-origin',
-            'X-Frame-Options':               'DENY',
-            'Cross-Origin-Resource-Policy':  'same-site',
+            'Content-Type':           contentType(r2_key),
+            'Content-Disposition':    'inline',
+            'Cache-Control':          'no-store, no-cache, must-revalidate',
+            'Pragma':                 'no-cache',
+            'X-Content-Type-Options': 'nosniff',
+            'Referrer-Policy':        'strict-origin',
+            'X-Frame-Options':        'DENY',
             ...CORS,
           },
         });
