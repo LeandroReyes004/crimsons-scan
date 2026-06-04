@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Star, Clock } from 'lucide-react';
+import { Star, Clock, Heart } from 'lucide-react';
 
 interface MangaCardProps {
   id: string;
@@ -11,6 +11,8 @@ interface MangaCardProps {
   updatedAt?: string | null;
   tags: string[];
   isHot?: boolean;
+  isFav?: boolean;
+  onToggleFav?: (id: string) => void;
 }
 
 function timeAgo(dateStr: string): string {
@@ -24,7 +26,7 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString('es', { day: '2-digit', month: 'short' });
 }
 
-export default function MangaCard({ id, title, imageUrl, chapter, chapterUrl, updatedAt, tags, isHot }: MangaCardProps) {
+export default function MangaCard({ id, title, imageUrl, chapter, chapterUrl, updatedAt, tags, isHot, isFav, onToggleFav }: MangaCardProps) {
   return (
     <Link href={`/manga/reader/${id}`} className="group relative block w-full rounded-2xl overflow-hidden bg-black/40 border border-white/5 transition-all duration-300 hover:-translate-y-2 hover:shadow-[0_15px_40px_rgba(225,29,72,0.4)]">
 
@@ -32,6 +34,21 @@ export default function MangaCard({ id, title, imageUrl, chapter, chapterUrl, up
         <div className="absolute top-3 left-3 z-20 bg-gradient-to-r from-rose-600 to-orange-500 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg flex items-center gap-1">
           <Star size={12} fill="currentColor" /> HOT
         </div>
+      )}
+
+      {/* Botón favorito */}
+      {onToggleFav && (
+        <button
+          onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleFav(id); }}
+          className={`absolute top-3 right-3 z-20 w-8 h-8 flex items-center justify-center rounded-full backdrop-blur-sm transition-all active:scale-90 ${
+            isFav
+              ? 'bg-rose-600 text-white shadow-lg shadow-rose-600/40'
+              : 'bg-black/50 text-white/60 hover:text-rose-400 hover:bg-black/70'
+          }`}
+          aria-label={isFav ? 'Quitar de favoritos' : 'Agregar a favoritos'}
+        >
+          <Heart size={14} fill={isFav ? 'currentColor' : 'none'}/>
+        </button>
       )}
 
       <div className="relative aspect-[3/4] w-full overflow-hidden">

@@ -3,7 +3,8 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, ChevronLeft, Play, Eye, Tag, Clock } from 'lucide-react';
+import { BookOpen, ChevronLeft, Play, Eye, Tag, Clock, Heart } from 'lucide-react';
+import { useFavorites } from '@/lib/favorites';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
@@ -18,10 +19,17 @@ interface Capitulo {
 export default function MangaDetailPage() {
   const { id } = useParams() as { id: string };
 
-  const [manga, setManga]     = useState<Manga | null>(null);
-  const [caps, setCaps]       = useState<Capitulo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError]     = useState<string | null>(null);
+  const [manga, setManga]         = useState<Manga | null>(null);
+  const [caps, setCaps]           = useState<Capitulo[]>([]);
+  const [loading, setLoading]     = useState(true);
+  const [error, setError]         = useState<string | null>(null);
+  const [lastChapterId, setLast]  = useState<string | null>(null);
+  const { isFav, toggle }         = useFavorites();
+
+  useEffect(() => {
+    const saved = localStorage.getItem(`crimson_last_${id}`);
+    if (saved) setLast(saved);
+  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -133,17 +141,37 @@ export default function MangaDetailPage() {
             </div>
 
             {caps.length > 0 && (
-              <div className="flex gap-3 mt-1">
-                <Link href={`/manga/reader/${id}/chapter/${caps[caps.length - 1].id}`}
-                  className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-rose-600/30 text-sm">
-                  <Play size={14} fill="white"/> Leer desde inicio
-                </Link>
+              <div className="flex flex-wrap gap-3 mt-1">
+                {/* Continuar leyendo */}
+                {lastChapterId && caps.some(c => c.id === lastChapterId) ? (
+                  <Link href={`/manga/reader/${id}/chapter/${lastChapterId}`}
+                    className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-rose-600/30 text-sm active:scale-95">
+                    <Play size={14} fill="white"/> Continuar
+                  </Link>
+                ) : (
+                  <Link href={`/manga/reader/${id}/chapter/${caps[caps.length - 1].id}`}
+                    className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-lg shadow-rose-600/30 text-sm active:scale-95">
+                    <Play size={14} fill="white"/> Leer desde inicio
+                  </Link>
+                )}
                 {caps.length > 1 && (
                   <Link href={`/manga/reader/${id}/chapter/${caps[0].id}`}
-                    className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-white font-bold px-5 py-2.5 rounded-xl transition border border-white/10 text-sm">
+                    className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-white font-bold px-5 py-2.5 rounded-xl transition border border-white/10 text-sm active:scale-95">
                     Último cap.
                   </Link>
                 )}
+                {/* Favorito */}
+                <button
+                  onClick={() => toggle(id)}
+                  className={`flex items-center gap-2 font-bold px-4 py-2.5 rounded-xl transition border text-sm active:scale-95 ${
+                    isFav(id)
+                      ? 'bg-rose-600/20 border-rose-500/40 text-rose-400'
+                      : 'bg-white/5 border-white/10 text-gray-400 hover:border-rose-500/40 hover:text-rose-400'
+                  }`}
+                >
+                  <Heart size={14} fill={isFav(id) ? 'currentColor' : 'none'}/>
+                  {isFav(id) ? 'En favoritos' : 'Favorito'}
+                </button>
               </div>
             )}
           </div>

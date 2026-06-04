@@ -1,0 +1,19 @@
+{
+  "name": "Crimson's Scan",
+  "short_name": "CrimsonScan",
+  "description": "Manga de alta calidad traducido por nuestro staff.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07070a",
+  "theme_color": "#e11d48",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/portada.jpg",
+      "sizes": "any",
+      "type": "image/jpeg",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["entertainment", "books"]
+}

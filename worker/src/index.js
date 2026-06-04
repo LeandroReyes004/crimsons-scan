@@ -116,15 +116,44 @@ function contentType(key) {
 export default {
   // Cron: cada 5 min publica capítulos cuya fecha llegó
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(
-      env.DB.prepare(
+    ctx.waitUntil((async () => {
+      const { results: toPublish } = await env.DB.prepare(
+        `SELECT c.id, c.numero, c.titulo, c.manga_id, m.titulo as manga_titulo
+         FROM capitulos c JOIN mangas m ON c.manga_id = m.id
+         WHERE c.estado = 'programado' AND c.fecha_publicacion <= datetime('now')`
+      ).all();
+
+      if (toPublish.length === 0) return;
+
+      await env.DB.prepare(
         `UPDATE capitulos SET estado = 'publicado'
          WHERE estado = 'programado' AND fecha_publicacion <= datetime('now')`
-      ).run()
-    );
+      ).run();
+
+      if (env.DISCORD_WEBHOOK_URL) {
+        for (const cap of toPublish) {
+          const capTitle = cap.titulo ? ` — ${cap.titulo}` : '';
+          const mangaUrl = `${env.FRONTEND_URL}/manga/reader/${cap.manga_id}`;
+          await fetch(env.DISCORD_WEBHOOK_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              embeds: [{
+                title: '📖 Nuevo capítulo publicado',
+                description: `**${cap.manga_titulo}** — Capítulo ${cap.numero}${capTitle}\n\n[👁 Leer ahora](${mangaUrl})`,
+                color: 0xe11d48,
+                url: mangaUrl,
+                footer: { text: "Crimson's Scan" },
+                timestamp: new Date().toISOString(),
+              }]
+            })
+          }).catch(() => {});
+        }
+      }
+    })());
   },
 
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
     const method = request.method;
 
@@ -301,9 +330,22 @@ export default {
           ]);
         }
 
+        const [prevCap, nextCap] = await Promise.all([
+          env.DB.prepare(
+            "SELECT id FROM capitulos WHERE manga_id = ? AND estado = 'publicado' AND numero < ? ORDER BY numero DESC LIMIT 1"
+          ).bind(cap.manga_id, cap.numero).first(),
+          env.DB.prepare(
+            "SELECT id FROM capitulos WHERE manga_id = ? AND estado = 'publicado' AND numero > ? ORDER BY numero ASC LIMIT 1"
+          ).bind(cap.manga_id, cap.numero).first(),
+        ]);
+
         return json({
           pages,
-          capitulo: { id: cap.id, numero: cap.numero, titulo: cap.titulo, manga_id: cap.manga_id },
+          capitulo: {
+            id: cap.id, numero: cap.numero, titulo: cap.titulo, manga_id: cap.manga_id,
+            prev_chapter_id: prevCap?.id || null,
+            next_chapter_id: nextCap?.id || null,
+          },
         });
       }
 
@@ -415,8 +457,35 @@ export default {
           if (!cap) return err('No tenés permiso para publicar este capítulo', 403);
         }
 
+        const capForWh = await env.DB.prepare(
+          `SELECT c.numero, c.titulo, c.manga_id, m.titulo as manga_titulo
+           FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?`
+        ).bind(publishCap[1]).first();
+
         await env.DB.prepare("UPDATE capitulos SET estado = 'publicado' WHERE id = ?")
           .bind(publishCap[1]).run();
+
+        if (env.DISCORD_WEBHOOK_URL && capForWh) {
+          const capTitle = capForWh.titulo ? ` — ${capForWh.titulo}` : '';
+          const mangaUrl = `${env.FRONTEND_URL}/manga/reader/${capForWh.manga_id}`;
+          ctx.waitUntil(
+            fetch(env.DISCORD_WEBHOOK_URL, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                embeds: [{
+                  title: '📖 Nuevo capítulo publicado',
+                  description: `**${capForWh.manga_titulo}** — Capítulo ${capForWh.numero}${capTitle}\n\n[👁 Leer ahora](${mangaUrl})`,
+                  color: 0xe11d48,
+                  url: mangaUrl,
+                  footer: { text: "Crimson's Scan" },
+                  timestamp: new Date().toISOString(),
+                }]
+              })
+            }).catch(() => {})
+          );
+        }
+
         return json({ message: 'Capítulo publicado' });
       }
 

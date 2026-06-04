@@ -3,21 +3,25 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, ChevronRight, Layers, AlignJustify } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Layers, AlignJustify, BookOpen } from 'lucide-react';
 import CanvasPageRenderer from '@/components/CanvasReader';
 import ReaderControls from '@/components/ReaderControls';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
 interface PageData { id: number; numero: number; image_url: string; scramble_map: number[]; }
+interface CapInfo {
+  id: string; numero: number; titulo: string | null; manga_id: string;
+  prev_chapter_id: string | null; next_chapter_id: string | null;
+}
 
 export default function ChapterReaderPage() {
   const { id: mangaId, chapterId } = useParams() as { id: string; chapterId: string };
 
-  const [pages, setPages]           = useState<PageData[]>([]);
-  const [capInfo, setCapInfo]       = useState<{ numero: number; titulo: string | null } | null>(null);
-  const [loading, setLoading]       = useState(true);
-  const [error, setError]           = useState<string | null>(null);
+  const [pages, setPages]             = useState<PageData[]>([]);
+  const [capInfo, setCapInfo]         = useState<CapInfo | null>(null);
+  const [loading, setLoading]         = useState(true);
+  const [error, setError]             = useState<string | null>(null);
   const [readingMode, setReadingMode] = useState<'webtoon' | 'paged'>('webtoon');
   const [currentPage, setCurrentPage] = useState(0);
 
@@ -27,6 +31,13 @@ export default function ChapterReaderPage() {
     const savedPage = localStorage.getItem(`crimson_page_${chapterId}`);
     if (savedPage) setCurrentPage(parseInt(savedPage) || 0);
   }, [chapterId]);
+
+  // Guardar último capítulo leído por manga
+  useEffect(() => {
+    if (mangaId && chapterId) {
+      localStorage.setItem(`crimson_last_${mangaId}`, chapterId);
+    }
+  }, [mangaId, chapterId]);
 
   useEffect(() => {
     localStorage.setItem('crimson_reader_mode', readingMode);
@@ -81,14 +92,33 @@ export default function ChapterReaderPage() {
     <div className="min-h-screen bg-[#111] text-white font-sans pb-32 select-none">
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-3 sm:px-6 flex items-center justify-between">
-        <Link href={`/manga/reader/${mangaId}`}
-          className="flex items-center gap-1.5 text-gray-400 hover:text-white transition text-sm font-medium min-h-[44px] min-w-[44px] sm:min-w-0 justify-center sm:justify-start">
-          <ChevronLeft size={18}/> <span className="hidden sm:inline">Volver</span>
-        </Link>
-        <div className="flex items-center gap-1.5 sm:gap-3">
+      <header className="sticky top-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-3 sm:px-6 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <Link href={`/manga/reader/${mangaId}`}
+            className="flex items-center gap-1 text-gray-400 hover:text-white transition text-sm font-medium min-h-[44px] min-w-[44px] justify-center sm:justify-start sm:min-w-0 sm:px-2">
+            <ChevronLeft size={18}/> <span className="hidden sm:inline">Volver</span>
+          </Link>
+          {/* Prev chapter */}
+          {capInfo?.prev_chapter_id && (
+            <Link href={`/manga/reader/${mangaId}/chapter/${capInfo.prev_chapter_id}`}
+              title="Capítulo anterior"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition">
+              <ChevronLeft size={16}/>
+            </Link>
+          )}
+          {/* Next chapter */}
+          {capInfo?.next_chapter_id && (
+            <Link href={`/manga/reader/${mangaId}/chapter/${capInfo.next_chapter_id}`}
+              title="Capítulo siguiente"
+              className="min-h-[44px] min-w-[44px] flex items-center justify-center rounded-lg text-gray-500 hover:text-white hover:bg-white/5 transition">
+              <ChevronRight size={16}/>
+            </Link>
+          )}
+        </div>
+
+        <div className="flex items-center gap-1 sm:gap-2">
           {capInfo && (
-            <span className="hidden sm:inline text-sm font-semibold text-gray-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 truncate max-w-[200px]">
+            <span className="hidden sm:inline text-sm font-semibold text-gray-300 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10 truncate max-w-[180px]">
               Cap. {capInfo.numero}{capInfo.titulo ? ` — ${capInfo.titulo}` : ''}
             </span>
           )}
@@ -113,7 +143,7 @@ export default function ChapterReaderPage() {
         {loading && (
           <div className="flex flex-col items-center gap-4 mt-24">
             <div className="w-10 h-10 rounded-full border-4 border-t-rose-500 border-rose-900/30 animate-spin"/>
-            <p className="text-gray-500 text-sm tracking-wider">Cargando páginas seguras...</p>
+            <p className="text-gray-500 text-sm tracking-wider">Cargando páginas...</p>
           </div>
         )}
 
@@ -131,7 +161,7 @@ export default function ChapterReaderPage() {
           </div>
         )}
 
-        {/* Navegación paginado — click en zonas */}
+        {/* Zonas click para paginado */}
         {readingMode === 'paged' && !loading && pages.length > 0 && (
           <div className="fixed inset-0 z-10 flex pointer-events-none" style={{ top: '56px', bottom: '80px' }}>
             <button onClick={goPrev} className="flex-1 pointer-events-auto opacity-0" aria-label="Página anterior"/>
@@ -153,12 +183,31 @@ export default function ChapterReaderPage() {
 
         {/* Final del capítulo */}
         {!loading && !error && pages.length > 0 && readingMode === 'webtoon' && (
-          <div className="w-full mt-16 py-12 border-t border-white/5 flex flex-col items-center gap-5">
-            <p className="text-gray-400 font-medium">— Fin del capítulo —</p>
-            <Link href={`/manga/reader/${mangaId}`}
-              className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold px-6 py-3 rounded-xl transition">
-              <ChevronLeft size={16}/> Ver todos los capítulos
-            </Link>
+          <div className="w-full mt-16 py-12 border-t border-white/5 flex flex-col items-center gap-5 px-4">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-px bg-white/20"/>
+              <p className="text-gray-400 font-medium text-sm">Fin del capítulo {capInfo?.numero}</p>
+              <div className="w-8 h-px bg-white/20"/>
+            </div>
+            <div className="flex flex-wrap gap-3 justify-center">
+              {capInfo?.prev_chapter_id && (
+                <Link href={`/manga/reader/${mangaId}/chapter/${capInfo.prev_chapter_id}`}
+                  className="flex items-center gap-2 bg-white/10 hover:bg-white/15 text-white font-bold px-5 py-3 rounded-xl transition border border-white/10 text-sm active:scale-95">
+                  <ChevronLeft size={16}/> Cap. anterior
+                </Link>
+              )}
+              {capInfo?.next_chapter_id ? (
+                <Link href={`/manga/reader/${mangaId}/chapter/${capInfo.next_chapter_id}`}
+                  className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg shadow-rose-600/20 text-sm active:scale-95">
+                  Cap. siguiente <ChevronRight size={16}/>
+                </Link>
+              ) : (
+                <Link href={`/manga/reader/${mangaId}`}
+                  className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white font-bold px-6 py-3 rounded-xl transition shadow-lg shadow-rose-600/20 text-sm active:scale-95">
+                  <BookOpen size={16}/> Ver todos los capítulos
+                </Link>
+              )}
+            </div>
           </div>
         )}
       </main>

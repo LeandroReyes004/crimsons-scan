@@ -16,6 +16,16 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Crimson's Scan",
   description: "Traducción y edición de manga de alta calidad.",
+  manifest: '/manifest.json',
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: "Crimson's Scan",
+  },
+  other: {
+    'mobile-web-app-capable': 'yes',
+    'msapplication-TileColor': '#e11d48',
+  },
 };
 
 export default function RootLayout({
