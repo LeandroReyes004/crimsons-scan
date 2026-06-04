@@ -110,51 +110,6 @@ function contentType(key) {
   return 'image/jpeg';
 }
 
-// ── Tokens de página firmados con HMAC (sin KV) ────────────
-// Elimina el problema de consistencia eventual de KV.
-// El token codifica r2_key + expiración, firmado con JWT_SECRET.
-async function makePageToken(r2_key, secret) {
-  const expiry  = Date.now() + 10 * 60 * 1000; // 10 min
-  const payload = btoa(JSON.stringify({ r: r2_key, e: expiry }))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  const key = await crypto.subtle.importKey(
-    'raw', new TextEncoder().encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
-  );
-  const sig    = await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(payload));
-  const sigB64 = btoa(String.fromCharCode(...new Uint8Array(sig)))
-    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
-  return `${payload}.${sigB64}`;
-}
-
-async function verifyPageToken(token, secret) {
-  try {
-    const dot = token.lastIndexOf('.');
-    if (dot === -1) return null;
-    const payload = token.slice(0, dot);
-    const sigB64  = token.slice(dot + 1);
-
-    // Reponer padding base64 que se quitó al crear el token
-    const addPad = s => s + '='.repeat((4 - s.length % 4) % 4);
-
-    const key = await crypto.subtle.importKey(
-      'raw', new TextEncoder().encode(secret),
-      { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
-    );
-    const sigBytes = Uint8Array.from(
-      atob(addPad(sigB64.replace(/-/g, '+').replace(/_/g, '/'))),
-      c => c.charCodeAt(0)
-    );
-    const valid = await crypto.subtle.verify('HMAC', key, sigBytes, new TextEncoder().encode(payload));
-    if (!valid) return null;
-
-    const { r: r2_key, e: expiry } = JSON.parse(
-      atob(addPad(payload.replace(/-/g, '+').replace(/_/g, '/')))
-    );
-    if (Date.now() > expiry) return null;
-    return r2_key;
-  } catch { return null; }
-}
 
 // ============================================================
 //  ROUTER PRINCIPAL
@@ -350,14 +305,12 @@ export default {
         const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
         const origin   = new URL(request.url).origin;
 
-        const pages = await Promise.all(paginas.map(async (pag) => {
-          const token = await makePageToken(pag.r2_key, env.JWT_SECRET);
-          return {
-            id:           pag.id,
-            numero:       pag.numero,
-            scramble_map: JSON.parse(pag.scramble_map || '[]'),
-            image_url:    `${origin}/api/reader/page/${token}`,
-          };
+        // URL directa: /api/reader/:chapterId/:orden — sin tokens, sin KV
+        const pages = paginas.map(pag => ({
+          id:           pag.id,
+          numero:       pag.numero,
+          scramble_map: JSON.parse(pag.scramble_map || '[]'),
+          image_url:    `${origin}/api/reader/${chapterPages[1]}/${pag.orden}`,
         }));
 
         // Una vista por IP cada 24h (como YouTube)
@@ -390,52 +343,42 @@ export default {
         });
       }
 
-      // ── GET /api/reader/page/:token ──────────────────────
-      // Proxy seguro: rate limit + referer + token único + IP binding
-      const readerPage = pathname.match(/^\/api\/reader\/page\/([^/]+)$/);
+      // ── GET /api/reader/:chapterId/:pageOrder ────────────
+      // Proxy directo: lookup en D1 → sirve desde R2
+      const readerPage = pathname.match(/^\/api\/reader\/([^/]+)\/(\d+)$/);
       if (readerPage && method === 'GET') {
-        const token    = readerPage[1];
+        const [, chapterId, pageOrder] = readerPage;
         const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
 
-        // ── Rate limiting: 200 páginas por IP por hora ────
+        // Rate limit: 500 páginas por IP por hora
         const rlKey   = `rl:${clientIp}`;
         const rlRaw   = await env.KV.get(rlKey);
         const rlCount = rlRaw ? parseInt(rlRaw) : 0;
-        if (rlCount >= 200) {
-          return new Response(JSON.stringify({ error: 'Límite de lectura alcanzado. Intentá en 1 hora.' }), {
-            status: 429,
-            headers: { 'Content-Type': 'application/json', 'Retry-After': '3600', ...CORS },
+        if (rlCount >= 500) {
+          return new Response(JSON.stringify({ error: 'Límite de lectura alcanzado.' }), {
+            status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '3600', ...CORS },
           });
         }
         await env.KV.put(rlKey, String(rlCount + 1), { expirationTtl: 3600 });
 
-        // ── Referer check ─────────────────────────────────
-        const referer = request.headers.get('Referer') || '';
-        const allowed = [
-          env.FRONTEND_URL || 'https://scancrimson.com',
-          'https://crimsons-scan.vercel.app',
-          'http://localhost:3000',
-        ];
-        if (referer && !allowed.some(o => referer.startsWith(o))) {
-          return err('Acceso denegado — origen no autorizado', 403);
-        }
+        // Buscar r2_key en D1 (valida que el capítulo esté publicado)
+        const pag = await env.DB.prepare(
+          `SELECT p.r2_key FROM paginas p
+           JOIN capitulos c ON p.capitulo_id = c.id
+           WHERE p.capitulo_id = ? AND p.orden = ? AND c.estado = 'publicado'`
+        ).bind(chapterId, parseInt(pageOrder)).first();
 
-        // ── Verificar token HMAC (sin KV, sin problemas de consistencia) ─
-        const r2_key = await verifyPageToken(token, env.JWT_SECRET);
-        if (!r2_key) return err('Token expirado o inválido', 403);
+        if (!pag) return err('Página no encontrada', 404);
 
-        const object = await env.R2.get(r2_key);
+        const object = await env.R2.get(pag.r2_key);
         if (!object) return err('Imagen no encontrada en storage', 404);
 
         return new Response(object.body, {
           headers: {
-            'Content-Type':           contentType(r2_key),
+            'Content-Type':           contentType(pag.r2_key),
             'Content-Disposition':    'inline',
-            'Cache-Control':          'no-store, no-cache, must-revalidate',
-            'Pragma':                 'no-cache',
+            'Cache-Control':          'public, max-age=3600',
             'X-Content-Type-Options': 'nosniff',
-            'Referrer-Policy':        'strict-origin',
-            'X-Frame-Options':        'DENY',
             ...CORS,
           },
         });
