@@ -773,6 +773,32 @@ export default {
         return json({ message: 'Contraseña actualizada correctamente' });
       }
 
+      // ── POST /api/admin/users/:id/send-reset-email ───────
+      // v2.0 — envía email para que el usuario resetee su contraseña
+      const sendResetEmail = pathname.match(/^\/api\/admin\/users\/([^/]+)\/send-reset-email$/);
+      if (sendResetEmail && method === 'POST') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('No autorizado', 401);
+
+        const userId = sendResetEmail[1];
+        const user = await env.DB.prepare('SELECT id, username, email FROM usuarios WHERE id = ?')
+          .bind(userId).first();
+        if (!user) return err('Usuario no encontrado', 404);
+
+        const token = crypto.randomUUID();
+        const ttl   = 48 * 60 * 60;
+        await env.KV.put(`setup:${token}`, JSON.stringify({ userId: user.id, username: user.username, email: user.email }), { expirationTtl: ttl });
+
+        const setupUrl  = `${env.FRONTEND_URL}/setup-password?token=${token}`;
+        const emailSent = await sendInviteEmail(user.email, user.username, setupUrl, env.RESEND_API_KEY, env.RESEND_FROM);
+
+        return json({
+          message: emailSent ? `Email enviado a ${user.email}` : 'No se pudo enviar el email — verificá RESEND_API_KEY',
+          emailSent,
+          setupUrl: emailSent ? undefined : setupUrl,
+        });
+      }
+
       // ── GET /api/admin/stats ─────────────────────────────
       if (pathname === '/api/admin/stats' && method === 'GET') {
         const admin = await requireAdmin(request, env);
@@ -988,8 +1014,9 @@ export default {
         if (!admin) return err('No autorizado', 401);
 
         // Admin de scan: solo ve usuarios de su propio scan
+        // v2.0 — incluye password_hash para detectar cuentas pendientes ('__pending__') en el frontend
         const base = `SELECT u.id, u.username, u.email, u.rol, u.activo, u.fecha_registro,
-                             u.ultimo_acceso, u.scan_id, s.nombre as scan_nombre
+                             u.ultimo_acceso, u.scan_id, s.nombre as scan_nombre, u.password_hash
                       FROM usuarios u LEFT JOIN scans s ON u.scan_id = s.id`;
 
         const { results } = isScanAdmin(admin) && admin.scan_id
