@@ -7,7 +7,7 @@ import {
   LayoutDashboard, BookOpen, Clock, Users, LogOut, Plus, Check, X,
   ChevronRight, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
-  Layers, Trash2, Menu, Settings,
+  Layers, Trash2, Menu, Settings, Mail,
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
 
@@ -19,7 +19,7 @@ type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'con
 interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; }
 interface Manga { id: string; titulo: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number; fecha_actualizacion: string; scan_nombre?: string; }
 interface Capitulo { id: string; numero: number; titulo: string; estado: string; manga_titulo: string; manga_id: string; uploader_username: string; notas_admin: string | null; fecha_subida: string; num_paginas?: number; }
-interface Usuario { id: string; username: string; email: string; rol: string; activo: number; fecha_registro: string; ultimo_acceso: string | null; scan_id?: string; scan_nombre?: string; }
+interface Usuario { id: string; username: string; email: string; rol: string; activo: number; fecha_registro: string; ultimo_acceso: string | null; scan_id?: string; scan_nombre?: string; password_hash?: string; }
 interface Scan { id: string; nombre: string; descripcion: string | null; activo: number; miembros: number; }
 
 // ── Hook: fetch con auth ───────────────────────────────────
@@ -748,9 +748,8 @@ function SectionUsuarios() {
   const [editScanMsg, setEditScanMsg] = useState<string | null>(null);
   const [editScanLoad, setEditScanLoad] = useState(false);
 
-  // Reset contraseña
+  // Reset contraseña — v2.0: envía email en lugar de ingresar contraseña manual
   const [resetingId, setResetingId] = useState<string | null>(null);
-  const [newPwd, setNewPwd]         = useState('');
   const [resetMsg, setResetMsg]     = useState<string | null>(null);
   const [resetLoading, setResetLoad] = useState(false);
 
@@ -768,20 +767,22 @@ function SectionUsuarios() {
     return matchQ && matchScan && matchRol;
   });
 
+  // v2.0 — envía email de reset en lugar de ingresar contraseña manual
   const handleResetPassword = async (userId: string) => {
-    if (!newPwd || newPwd.length < 6) { setResetMsg('❌ Mínimo 6 caracteres'); return; }
     setResetLoad(true); setResetMsg(null);
     try {
-      const res = await fetch(`${API}/api/admin/users/${userId}/reset-password`, {
-        method: 'PUT',
+      const res = await fetch(`${API}/api/admin/users/${userId}/send-reset-email`, {
+        method: 'POST',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ newPassword: newPwd }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setResetMsg('✅ Contraseña actualizada');
-      setNewPwd('');
-      setTimeout(() => { setResetingId(null); setResetMsg(null); }, 1500);
+      if (d.emailSent) {
+        setResetMsg('✅ Email de reset enviado');
+      } else {
+        setResetMsg(`⚠️ No se pudo enviar email — link: ${d.setupUrl ?? '(sin RESEND_API_KEY)'}`);
+      }
+      setTimeout(() => { setResetingId(null); setResetMsg(null); }, 4000);
     } catch (e: any) { setResetMsg(`❌ ${e.message}`); }
     finally { setResetLoad(false); }
   };
@@ -985,8 +986,14 @@ function SectionUsuarios() {
                     </span>
                   )}
                   <Badge estado={u.rol}/>
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${u.activo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-gray-100 text-gray-500 dark:bg-white/5'}`}>
-                    {u.activo ? 'Activo' : 'Bloqueado'}
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                    u.password_hash === '__pending__'
+                      ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-400'
+                      : u.activo
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
+                        : 'bg-gray-100 text-gray-500 dark:bg-white/5'
+                  }`}>
+                    {u.password_hash === '__pending__' ? 'Pendiente' : u.activo ? 'Activo' : 'Bloqueado'}
                   </span>
                 </div>
               </div>
@@ -1028,9 +1035,10 @@ function SectionUsuarios() {
                     className={`p-1.5 rounded-lg transition ${u.activo ? 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'}`}>
                     {u.activo ? <Ban size={14}/> : <Check size={14}/>}
                   </button>
-                  <button onClick={() => { setResetingId(resetingId === u.id ? null : u.id); setNewPwd(''); setResetMsg(null); setEditScanId(null); setEditRolId(null); }}
-                    title="Resetear contraseña" className="p-1.5 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition">
-                    <ShieldCheck size={14}/>
+                  <button onClick={() => { setResetingId(resetingId === u.id ? null : u.id); setResetMsg(null); setEditScanId(null); setEditRolId(null); }}
+                    title={u.password_hash === '__pending__' ? 'Reenviar invitación' : 'Resetear contraseña por email'}
+                    className={`p-1.5 rounded-lg transition ${u.password_hash === '__pending__' ? 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10'}`}>
+                    {u.password_hash === '__pending__' ? <Mail size={14}/> : <ShieldCheck size={14}/>}
                   </button>
                 </div>
               )}
@@ -1060,23 +1068,38 @@ function SectionUsuarios() {
                 </div>
               )}
 
-              {/* Panel reset contraseña */}
+              {/* Panel reset/reenvío invitación — v2.0: siempre envía email */}
               {isSuperAdmin && resetingId === u.id && (
-                <div className="mx-5 mb-3 bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-xl p-4 animate-in slide-in-from-top-1 duration-200">
-                  <p className="text-xs font-bold text-amber-700 dark:text-amber-400 mb-3 flex items-center gap-1.5">
-                    <ShieldCheck size={13}/> Nueva contraseña para <strong>{u.username}</strong>
+                <div className={`mx-5 mb-3 rounded-xl p-4 animate-in slide-in-from-top-1 duration-200 border ${
+                  u.password_hash === '__pending__'
+                    ? 'bg-sky-50 dark:bg-sky-500/10 border-sky-200 dark:border-sky-500/20'
+                    : 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20'
+                }`}>
+                  <p className={`text-xs font-bold mb-2 flex items-center gap-1.5 ${
+                    u.password_hash === '__pending__' ? 'text-sky-700 dark:text-sky-400' : 'text-amber-700 dark:text-amber-400'
+                  }`}>
+                    {u.password_hash === '__pending__' ? <Mail size={13}/> : <ShieldCheck size={13}/>}
+                    {u.password_hash === '__pending__' ? 'Reenviar invitación' : 'Reset de contraseña'} — <strong>{u.username}</strong>
                   </p>
-                  {resetMsg && <p className={`text-xs font-medium mb-2 ${resetMsg.startsWith('✅') ? 'text-emerald-600' : 'text-red-600'}`}>{resetMsg}</p>}
+                  <p className={`text-xs mb-3 ${u.password_hash === '__pending__' ? 'text-sky-600 dark:text-sky-400/70' : 'text-amber-600 dark:text-amber-400/70'}`}>
+                    Se enviará un email a <strong>{u.email}</strong> con un link para {u.password_hash === '__pending__' ? 'activar su cuenta' : 'configurar una nueva contraseña'}. El link expira en 48 hs.
+                  </p>
+                  {resetMsg && (
+                    <p className={`text-xs font-medium mb-3 break-all ${resetMsg.startsWith('✅') ? 'text-emerald-600' : resetMsg.startsWith('⚠️') ? 'text-amber-600' : 'text-red-600'}`}>
+                      {resetMsg}
+                    </p>
+                  )}
                   <div className="flex gap-2">
-                    <input type="password" value={newPwd} onChange={e => setNewPwd(e.target.value)}
-                      placeholder="Nueva contraseña (mín. 6 caracteres)"
-                      onKeyDown={e => e.key === 'Enter' && handleResetPassword(u.id)}
-                      className="flex-1 bg-white dark:bg-black/30 border border-amber-200 dark:border-white/10 px-3 py-2 rounded-lg text-sm dark:text-white focus:border-amber-400 outline-none transition"/>
                     <button onClick={() => handleResetPassword(u.id)} disabled={resetLoading}
-                      className="flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-white text-sm font-bold px-4 py-2 rounded-lg transition disabled:opacity-50">
-                      {resetLoading ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>} Guardar
+                      className={`flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-lg transition disabled:opacity-50 ${
+                        u.password_hash === '__pending__'
+                          ? 'bg-sky-500 hover:bg-sky-400'
+                          : 'bg-amber-500 hover:bg-amber-400'
+                      }`}>
+                      {resetLoading ? <Loader2 size={14} className="animate-spin"/> : u.password_hash === '__pending__' ? <Mail size={14}/> : <ShieldCheck size={14}/>}
+                      {u.password_hash === '__pending__' ? 'Reenviar invitación' : 'Enviar email de reset'}
                     </button>
-                    <button onClick={() => { setResetingId(null); setNewPwd(''); setResetMsg(null); }}
+                    <button onClick={() => { setResetingId(null); setResetMsg(null); }}
                       className="p-2 rounded-lg text-gray-400 hover:bg-white/10 transition"><X size={14}/></button>
                   </div>
                 </div>
