@@ -333,24 +333,28 @@ export default {
 
       // ── GET /api/mangas ──────────────────────────────────
       if (pathname === '/api/mangas' && method === 'GET') {
-        const caller = await getUser(request, env);
-        const isAdmin = caller && (caller.rol === 'admin' || caller.is_superadmin);
+        const caller    = await getUser(request, env);
+        const isAdmin   = caller && (caller.is_superadmin || caller.rol === 'admin' || caller.rol === 'admin_scan' || caller.rol === 'soporte');
         const isScanMember = caller && !isAdmin && caller.scan_id;
+        // Panel admin pasa ?admin=1 para ver todos los mangas incluyendo +18
+        const showAll   = isAdmin && new URL(request.url).searchParams.get('admin') === '1';
 
         const subqueries = `
             (SELECT numero FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_capitulo,
             (SELECT id     FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_capitulo_id,
             (SELECT fecha_publicacion FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_cap_fecha`;
 
+        const adultFilter = showAll ? '' : 'AND (m.es_adulto = 0 OR m.es_adulto IS NULL)';
+
         const query_all = `
           SELECT m.*, s.nombre as scan_nombre, ${subqueries}
           FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id
-          WHERE (m.es_adulto = 0 OR m.es_adulto IS NULL)
+          WHERE 1=1 ${adultFilter}
           ORDER BY ultimo_cap_fecha DESC NULLS LAST, m.fecha_actualizacion DESC`;
         const query_scan = `
           SELECT m.*, s.nombre as scan_nombre, ${subqueries}
           FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id
-          WHERE m.scan_id = ? AND (m.es_adulto = 0 OR m.es_adulto IS NULL)
+          WHERE m.scan_id = ? ${adultFilter}
           ORDER BY ultimo_cap_fecha DESC NULLS LAST, m.fecha_actualizacion DESC`;
 
         const { results } = isScanMember
@@ -855,10 +859,10 @@ export default {
       if (editManga && method === 'PUT') {
         const admin = await requireAdmin(request, env);
         if (!admin) return err('No autorizado', 401);
-        const { titulo, titulo_alt, descripcion, generos, tipo, estado, es_adulto } = await request.json();
+        const { titulo, titulo_alt, descripcion, generos, tipo, estado, es_adulto, scan_id } = await request.json();
         await env.DB.prepare(
-          `UPDATE mangas SET titulo=?, titulo_alt=?, descripcion=?, generos=?, tipo=?, estado=?, es_adulto=?, fecha_actualizacion=datetime('now') WHERE id=?`
-        ).bind(titulo, titulo_alt||null, descripcion||null, JSON.stringify(generos||[]), tipo||'manga', estado||'en_curso', es_adulto ? 1 : 0, editManga[1]).run();
+          `UPDATE mangas SET titulo=?, titulo_alt=?, descripcion=?, generos=?, tipo=?, estado=?, es_adulto=?, scan_id=?, fecha_actualizacion=datetime('now') WHERE id=?`
+        ).bind(titulo, titulo_alt||null, descripcion||null, JSON.stringify(generos||[]), tipo||'manga', estado||'en_curso', es_adulto ? 1 : 0, scan_id||null, editManga[1]).run();
         return json({ message: 'Manga actualizado' });
       }
 

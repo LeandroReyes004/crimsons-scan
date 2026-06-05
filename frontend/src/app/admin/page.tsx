@@ -287,7 +287,7 @@ export default function AdminPage() {
 // ============================================================
 function SectionDashboard() {
   const { data, loading, refetch } = useAPI<Stats>('/api/admin/stats');
-  const { data: manga_data } = useAPI<{ mangas: Manga[] }>('/api/mangas');
+  const { data: manga_data } = useAPI<{ mangas: Manga[] }>('/api/mangas?admin=1');
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in duration-300">
@@ -487,7 +487,7 @@ function MangaForm({ initial, onSave, onCancel, title }: {
 }
 
 function SectionMangas() {
-  const { data, loading, refetch } = useAPI<{ mangas: Manga[] }>('/api/mangas');
+  const { data, loading, refetch } = useAPI<{ mangas: Manga[] }>('/api/mangas?admin=1');
   const [showCreate, setShowCreate] = useState(false);
   const [editingManga, setEditing]  = useState<Manga | null>(null);
   const isReadOnly = getUser()?.rol === 'soporte';
