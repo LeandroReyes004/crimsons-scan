@@ -7,13 +7,13 @@ import {
   LayoutDashboard, BookOpen, Clock, Users, LogOut, Plus, Check, X,
   ChevronRight, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
-  Layers, Trash2, Menu, Settings, Mail,
+  Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign,
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
-type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'config';
+type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'config' | 'revenue';
 
 // ── Tipos ──────────────────────────────────────────────────
 interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; }
@@ -219,6 +219,7 @@ export default function AdminPage() {
             { id: 'mangas',    icon: <BookOpen size={16}/>,        label: 'Mangas',    show: true },
             { id: 'revision',  icon: <Clock size={16}/>,           label: 'Agenda',    show: true },
             { id: 'scans',     icon: <Layers size={16}/>,          label: 'Scans',     show: !!user.is_superadmin },
+            { id: 'revenue',   icon: <BarChart2 size={16}/>,       label: 'Revenue',   show: !!user.is_superadmin },
             { id: 'usuarios',  icon: <Users size={16}/>,           label: 'Usuarios',  show: !!user.is_superadmin || user.rol === 'soporte' },
             { id: 'config',    icon: <Settings size={16}/>,        label: 'Mi Scan',   show: !user.is_superadmin && (user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id },
           ] as const).filter(item => item.show).map(item => (
@@ -272,6 +273,7 @@ export default function AdminPage() {
           {section === 'mangas'    && <SectionMangas />}
           {section === 'revision'  && <SectionRevision />}
           {section === 'scans'     && <SectionScans />}
+          {section === 'revenue'   && <SectionRevenue />}
           {section === 'usuarios'  && <SectionUsuarios />}
           {section === 'config'    && <SectionConfig scanId={user.scan_id!} />}
         </main>
@@ -1137,6 +1139,194 @@ function SectionUsuarios() {
 //  SECCIÓN: SCANS
 // ============================================================
 interface ScanDetail { scan: Scan; mangas: any[]; miembros: any[]; totalViews: number; }
+
+// ============================================================
+//  SECCIÓN: REVENUE SHARE
+// ============================================================
+interface RevenueScan {
+  id: string; nombre: string; total_views: number;
+  total_mangas: number; total_capitulos: number;
+}
+interface RevenueManga {
+  id: string; titulo: string; views_total: number; tipo: string; estado: string;
+  capitulos: { id: string; numero: number; titulo: string | null; views: number }[];
+}
+
+function SectionRevenue() {
+  const { data, loading, refetch } = useAPI<{ scans: RevenueScan[]; grand_total: number }>('/api/admin/revenue');
+  const [expandedScan, setExpandedScan]     = useState<string | null>(null);
+  const [scanDetail, setScanDetail]         = useState<Record<string, { mangas: RevenueManga[]; scan_total: number }>>({});
+  const [loadingDetail, setLoadingDetail]   = useState<string | null>(null);
+  const [expandedManga, setExpandedManga]   = useState<string | null>(null);
+
+  const loadScanDetail = async (scanId: string) => {
+    if (expandedScan === scanId) { setExpandedScan(null); return; }
+    if (scanDetail[scanId]) { setExpandedScan(scanId); return; }
+    setLoadingDetail(scanId);
+    try {
+      const res = await fetch(`${API}/api/admin/revenue/${scanId}`, { headers: authHeaders() });
+      const d = await res.json();
+      setScanDetail(prev => ({ ...prev, [scanId]: d }));
+      setExpandedScan(scanId);
+    } finally { setLoadingDetail(null); }
+  };
+
+  const pct = (views: number, total: number) =>
+    total > 0 ? ((views / total) * 100).toFixed(1) : '0.0';
+
+  return (
+    <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-extrabold dark:text-white flex items-center gap-2">
+            <DollarSign size={22} className="text-emerald-500"/> Revenue Share
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">Vistas acumuladas por scan — base para calcular pagos</p>
+        </div>
+        <button onClick={refetch} className="flex items-center gap-2 text-sm text-gray-500 hover:text-rose-500 transition-colors">
+          <RefreshCw size={15}/> Actualizar
+        </button>
+      </div>
+
+      {/* Tarjeta total global */}
+      {!loading && data && (
+        <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-5">
+          <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
+            <Eye size={22}/>
+          </div>
+          <div>
+            <p className="text-3xl font-black dark:text-white">{data.grand_total.toLocaleString()}</p>
+            <p className="text-sm text-gray-500 font-semibold">vistas totales en todos los scans</p>
+          </div>
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {(data?.scans ?? []).map(scan => {
+            const det = scanDetail[scan.id];
+            const isExpanded = expandedScan === scan.id;
+            const isLoading = loadingDetail === scan.id;
+            const pctGlobal = pct(scan.total_views, data?.grand_total ?? 0);
+
+            return (
+              <div key={scan.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
+                {/* Fila del scan */}
+                <div className="flex items-center gap-4 px-5 py-4">
+                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center text-emerald-500 shrink-0 font-black text-lg">
+                    {scan.nombre.charAt(0)}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold dark:text-white">{scan.nombre}</p>
+                    <p className="text-xs text-gray-400">{scan.total_mangas} obras · {scan.total_capitulos} caps publicados</p>
+                  </div>
+                  <div className="hidden md:flex flex-col items-end gap-0.5 shrink-0">
+                    <p className="text-xl font-black dark:text-white">{scan.total_views.toLocaleString()}</p>
+                    <p className="text-xs text-gray-400 flex items-center gap-1">
+                      <TrendingUp size={11} className="text-emerald-500"/> {pctGlobal}% del total
+                    </p>
+                  </div>
+                  {/* Barra de porcentaje */}
+                  <div className="hidden lg:block w-32">
+                    <div className="h-2 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                      <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all"
+                        style={{ width: `${pctGlobal}%` }}/>
+                    </div>
+                  </div>
+                  <button onClick={() => loadScanDetail(scan.id)} disabled={isLoading}
+                    className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/10 hover:text-emerald-600 transition shrink-0">
+                    {isLoading ? <Loader2 size={12} className="animate-spin"/> : <ChevronRight size={12} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}/>}
+                    {isExpanded ? 'Cerrar' : 'Ver detalle'}
+                  </button>
+                </div>
+
+                {/* Detalle expandido */}
+                {isExpanded && det && (
+                  <div className="border-t border-gray-100 dark:border-white/5 px-5 py-5 bg-gray-50/50 dark:bg-white/2 animate-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <BookOpen size={12}/> Desglose por obra
+                      </p>
+                      <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                        Total scan: {det.scan_total.toLocaleString()} vistas
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {det.mangas.map(manga => {
+                        const isMangaExpanded = expandedManga === manga.id;
+                        const mangaPct = pct(manga.views_total, det.scan_total);
+                        return (
+                          <div key={manga.id} className="bg-white dark:bg-[#111114] rounded-xl border border-gray-100 dark:border-white/5 overflow-hidden">
+                            {/* Fila manga */}
+                            <button onClick={() => setExpandedManga(isMangaExpanded ? null : manga.id)}
+                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/2 transition text-left">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold dark:text-white truncate">{manga.titulo}</p>
+                                <p className="text-[10px] text-gray-400">{manga.tipo} · {manga.capitulos.length} caps</p>
+                              </div>
+                              <div className="flex items-center gap-3 shrink-0">
+                                <div className="hidden sm:block w-20">
+                                  <div className="h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-500/60 rounded-full"
+                                      style={{ width: `${mangaPct}%` }}/>
+                                  </div>
+                                </div>
+                                <span className="text-sm font-bold dark:text-white tabular-nums">
+                                  {manga.views_total.toLocaleString()}
+                                </span>
+                                <span className="text-xs text-gray-400">{mangaPct}%</span>
+                                <ChevronRight size={12} className={`text-gray-400 transition-transform ${isMangaExpanded ? 'rotate-90' : ''}`}/>
+                              </div>
+                            </button>
+                            {/* Detalle capítulos */}
+                            {isMangaExpanded && (
+                              <div className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/20 px-4 py-3 animate-in slide-in-from-top-1 duration-150">
+                                <div className="flex flex-col gap-1">
+                                  {manga.capitulos.map(cap => (
+                                    <div key={cap.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-white/5 last:border-0">
+                                      <span className="text-xs text-gray-600 dark:text-gray-300">
+                                        Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}
+                                      </span>
+                                      <span className="text-xs font-bold tabular-nums dark:text-white flex items-center gap-1">
+                                        <Eye size={10} className="text-gray-400"/>
+                                        {cap.views.toLocaleString()}
+                                      </span>
+                                    </div>
+                                  ))}
+                                  {manga.capitulos.length === 0 && (
+                                    <p className="text-xs text-gray-400 italic py-1">Sin capítulos publicados</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {det.mangas.length === 0 && (
+                        <p className="text-sm text-gray-400 italic text-center py-4">Sin obras en este scan</p>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          {(data?.scans?.length === 0) && (
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center py-16 text-gray-400">
+              <BarChart2 size={40} className="mb-3 opacity-30"/>
+              <p className="font-medium">No hay datos de revenue aún</p>
+              <p className="text-sm">Las vistas se acumulan automáticamente cuando los usuarios leen</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function SectionScans() {
   const currentUser = getUser();

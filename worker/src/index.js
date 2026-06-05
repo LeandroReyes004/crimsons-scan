@@ -437,17 +437,6 @@ export default {
           image_url:    `${origin}/api/reader/${chapterPages[1]}/${pag.orden}`,
         }));
 
-        // Una vista por IP cada 24h (como YouTube)
-        const viewKey     = `view:${chapterPages[1]}:${clientIp}`;
-        const yaVio       = await env.KV.get(viewKey);
-        if (!yaVio) {
-          await Promise.all([
-            env.DB.prepare('UPDATE capitulos SET views = views + 1 WHERE id = ?').bind(chapterPages[1]).run(),
-            env.DB.prepare('UPDATE mangas SET views_total = views_total + 1 WHERE id = ?').bind(cap.manga_id).run(),
-            env.KV.put(viewKey, '1', { expirationTtl: 86400 }), // expira en 24h
-          ]);
-        }
-
         const [prevCap, nextCap] = await Promise.all([
           env.DB.prepare(
             "SELECT id FROM capitulos WHERE manga_id = ? AND estado = 'publicado' AND numero < ? ORDER BY numero DESC LIMIT 1"
@@ -465,6 +454,100 @@ export default {
             next_chapter_id: nextCap?.id || null,
           },
         });
+      }
+
+      // ── POST /api/chapters/:id/view ──────────────────────
+      // Registra una vista con deduplicación doble:
+      //   1. Fingerprint del browser (localStorage UUID) — más preciso para usuarios reales
+      //   2. IP del cliente (fallback para bots / clientes sin fingerprint)
+      // Una vista por capa por capítulo cada 24h — anti-farming para Revenue Share
+      const chapterView = pathname.match(/^\/api\/chapters\/([^/]+)\/view$/);
+      if (chapterView && method === 'POST') {
+        const capId      = chapterView[1];
+        const clientIp   = request.headers.get('CF-Connecting-IP') || 'unknown';
+        const fingerprint = request.headers.get('X-Fingerprint') || null;
+
+        const cap = await env.DB.prepare(
+          "SELECT id, manga_id FROM capitulos WHERE id = ? AND estado = 'publicado'"
+        ).bind(capId).first();
+        if (!cap) return json({ counted: false, reason: 'not_found' });
+
+        const TTL = 86400; // 24 horas
+        let counted = false;
+
+        if (fingerprint) {
+          // Capa 1: fingerprint del browser (más fiable, independiente de IP/VPN)
+          const fpKey = `view:fp:${capId}:${fingerprint}`;
+          const visto = await env.KV.get(fpKey);
+          if (!visto) {
+            await Promise.all([
+              env.DB.prepare('UPDATE capitulos SET views = views + 1 WHERE id = ?').bind(capId).run(),
+              env.DB.prepare('UPDATE mangas SET views_total = views_total + 1 WHERE id = ?').bind(cap.manga_id).run(),
+              env.KV.put(fpKey, '1', { expirationTtl: TTL }),
+            ]);
+            counted = true;
+          }
+        } else {
+          // Capa 2: IP del cliente (fallback — bots, herramientas sin browser)
+          const ipKey = `view:ip:${capId}:${clientIp}`;
+          const visto = await env.KV.get(ipKey);
+          if (!visto) {
+            await Promise.all([
+              env.DB.prepare('UPDATE capitulos SET views = views + 1 WHERE id = ?').bind(capId).run(),
+              env.DB.prepare('UPDATE mangas SET views_total = views_total + 1 WHERE id = ?').bind(cap.manga_id).run(),
+              env.KV.put(ipKey, '1', { expirationTtl: TTL }),
+            ]);
+            counted = true;
+          }
+        }
+
+        return json({ counted });
+      }
+
+      // ── GET /api/admin/revenue ────────────────────────────
+      // Resumen de vistas por scan para Revenue Share — solo superadmin
+      if (pathname === '/api/admin/revenue' && method === 'GET') {
+        const sa = await requireSuperAdmin(request, env);
+        if (!sa) return err('Solo el superadmin puede consultar revenue', 403);
+
+        const { results: scans } = await env.DB.prepare(
+          `SELECT s.id, s.nombre,
+                  COALESCE(SUM(m.views_total), 0) as total_views,
+                  COUNT(DISTINCT m.id) as total_mangas,
+                  COUNT(DISTINCT c.id) as total_capitulos
+           FROM scans s
+           LEFT JOIN mangas m ON m.scan_id = s.id
+           LEFT JOIN capitulos c ON c.manga_id = m.id AND c.estado = 'publicado'
+           GROUP BY s.id, s.nombre
+           ORDER BY total_views DESC`
+        ).all();
+
+        const grandTotal = scans.reduce((sum, s) => sum + (s.total_views || 0), 0);
+        return json({ scans, grand_total: grandTotal });
+      }
+
+      // ── GET /api/admin/revenue/:scanId ───────────────────
+      // Detalle por scan: mangas + capítulos con sus vistas
+      const revenueScan = pathname.match(/^\/api\/admin\/revenue\/([^/]+)$/);
+      if (revenueScan && method === 'GET') {
+        const sa = await requireSuperAdmin(request, env);
+        if (!sa) return err('Solo el superadmin puede consultar revenue', 403);
+
+        const { results: mangas } = await env.DB.prepare(
+          `SELECT id, titulo, views_total, tipo, estado
+           FROM mangas WHERE scan_id = ? ORDER BY views_total DESC`
+        ).bind(revenueScan[1]).all();
+
+        const mangasConCaps = await Promise.all(mangas.map(async (manga) => {
+          const { results: caps } = await env.DB.prepare(
+            `SELECT id, numero, titulo, views FROM capitulos
+             WHERE manga_id = ? AND estado = 'publicado' ORDER BY numero ASC`
+          ).bind(manga.id).all();
+          return { ...manga, capitulos: caps };
+        }));
+
+        const scanTotal = mangasConCaps.reduce((s, m) => s + (m.views_total || 0), 0);
+        return json({ mangas: mangasConCaps, scan_total: scanTotal });
       }
 
       // ── GET /api/reader/:chapterId/:pageOrder ────────────

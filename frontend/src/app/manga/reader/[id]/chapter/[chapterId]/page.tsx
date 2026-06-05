@@ -39,6 +39,37 @@ export default function ChapterReaderPage() {
     }
   }, [mangaId, chapterId]);
 
+  // Registrar vista — anti-farming doble capa:
+  //   Cliente: localStorage bloquea llamadas repetidas dentro de las 24h
+  //   Servidor: fingerprint UUID impide el mismo browser aunque borre la key
+  useEffect(() => {
+    if (!chapterId) return;
+
+    // Generar o reutilizar el fingerprint único del browser (persiste en localStorage)
+    let fp = localStorage.getItem('crimson_fp');
+    if (!fp) {
+      fp = crypto.randomUUID();
+      localStorage.setItem('crimson_fp', fp);
+    }
+
+    // Verificar si ya contabilizamos esta vista en las últimas 24h (capa cliente)
+    const viewedKey = `crimson_viewed_${chapterId}`;
+    const lastView  = parseInt(localStorage.getItem(viewedKey) || '0', 10);
+    const now       = Date.now();
+    if (now - lastView < 86400_000) return; // menos de 24h → no llamar
+
+    // Marcar inmediatamente en localStorage para evitar race conditions (recargas rápidas)
+    localStorage.setItem(viewedKey, String(now));
+
+    fetch(`${API}/api/chapters/${chapterId}/view`, {
+      method:  'POST',
+      headers: { 'X-Fingerprint': fp },
+    }).catch(() => {
+      // Si falla la red, revertir para que se intente de nuevo en la próxima sesión
+      localStorage.removeItem(viewedKey);
+    });
+  }, [chapterId]);
+
   useEffect(() => {
     localStorage.setItem('crimson_reader_mode', readingMode);
   }, [readingMode]);
