@@ -1,7 +1,7 @@
 'use client';
 // v2.0 — Página de configuración de contraseña desde email de invitación
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Eye, EyeOff, ShieldCheck, AlertCircle, Loader2, CheckCircle } from 'lucide-react';
@@ -10,7 +10,8 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
 type Status = 'idle' | 'loading' | 'success' | 'error' | 'invalid';
 
-export default function SetupPasswordPage() {
+// useSearchParams requiere Suspense en Next.js App Router
+function SetupPasswordContent() {
   const router       = useRouter();
   const params       = useSearchParams();
   const token        = params.get('token');
@@ -197,5 +198,17 @@ export default function SetupPasswordPage() {
         </form>
       </div>
     </div>
+  );
+}
+
+export default function SetupPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0a0a0c] flex items-center justify-center">
+        <div className="w-8 h-8 border-4 border-rose-600 border-t-transparent rounded-full animate-spin"/>
+      </div>
+    }>
+      <SetupPasswordContent />
+    </Suspense>
   );
 }
