@@ -174,13 +174,22 @@ export default function UploaderPage() {
       const folderMap: Record<string, File[]> = {};
       const imageExts = /\.(jpe?g|png|webp)$/i;
 
+      // Detectar si el ZIP tiene una carpeta raíz común (ej: manga-name/cap-01/...)
+      const allPaths = Object.keys(zip.files).filter(p => !zip.files[p].dir);
+      const allFolders = allPaths
+        .filter(p => !p.startsWith('__MACOSX') && !p.split('/').pop()?.startsWith('.'))
+        .map(p => p.split('/'));
+      const rootOffset = allFolders.length > 0 && allFolders.every(p => p[0] === allFolders[0][0]) && allFolders[0].length > 2 ? 1 : 0;
+
       const promises = Object.entries(zip.files).map(async ([path, entry]) => {
         if (entry.dir || !imageExts.test(path)) return;
         const parts   = path.split('/');
-        const folder  = parts.length > 1 ? parts[0] : '__root__';
         const fname   = parts[parts.length - 1];
         // Ignorar archivos ocultos (macOS __MACOSX, .DS_Store)
-        if (folder.startsWith('__MACOSX') || fname.startsWith('.')) return;
+        if (parts.some(p => p.startsWith('__MACOSX')) || fname.startsWith('.')) return;
+
+        const folderIndex = rootOffset;
+        const folder = parts.length > folderIndex + 1 ? parts[folderIndex] : '__root__';
 
         const blob = await entry.async('blob');
         const ext  = fname.split('.').pop()!.toLowerCase();
@@ -192,7 +201,7 @@ export default function UploaderPage() {
       await Promise.all(promises);
 
       if (Object.keys(folderMap).length === 0) {
-        setBatchError('No se encontraron imágenes en el ZIP. Asegurate de que las páginas estén en carpetas (ej: cap-01/001.jpg).');
+        setBatchError('No se encontraron imágenes. Verificá que el ZIP tenga carpetas por capítulo (ej: cap-01/001.jpg, cap-02/001.jpg).');
         return;
       }
 
@@ -224,8 +233,8 @@ export default function UploaderPage() {
     for (let ci = 0; ci < batchChapters.length; ci++) {
       const cap = batchChapters[ci];
       const num = parseFloat(cap.userNum);
-      if (!num || isNaN(num)) {
-        setBatchChapters(prev => prev.map((c, i) => i === ci ? { ...c, status: 'error', errorMsg: 'Número de capítulo inválido' } : c));
+      if (!num || isNaN(num) || num <= 0) {
+        setBatchChapters(prev => prev.map((c, i) => i === ci ? { ...c, status: 'error', errorMsg: `Número inválido "${cap.userNum}" — editalo manualmente antes de subir` } : c));
         continue;
       }
       if (existingNums.has(num)) {

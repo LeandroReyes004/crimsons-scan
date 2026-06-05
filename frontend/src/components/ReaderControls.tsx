@@ -53,10 +53,10 @@ export default function ReaderControls({
       <div className="hidden sm:block w-px h-8 bg-white/10 mx-1 sm:mx-2"></div>
 
       {/* Pagination Controls (Only visible in 'paged' mode) */}
-      <div className={`flex items-center gap-3 transition-opacity duration-300 ${readingMode === 'paged' ? 'opacity-100 flex' : 'opacity-50 pointer-events-none'}`}>
+      <div className={`items-center gap-3 ${readingMode === 'paged' ? 'flex' : 'hidden'}`}>
         <button 
           onClick={onPrevPage}
-          disabled={currentPage <= 1 || readingMode !== 'paged'}
+          disabled={currentPage <= 1}
           className="p-2 text-gray-300 hover:bg-white/10 hover:text-white rounded-xl transition-all disabled:opacity-30"
           title="Página anterior (Flecha Izquierda)"
         >
