@@ -125,7 +125,7 @@ export default function SetupPasswordPage() {
         </div>
 
         {/* Mensaje de error */}
-        {message && status !== 'success' && (
+        {message && status === 'error' && (
           <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-4 py-3 rounded-xl flex items-center gap-2">
             <AlertCircle size={14} className="shrink-0"/>
             {message}
