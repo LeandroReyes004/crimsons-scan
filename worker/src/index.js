@@ -137,6 +137,16 @@ async function requireSuperAdmin(request, env) {
   return user?.is_superadmin ? user : null;
 }
 
+// Permite soporte + todos los niveles de admin
+async function requireSupport(request, env) {
+  const user = await getUser(request, env);
+  return (user?.is_superadmin || user?.rol === 'admin' || user?.rol === 'admin_scan' || user?.rol === 'soporte') ? user : null;
+}
+
+function isSoporte(user) {
+  return user?.rol === 'soporte' && !user?.is_superadmin;
+}
+
 // ── Scramble map para ofuscar páginas ─────────────────────
 function generateScrambleMap(size = 9) {
   const map = Array.from({ length: size }, (_, i) => i);
@@ -239,11 +249,16 @@ export default {
       // ── POST /api/auth/register (solo admin puede crear usuarios) ──
       // v2.0 — password ahora es opcional; si se omite se envía email de invitación
       if (pathname === '/api/auth/register' && method === 'POST') {
-        const admin = await requireAdmin(request, env);
+        const admin = await requireSupport(request, env);
         if (!admin) return err('No tenés permisos para crear usuarios', 403);
 
         const { username, email, password, rol, scan_id } = await request.json();
         if (!username || !email) return err('Username y email son requeridos');
+
+        // Soporte solo puede crear usuarios con roles no-admin
+        if (isSoporte(admin) && rol && !['uploader', 'lector'].includes(rol)) {
+          return err('No tenés permisos para asignar ese rol', 403);
+        }
 
         const exists = await env.DB.prepare('SELECT id FROM usuarios WHERE username = ? OR email = ?')
           .bind(username, email).first();
@@ -777,7 +792,7 @@ export default {
       // v2.0 — envía email para que el usuario resetee su contraseña
       const sendResetEmail = pathname.match(/^\/api\/admin\/users\/([^/]+)\/send-reset-email$/);
       if (sendResetEmail && method === 'POST') {
-        const admin = await requireAdmin(request, env);
+        const admin = await requireSupport(request, env);
         if (!admin) return err('No autorizado', 401);
 
         const userId = sendResetEmail[1];
@@ -801,7 +816,7 @@ export default {
 
       // ── GET /api/admin/stats ─────────────────────────────
       if (pathname === '/api/admin/stats' && method === 'GET') {
-        const admin = await requireAdmin(request, env);
+        const admin = await requireSupport(request, env);
         if (!admin) return err('No autorizado', 401);
 
         let mangas, capitulos, usuarios, pendientes;
@@ -832,7 +847,7 @@ export default {
       // ── GET /api/admin/scheduled ─────────────────────────
       // Lista capítulos programados o en borrador
       if (pathname === '/api/admin/scheduled' && method === 'GET') {
-        const admin = await requireAdmin(request, env);
+        const admin = await requireSupport(request, env);
         if (!admin) return err('Necesitás iniciar sesión para continuar', 401);
 
         const base = `SELECT c.id, c.numero, c.titulo, c.estado, c.fecha_publicacion, c.fecha_subida,
@@ -1010,7 +1025,7 @@ export default {
 
       // ── GET /api/admin/users ─────────────────────────────
       if (pathname === '/api/admin/users' && method === 'GET') {
-        const admin = await requireAdmin(request, env);
+        const admin = await requireSupport(request, env);
         if (!admin) return err('No autorizado', 401);
 
         // Admin de scan: solo ve usuarios de su propio scan
@@ -1029,11 +1044,19 @@ export default {
       // ── PUT /api/admin/users/:id ─────────────────────────
       const editUser = pathname.match(/^\/api\/admin\/users\/([^/]+)$/);
       if (editUser && method === 'PUT') {
-        const admin = await requireAdmin(request, env);
+        const admin = await requireSupport(request, env);
         if (!admin) return err('No autorizado', 401);
 
         const body = await request.json();
         const { rol, activo } = body;
+
+        // Soporte solo puede cambiar activo, no el rol ni el scan
+        if (isSoporte(admin)) {
+          await env.DB.prepare('UPDATE usuarios SET activo = ? WHERE id = ?')
+            .bind(activo ? 1 : 0, editUser[1]).run();
+          return json({ message: 'Usuario actualizado' });
+        }
+
         if ('scan_id' in body) {
           await env.DB.prepare('UPDATE usuarios SET rol = ?, activo = ?, scan_id = ? WHERE id = ?')
             .bind(rol, activo ? 1 : 0, body.scan_id || null, editUser[1]).run();

@@ -66,6 +66,7 @@ function Badge({ estado }: { estado: string }) {
     pausado:     'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400',
     admin:       'bg-rose-100 text-rose-700 dark:bg-rose-500/20 dark:text-rose-400',
     admin_scan:  'bg-orange-100 text-orange-700 dark:bg-orange-500/20 dark:text-orange-400',
+    soporte:     'bg-teal-100 text-teal-700 dark:bg-teal-500/20 dark:text-teal-400',
     uploader:    'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400',
     lector:      'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400',
     superadmin:  'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400',
@@ -74,6 +75,7 @@ function Badge({ estado }: { estado: string }) {
   const labels: Record<string, string> = {
     admin_scan: 'Admin Scan',
     superadmin: 'SuperAdmin',
+    soporte:    'Soporte',
   };
   return (
     <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${map[estado] || map.lector}`}>
@@ -107,7 +109,7 @@ export default function AdminPage() {
     try {
       const { login } = await import('@/lib/auth');
       const u = await login(loginUser, loginPass);
-      if (!u.is_superadmin && u.rol !== 'admin' && u.rol !== 'admin_scan') {
+      if (!u.is_superadmin && u.rol !== 'admin' && u.rol !== 'admin_scan' && u.rol !== 'soporte') {
         logout(); setLoginErr('No tenés permisos de admin.'); return;
       }
       setUser(u);
@@ -204,9 +206,9 @@ export default function AdminPage() {
               {user.is_superadmin ? 'CrimsonHQ' : (user.scan_nombre || 'Admin Panel')}
             </p>
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{
-              color: user.is_superadmin ? '#f59e0b' : user.rol === 'admin_scan' ? '#f97316' : '#f43f5e'
+              color: user.is_superadmin ? '#f59e0b' : user.rol === 'admin_scan' ? '#f97316' : user.rol === 'soporte' ? '#14b8a6' : '#f43f5e'
             }}>
-              {user.is_superadmin ? '⚡ SuperAdmin' : user.rol === 'admin_scan' ? '🛡 Admin Scan' : 'Admin'}
+              {user.is_superadmin ? '⚡ SuperAdmin' : user.rol === 'admin_scan' ? '🛡 Admin Scan' : user.rol === 'soporte' ? '🎧 Soporte' : 'Admin'}
             </p>
           </div>
         </div>
@@ -217,7 +219,7 @@ export default function AdminPage() {
             { id: 'mangas',    icon: <BookOpen size={16}/>,        label: 'Mangas',    show: true },
             { id: 'revision',  icon: <Clock size={16}/>,           label: 'Agenda',    show: true },
             { id: 'scans',     icon: <Layers size={16}/>,          label: 'Scans',     show: !!user.is_superadmin },
-            { id: 'usuarios',  icon: <Users size={16}/>,           label: 'Usuarios',  show: !!user.is_superadmin },
+            { id: 'usuarios',  icon: <Users size={16}/>,           label: 'Usuarios',  show: !!user.is_superadmin || user.rol === 'soporte' },
             { id: 'config',    icon: <Settings size={16}/>,        label: 'Mi Scan',   show: !user.is_superadmin && (user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id },
           ] as const).filter(item => item.show).map(item => (
             <button
@@ -486,6 +488,7 @@ function SectionMangas() {
   const { data, loading, refetch } = useAPI<{ mangas: Manga[] }>('/api/mangas');
   const [showCreate, setShowCreate] = useState(false);
   const [editingManga, setEditing]  = useState<Manga | null>(null);
+  const isReadOnly = getUser()?.rol === 'soporte';
 
   const handleCreate = async (formData: any, coverFile: File | null) => {
     const res = await fetch(`${API}/api/mangas`, {
@@ -529,10 +532,12 @@ function SectionMangas() {
           <h2 className="text-2xl font-extrabold dark:text-white">Gestión de Mangas</h2>
           <p className="text-gray-500 text-sm mt-1">{data?.mangas?.length ?? 0} obras en total</p>
         </div>
-        <button onClick={() => { setShowCreate(!showCreate); setEditing(null); }}
-          className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-600/20">
-          <Plus size={16}/> Nueva Obra
-        </button>
+        {!isReadOnly && (
+          <button onClick={() => { setShowCreate(!showCreate); setEditing(null); }}
+            className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-600/20">
+            <Plus size={16}/> Nueva Obra
+          </button>
+        )}
       </div>
 
       {showCreate && !editingManga && (
@@ -576,10 +581,12 @@ function SectionMangas() {
               <div className="flex items-center gap-2 shrink-0">
                 <span className="text-xs text-gray-400 flex items-center gap-1"><Eye size={12}/>{m.views_total}</span>
                 <Badge estado={m.estado}/>
-                <button onClick={() => { setEditing(m); setShowCreate(false); }}
-                  className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition" title="Editar">
-                  <Edit3 size={14}/>
-                </button>
+                {!isReadOnly && (
+                  <button onClick={() => { setEditing(m); setShowCreate(false); }}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition" title="Editar">
+                    <Edit3 size={14}/>
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -720,6 +727,8 @@ function SectionUsuarios() {
   const { data, loading, refetch } = useAPI<{ usuarios: Usuario[] }>('/api/admin/users');
   const currentUser = getUser();
   const isSuperAdmin = !!currentUser?.is_superadmin;
+  const isSoporte = !isSuperAdmin && currentUser?.rol === 'soporte';
+  const canManageUsers = isSuperAdmin || isSoporte;
 
   // Crear usuario
   const [showForm, setShowForm]     = useState(false);
@@ -864,9 +873,11 @@ function SectionUsuarios() {
           <h2 className="text-2xl font-extrabold dark:text-white">Gestión de Usuarios</h2>
           <p className="text-gray-500 text-sm mt-1">{filtered.length} de {data?.usuarios?.length ?? 0} miembros</p>
         </div>
-        <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-600/20">
-          <UserPlus size={16}/> Nuevo Usuario
-        </button>
+        {canManageUsers && (
+          <button onClick={() => setShowForm(!showForm)} className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-600/20">
+            <UserPlus size={16}/> Nuevo Usuario
+          </button>
+        )}
       </div>
 
       {/* Barra de filtros */}
@@ -890,6 +901,7 @@ function SectionUsuarios() {
           className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
           <option value="">Todos los roles</option>
           <option value="admin_scan">Admin Scan</option>
+          <option value="soporte">Soporte</option>
           <option value="uploader">Uploader</option>
           <option value="lector">Lector</option>
         </select>
@@ -931,8 +943,10 @@ function SectionUsuarios() {
               <select value={rol} onChange={e => setRol(e.target.value)}
                 className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
                 <option value="uploader">Uploader / Ayudante</option>
-                <option value="admin_scan">Admin de Scan</option>
+                <option value="lector">Lector</option>
+                {!isSoporte && <option value="admin_scan">Admin de Scan</option>}
                 {isSuperAdmin && <option value="admin">Admin</option>}
+                {isSuperAdmin && <option value="soporte">Soporte</option>}
               </select>
             </div>
             <div className="flex flex-col gap-1.5">
@@ -997,21 +1011,23 @@ function SectionUsuarios() {
                   </span>
                 </div>
               </div>
-              {/* Fila de acciones (solo superadmin) */}
-              {u.rol !== 'superadmin' && isSuperAdmin && (
+              {/* Fila de acciones */}
+              {u.rol !== 'superadmin' && canManageUsers && (
                 <div className="flex items-center gap-1.5 px-4 sm:px-5 pb-2 flex-wrap">
                   {u.scan_nombre && (
                     <span className="sm:hidden text-xs font-semibold px-2 py-0.5 rounded-full bg-violet-100 text-violet-700 dark:bg-violet-500/20 dark:text-violet-400 flex items-center gap-1">
                       <Layers size={10}/> {u.scan_nombre}
                     </span>
                   )}
-                  {editRolId === u.id ? (
+                  {/* Cambiar rol — solo superadmin */}
+                  {isSuperAdmin && (editRolId === u.id ? (
                     <div className="flex items-center gap-1 flex-wrap">
                       <select value={editRolVal} onChange={e => setEditRolVal(e.target.value)} autoFocus
                         className="bg-gray-50 dark:bg-black/40 border border-rose-300 dark:border-rose-500/40 px-2 py-1 rounded-lg text-xs dark:text-white outline-none">
                         <option value="uploader">Uploader</option>
                         <option value="admin_scan">Admin Scan</option>
                         <option value="admin">Admin</option>
+                        <option value="soporte">Soporte</option>
                       </select>
                       <button onClick={() => handleChangeRol(u.id)} disabled={editRolLoad}
                         className="p-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-500 transition">
@@ -1026,15 +1042,20 @@ function SectionUsuarios() {
                       title="Cambiar rol" className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition">
                       <Edit3 size={14}/>
                     </button>
+                  ))}
+                  {/* Cambiar scan — solo superadmin */}
+                  {isSuperAdmin && (
+                    <button onClick={() => { setEditScanId(editScanId === u.id ? null : u.id); setEditScanVal(u.scan_id || ''); setEditScanMsg(null); setEditRolId(null); }}
+                      title="Cambiar scan" className="p-1.5 rounded-lg text-gray-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition">
+                      <Layers size={14}/>
+                    </button>
                   )}
-                  <button onClick={() => { setEditScanId(editScanId === u.id ? null : u.id); setEditScanVal(u.scan_id || ''); setEditScanMsg(null); setEditRolId(null); }}
-                    title="Cambiar scan" className="p-1.5 rounded-lg text-gray-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition">
-                    <Layers size={14}/>
-                  </button>
+                  {/* Bloquear/activar — superadmin y soporte */}
                   <button onClick={() => toggleActivo(u)} title={u.activo ? 'Bloquear' : 'Activar'}
                     className={`p-1.5 rounded-lg transition ${u.activo ? 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'}`}>
                     {u.activo ? <Ban size={14}/> : <Check size={14}/>}
                   </button>
+                  {/* Resetear contraseña — superadmin y soporte */}
                   <button onClick={() => { setResetingId(resetingId === u.id ? null : u.id); setResetMsg(null); setEditScanId(null); setEditRolId(null); }}
                     title={u.password_hash === '__pending__' ? 'Reenviar invitación' : 'Resetear contraseña por email'}
                     className={`p-1.5 rounded-lg transition ${u.password_hash === '__pending__' ? 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10'}`}>
