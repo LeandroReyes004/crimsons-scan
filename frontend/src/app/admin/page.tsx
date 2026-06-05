@@ -338,7 +338,7 @@ function SectionDashboard() {
 // ============================================================
 //  SECCIÓN: MANGAS
 // ============================================================
-const GENRES_LIST = ['Acción','Aventura','Comedia','Drama','Fantasía','Horror','Misterio','Psicológico','Romance','Ciencia Ficción','Sobrenatural','Thriller','Deportes','Histórico','Isekai','Mecha','Magia','Artes Marciales','Superpoderes','Reencarnación','Supervivencia'];
+const GENRES_LIST = ['Acción','Aventura','Comedia','Drama','Fantasía','Horror','Misterio','Psicológico','Romance','Ciencia Ficción','Sobrenatural','Thriller','Deportes','Histórico','Isekai','Mecha','Magia','Artes Marciales','Superpoderes','Reencarnación','Supervivencia','BL','Yuri'];
 
 function MangaForm({ initial, onSave, onCancel, title }: {
   initial?: Partial<Manga>;

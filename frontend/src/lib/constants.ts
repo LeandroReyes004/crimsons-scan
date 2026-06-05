@@ -24,5 +24,7 @@ export const GENRES = [
   'Artes Marciales',
   'Superpoderes',
   'Reencarnación',
-  'Supervivencia'
+  'Supervivencia',
+  'BL',
+  'Yuri'
 ];
