@@ -2,17 +2,50 @@
 
 import { useEffect, useState } from 'react';
 
+// Clases que todos los bloqueadores (incluido Brave) ocultan via CSS
+const BAIT_CLASSES = 'adsbox ad-banner pub_300x250 pub_300x250m text-ad textAd text_ad text_ads ad-unit';
+
+function detectViaCSSBait(): Promise<boolean> {
+  return new Promise(resolve => {
+    const bait = document.createElement('div');
+    bait.className = BAIT_CLASSES;
+    bait.style.cssText = 'width:1px;height:1px;position:absolute;left:-9999px;top:-9999px;';
+    document.body.appendChild(bait);
+    // Dar tiempo al bloqueador para aplicar sus reglas CSS
+    setTimeout(() => {
+      const blocked =
+        bait.offsetParent === null ||
+        bait.offsetHeight === 0 ||
+        bait.offsetWidth  === 0 ||
+        getComputedStyle(bait).display === 'none' ||
+        getComputedStyle(bait).visibility === 'hidden';
+      bait.remove();
+      resolve(blocked);
+    }, 150);
+  });
+}
+
+function detectViaScript(): Promise<boolean> {
+  return new Promise(resolve => {
+    // Si el script ya fue cargado y canRunAds está seteado, confiar en eso
+    if ((window as any).canRunAds === true) { resolve(false); return; }
+
+    const script = document.createElement('script');
+    script.src = `/ads.js?t=${Date.now()}`;
+    script.onload = () => resolve(!(window as any).canRunAds);
+    script.onerror = () => resolve(true);
+    document.head.appendChild(script);
+  });
+}
+
 export default function AdBlockDetector() {
   const [blocked, setBlocked] = useState(false);
 
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = '/ads.js';
-    script.onload = () => {
-      if (!(window as any).canRunAds) setBlocked(true);
-    };
-    script.onerror = () => setBlocked(true);
-    document.head.appendChild(script);
+    // Ambos métodos deben coincidir para evitar falsos positivos
+    Promise.all([detectViaCSSBait(), detectViaScript()]).then(([cssBait, scriptBait]) => {
+      if (cssBait || scriptBait) setBlocked(true);
+    });
   }, []);
 
   if (!blocked) return null;
