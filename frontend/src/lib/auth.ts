@@ -5,7 +5,7 @@ const USER_KEY  = 'crimson_user';
 export interface CrimsonUser {
   id: string;
   username: string;
-  rol: 'lector' | 'uploader' | 'admin' | 'admin_scan';
+  rol: 'lector' | 'uploader' | 'admin' | 'admin_scan' | 'soporte';
   avatar_url?: string;
   is_superadmin?: boolean;
   scan_id?: string | null;
