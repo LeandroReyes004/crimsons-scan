@@ -355,6 +355,7 @@ function MangaForm({ initial, onSave, onCancel, title }: {
   const [generos, setGeneros]     = useState<string[]>(() => {
     try { return initial ? JSON.parse((initial as any).generos || '[]') : []; } catch { return []; }
   });
+  const [esAdulto, setEsAdulto]   = useState<boolean>(!!(initial as any)?.es_adulto);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [saving, setSaving]       = useState(false);
   const [feedback, setFeedback]   = useState<string | null>(null);
@@ -372,7 +373,7 @@ function MangaForm({ initial, onSave, onCancel, title }: {
     setSaving(true);
     setFeedback(null);
     try {
-      await onSave({ titulo, tipo, estado, descripcion, generos, scan_id: scanId || null }, coverFile);
+      await onSave({ titulo, tipo, estado, descripcion, generos, scan_id: scanId || null, es_adulto: esAdulto }, coverFile);
       setFeedback('✅ Guardado');
       setTimeout(onCancel, 1200);
     } catch (err: any) {
@@ -424,6 +425,13 @@ function MangaForm({ initial, onSave, onCancel, title }: {
               <option value="completado">Completado</option>
               <option value="pausado">Pausado</option>
             </select>
+          </div>
+          <div className="flex items-center gap-3 mt-1">
+            <button type="button" onClick={() => setEsAdulto(v => !v)}
+              className={`w-10 h-6 rounded-full transition-colors shrink-0 ${esAdulto ? 'bg-rose-500' : 'bg-gray-300 dark:bg-white/20'}`}>
+              <span className={`block w-4 h-4 bg-white rounded-full shadow transition-transform mx-1 ${esAdulto ? 'translate-x-4' : 'translate-x-0'}`}/>
+            </button>
+            <span className="text-sm dark:text-white font-medium">Contenido +18</span>
           </div>
         </div>
 

@@ -67,6 +67,7 @@ export default function Home() {
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600 dark:text-gray-400">
           <Link href="/" className="text-gray-900 dark:text-white hover:text-rose-500 dark:hover:text-rose-400 transition-colors">Inicio</Link>
           <Link href="/catalogo" className="hover:text-gray-900 dark:hover:text-white transition-colors">Catálogo</Link>
+          <Link href="/adulto" className="flex items-center gap-1 bg-rose-500/10 hover:bg-rose-500/20 text-rose-500 font-semibold px-3 py-1 rounded-full text-xs transition-colors border border-rose-500/20">+18</Link>
           <Link href="/discord" className="hover:text-[#5865F2] transition-colors">Discord</Link>
           <div className="w-px h-4 bg-gray-300 dark:bg-white/10 mx-2"/>
           <ThemeToggle />
@@ -91,6 +92,7 @@ export default function Home() {
           <div className="absolute top-full left-0 right-0 z-50 bg-white/97 dark:bg-[#0a0a0c]/97 backdrop-blur-md border-b border-gray-200 dark:border-white/5 px-6 py-2 flex flex-col md:hidden shadow-xl">
             <Link href="/" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-900 dark:text-white hover:text-rose-500 transition border-b border-gray-100 dark:border-white/5">Inicio</Link>
             <Link href="/catalogo" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition border-b border-gray-100 dark:border-white/5">Catálogo</Link>
+            <Link href="/adulto" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-rose-500 hover:text-rose-400 transition border-b border-gray-100 dark:border-white/5">+18</Link>
             <Link href="/discord" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-[#5865F2] transition border-b border-gray-100 dark:border-white/5">Discord</Link>
             {user && (
               <Link href={(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') ? '/admin' : '/uploader'} onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-rose-500 transition flex items-center gap-1.5">
