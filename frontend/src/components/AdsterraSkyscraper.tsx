@@ -9,6 +9,8 @@ export default function AdsterraSkyscraper({ side }: { side: 'left' | 'right' })
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    // Solo en pantallas anchas donde hay espacio real
+    if (window.innerWidth < 1536) return;
     if (!ref.current) return;
     if (ref.current.querySelector('script')) return;
 
@@ -27,13 +29,13 @@ export default function AdsterraSkyscraper({ side }: { side: 'left' | 'right' })
   }, []);
 
   const pos = side === 'left'
-    ? { left: 'calc(50% - 680px)' }
-    : { right: 'calc(50% - 680px)' };
+    ? { left: 'calc(50% - 720px)' }
+    : { right: 'calc(50% - 720px)' };
 
   return (
     <div
       ref={ref}
-      className="hidden 2xl:flex fixed top-1/2 -translate-y-1/2 z-30 items-center justify-center overflow-hidden"
+      className="fixed top-1/2 -translate-y-1/2 z-30 overflow-hidden"
       style={{ ...pos, width: 160, minHeight: 300 }}
     />
   );
