@@ -17,7 +17,7 @@ type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'con
 
 // ── Tipos ──────────────────────────────────────────────────
 interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; }
-interface Manga { id: string; titulo: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number; fecha_actualizacion: string; scan_nombre?: string; }
+interface Manga { id: string; titulo: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number; fecha_actualizacion: string; scan_nombre?: string; descripcion?: string | null; es_adulto?: number; scan_id?: string | null; generos?: string; }
 interface Capitulo { id: string; numero: number; titulo: string; estado: string; manga_titulo: string; manga_id: string; uploader_username: string; notas_admin: string | null; fecha_subida: string; num_paginas?: number; }
 interface Usuario { id: string; username: string; email: string; rol: string; activo: number; fecha_registro: string; ultimo_acceso: string | null; scan_id?: string; scan_nombre?: string; password_hash?: string; }
 interface Scan { id: string; nombre: string; descripcion: string | null; activo: number; miembros: number; }
@@ -353,13 +353,13 @@ function MangaForm({ initial, onSave, onCancel, title }: {
   const [titulo, setTitulo]       = useState(initial?.titulo || '');
   const [tipo, setTipo]           = useState(initial?.tipo || 'manga');
   const [estado, setEstado]       = useState(initial?.estado || 'en_curso');
-  const [descripcion, setDesc]    = useState('');
-  const [scanId, setScanId]       = useState((initial as any)?.scan_id || '');
+  const [descripcion, setDesc]    = useState(initial?.descripcion || '');
+  const [scanId, setScanId]       = useState(initial?.scan_id || '');
   const [scans, setScans]         = useState<{id:string; nombre:string}[]>([]);
   const [generos, setGeneros]     = useState<string[]>(() => {
-    try { return initial ? JSON.parse((initial as any).generos || '[]') : []; } catch { return []; }
+    try { return initial ? JSON.parse(initial.generos || '[]') : []; } catch { return []; }
   });
-  const [esAdulto, setEsAdulto]   = useState<boolean>(!!(initial as any)?.es_adulto);
+  const [esAdulto, setEsAdulto]   = useState<boolean>(!!(initial?.es_adulto));
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [saving, setSaving]       = useState(false);
   const [feedback, setFeedback]   = useState<string | null>(null);
