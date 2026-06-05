@@ -1,34 +1,17 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 
 const SCRIPT_SRC = 'https://www.highperformanceformat.com/8ee74c0f889796bc175bf62ab6c3728a/invoke.js';
 const AD_KEY     = '8ee74c0f889796bc175bf62ab6c3728a';
 
-/**
- * Adsterra Skyscraper 160×300
- *
- * Este formato necesita que `window.atOptions` esté definido ANTES
- * de que se ejecute el script externo, por eso se asigna de forma
- * síncrona justo antes de appendear el <script>.
- */
-export default function AdsterraSkyscraper() {
-  const [mounted, setMounted] = useState(false);
-  const injectedRef = useRef(false);
-
-  useEffect(() => { setMounted(true); }, []);
+export default function AdsterraSkyscraper({ side }: { side: 'left' | 'right' }) {
+  const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!mounted) return;
-    if (injectedRef.current) return;
-    if (document.querySelector(`script[src="${SCRIPT_SRC}"]`)) {
-      injectedRef.current = true;
-      return;
-    }
+    if (!ref.current) return;
+    if (ref.current.querySelector('script')) return;
 
-    injectedRef.current = true;
-
-    // Definir atOptions ANTES del script (requerimiento de la red)
     (window as any).atOptions = {
       key:    AD_KEY,
       format: 'iframe',
@@ -40,17 +23,18 @@ export default function AdsterraSkyscraper() {
     const script = document.createElement('script');
     script.src   = SCRIPT_SRC;
     script.async = true;
-    document.body.appendChild(script);
-  }, [mounted]);
+    ref.current.appendChild(script);
+  }, []);
 
-  if (!mounted) return null;
+  const pos = side === 'left'
+    ? { left: 'calc(50% - 680px)' }
+    : { right: 'calc(50% - 680px)' };
 
   return (
-    // Reserva exactamente 160×300 para evitar CLS
-    <div className="flex justify-center items-center overflow-hidden"
-         style={{ width: 160, minHeight: 300 }}>
-      {/* El script inyecta el iframe directamente en el body,
-          no en un contenedor específico */}
-    </div>
+    <div
+      ref={ref}
+      className="hidden 2xl:flex fixed top-1/2 -translate-y-1/2 z-30 items-center justify-center overflow-hidden"
+      style={{ ...pos, width: 160, minHeight: 300 }}
+    />
   );
 }
