@@ -528,10 +528,17 @@ export default {
 
       // ── GET /api/admin/revenue/:scanId ───────────────────
       // Detalle por scan: mangas + capítulos con sus vistas
+      // Accesible por superadmin (cualquier scan) y admin/admin_scan (solo su scan)
       const revenueScan = pathname.match(/^\/api\/admin\/revenue\/([^/]+)$/);
       if (revenueScan && method === 'GET') {
-        const sa = await requireSuperAdmin(request, env);
-        if (!sa) return err('Solo el superadmin puede consultar revenue', 403);
+        const caller = await requireSupport(request, env); // admin, admin_scan, soporte
+        if (!caller) return err('No autorizado', 401);
+        // admin_scan solo puede ver su propio scan
+        if (isScanAdmin(caller) && caller.scan_id !== revenueScan[1]) {
+          return err('Solo podés consultar el revenue de tu scan', 403);
+        }
+        // soporte: no tiene acceso a revenue
+        if (isSoporte(caller)) return err('No tenés permisos para ver revenue', 403);
 
         const { results: mangas } = await env.DB.prepare(
           `SELECT id, titulo, views_total, tipo, estado

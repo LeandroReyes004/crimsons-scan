@@ -219,7 +219,7 @@ export default function AdminPage() {
             { id: 'mangas',    icon: <BookOpen size={16}/>,        label: 'Mangas',    show: true },
             { id: 'revision',  icon: <Clock size={16}/>,           label: 'Agenda',    show: true },
             { id: 'scans',     icon: <Layers size={16}/>,          label: 'Scans',     show: !!user.is_superadmin },
-            { id: 'revenue',   icon: <BarChart2 size={16}/>,       label: 'Revenue',   show: !!user.is_superadmin },
+            { id: 'revenue',   icon: <BarChart2 size={16}/>,       label: 'Revenue',   show: !!user.is_superadmin || ((user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id) },
             { id: 'usuarios',  icon: <Users size={16}/>,           label: 'Usuarios',  show: !!user.is_superadmin || user.rol === 'soporte' },
             { id: 'config',    icon: <Settings size={16}/>,        label: 'Mi Scan',   show: !user.is_superadmin && (user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id },
           ] as const).filter(item => item.show).map(item => (
@@ -1153,11 +1153,28 @@ interface RevenueManga {
 }
 
 function SectionRevenue() {
-  const { data, loading, refetch } = useAPI<{ scans: RevenueScan[]; grand_total: number }>('/api/admin/revenue');
-  const [expandedScan, setExpandedScan]     = useState<string | null>(null);
+  const currentUser  = getUser();
+  const isSuperAdmin = !!currentUser?.is_superadmin;
+  // admin_scan ve solo su propio scan, cargado automáticamente
+  const ownScanId    = (!isSuperAdmin && currentUser?.scan_id) ? currentUser.scan_id : null;
+
+  const { data, loading, refetch } = useAPI<{ scans: RevenueScan[]; grand_total: number }>(
+    isSuperAdmin ? '/api/admin/revenue' : '/api/admin/revenue/__skip__'
+  );
+  const [expandedScan, setExpandedScan]     = useState<string | null>(ownScanId);
   const [scanDetail, setScanDetail]         = useState<Record<string, { mangas: RevenueManga[]; scan_total: number }>>({});
   const [loadingDetail, setLoadingDetail]   = useState<string | null>(null);
   const [expandedManga, setExpandedManga]   = useState<string | null>(null);
+
+  // Para admin_scan: cargar el detalle de su scan directamente al montar
+  useEffect(() => {
+    if (!ownScanId) return;
+    setLoadingDetail(ownScanId);
+    fetch(`${API}/api/admin/revenue/${ownScanId}`, { headers: authHeaders() })
+      .then(r => r.json())
+      .then(d => { setScanDetail(prev => ({ ...prev, [ownScanId]: d })); })
+      .finally(() => setLoadingDetail(null));
+  }, [ownScanId]);
 
   const loadScanDetail = async (scanId: string) => {
     if (expandedScan === scanId) { setExpandedScan(null); return; }
@@ -1173,6 +1190,70 @@ function SectionRevenue() {
 
   const pct = (views: number, total: number) =>
     total > 0 ? ((views / total) * 100).toFixed(1) : '0.0';
+
+  // Vista para admin_scan: solo su propio scan
+  if (ownScanId) {
+    const det = scanDetail[ownScanId];
+    const isLoading = loadingDetail === ownScanId;
+    return (
+      <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+        <div>
+          <h2 className="text-2xl font-extrabold dark:text-white flex items-center gap-2">
+            <DollarSign size={22} className="text-emerald-500"/> Revenue — Mi Scan
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">Vistas acumuladas de tu scan</p>
+        </div>
+        {isLoading && <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>}
+        {det && (
+          <>
+            <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-5">
+              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400"><Eye size={22}/></div>
+              <div>
+                <p className="text-3xl font-black dark:text-white">{det.scan_total.toLocaleString()}</p>
+                <p className="text-sm text-gray-500 font-semibold">vistas totales en tu scan</p>
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              {det.mangas.map(manga => {
+                const isMangaExpanded = expandedManga === manga.id;
+                return (
+                  <div key={manga.id} className="bg-white dark:bg-[#111114] rounded-xl border border-gray-100 dark:border-white/5 overflow-hidden">
+                    <button onClick={() => setExpandedManga(isMangaExpanded ? null : manga.id)}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/2 transition text-left">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold dark:text-white truncate">{manga.titulo}</p>
+                        <p className="text-[10px] text-gray-400">{manga.capitulos.length} caps publicados</p>
+                      </div>
+                      <div className="flex items-center gap-3 shrink-0">
+                        <span className="text-sm font-bold dark:text-white tabular-nums">{manga.views_total.toLocaleString()}</span>
+                        <span className="text-xs text-gray-400">{pct(manga.views_total, det.scan_total)}%</span>
+                        <ChevronRight size={12} className={`text-gray-400 transition-transform ${isMangaExpanded ? 'rotate-90' : ''}`}/>
+                      </div>
+                    </button>
+                    {isMangaExpanded && (
+                      <div className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/20 px-4 py-3">
+                        {manga.capitulos.map(cap => (
+                          <div key={cap.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-white/5 last:border-0">
+                            <span className="text-xs text-gray-600 dark:text-gray-300">
+                              Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}
+                            </span>
+                            <span className="text-xs font-bold tabular-nums dark:text-white flex items-center gap-1">
+                              <Eye size={10} className="text-gray-400"/> {cap.views.toLocaleString()}
+                            </span>
+                          </div>
+                        ))}
+                        {manga.capitulos.length === 0 && <p className="text-xs text-gray-400 italic py-1">Sin capítulos publicados</p>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </>
+        )}
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">
