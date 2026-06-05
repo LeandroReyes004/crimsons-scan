@@ -793,14 +793,18 @@ function SectionUsuarios() {
       const res = await fetch(`${API}/api/auth/register`, {
         method: 'POST',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, email, password, rol, scan_id: userScanId || null }),
+        // v2.0 — sin password: el usuario recibe email para configurarla
+        body: JSON.stringify({ username, email, rol, scan_id: userScanId || null }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setFeedback(`✅ Usuario "${username}" creado`);
-      setUsername(''); setEmail(''); setPassword(''); setUserScanId('');
+      const msg = d.emailSent
+        ? `✅ Usuario "${username}" creado — email de invitación enviado a ${email}`
+        : `✅ Usuario "${username}" creado — link de setup: ${d.setupUrl ?? '(configurá RESEND_API_KEY)'}`;
+      setFeedback(msg);
+      setUsername(''); setEmail(''); setUserScanId('');
       refetch();
-      setTimeout(() => setShowForm(false), 1500);
+      setTimeout(() => setShowForm(false), 3000);
     } catch (err: any) { setFeedback(`❌ ${err.message}`); }
     finally { setSaving(false); }
   };
@@ -905,11 +909,15 @@ function SectionUsuarios() {
               {feedback}
             </div>
           )}
+          {/* v2.0 — sin campo contraseña: el usuario la configura por email */}
+          <div className="mb-4 flex items-start gap-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl px-4 py-3 text-xs text-blue-700 dark:text-blue-300">
+            <span className="mt-0.5">📧</span>
+            <span>Se enviará un email al usuario con un link para que configure su propia contraseña. El link expira en 48 hs.</span>
+          </div>
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
               { label: 'Username', value: username, set: setUsername, type: 'text', ph: 'Ej: Alex_Clean' },
               { label: 'Email', value: email, set: setEmail, type: 'email', ph: 'correo@scan.com' },
-              { label: 'Contraseña', value: password, set: setPassword, type: 'password', ph: '••••••••' },
             ].map(f => (
               <div key={f.label} className="flex flex-col gap-1.5">
                 <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{f.label} *</label>

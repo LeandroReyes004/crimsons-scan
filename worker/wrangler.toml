@@ -21,5 +21,8 @@ id = "b0da4cd5c5894e4cbaa6d6e3137ca1b8"
 [vars]
 FRONTEND_URL = "https://scancrimson.com"
 
-# JWT_SECRET se configura como secret de Cloudflare:
+# Secrets — configurar con Cloudflare CLI:
 # wrangler secret put JWT_SECRET
+# v2.0 — Email de invitación (Resend):
+# wrangler secret put RESEND_API_KEY   (obtener en resend.com)
+# wrangler secret put RESEND_FROM      (ej: "Crimson's Scan <noreply@scancrimson.com>")

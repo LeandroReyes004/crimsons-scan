@@ -71,6 +71,51 @@ async function verifyPassword(password, stored) {
   return newHash === hashHex;
 }
 
+// ── v2.0 — Email de invitación via Resend API ─────────────
+// Requiere secrets: RESEND_API_KEY, RESEND_FROM (wrangler secret put ...)
+async function sendInviteEmail(to, username, setupUrl, apiKey, from) {
+  if (!apiKey) return false;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        from: from || "Crimson's Scan <noreply@scancrimson.com>",
+        to: [to],
+        subject: "Configurá tu contraseña — Crimson's Scan",
+        html: `<!DOCTYPE html><html><body style="margin:0;padding:20px;background:#f3f4f6;font-family:sans-serif;">
+<div style="max-width:480px;margin:0 auto;background:#0a0a0c;border-radius:16px;overflow:hidden;">
+  <div style="background:linear-gradient(135deg,#e11d48,#f97316);padding:28px 32px;text-align:center;">
+    <h1 style="margin:0;color:#fff;font-size:22px;font-weight:900;letter-spacing:-0.5px;">Crimson's Scan</h1>
+  </div>
+  <div style="padding:32px;">
+    <h2 style="margin:0 0 8px;color:#fff;font-size:20px;">¡Hola, ${username}!</h2>
+    <p style="color:#9ca3af;margin:0 0 24px;line-height:1.7;font-size:14px;">
+      El admin te creó una cuenta en el equipo. Hacé clic en el botón de abajo para configurar tu contraseña y activar tu cuenta.<br><br>
+      <strong style="color:#f9fafb;">El link expira en 48 horas.</strong>
+    </p>
+    <a href="${setupUrl}"
+       style="display:inline-block;background:linear-gradient(135deg,#e11d48,#f97316);color:#fff;text-decoration:none;padding:14px 32px;border-radius:12px;font-weight:700;font-size:15px;">
+      Configurar mi contraseña →
+    </a>
+    <p style="color:#6b7280;font-size:12px;margin:24px 0 0;line-height:1.6;">
+      Si no esperabas este email, podés ignorarlo sin problema.<br>
+      Link directo: <a href="${setupUrl}" style="color:#e11d48;">${setupUrl}</a>
+    </p>
+  </div>
+</div>
+</body></html>`,
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // ── Middleware de auth ─────────────────────────────────────
 async function getUser(request, env) {
   const auth = request.headers.get('Authorization');
@@ -192,25 +237,74 @@ export default {
       }
 
       // ── POST /api/auth/register (solo admin puede crear usuarios) ──
+      // v2.0 — password ahora es opcional; si se omite se envía email de invitación
       if (pathname === '/api/auth/register' && method === 'POST') {
         const admin = await requireAdmin(request, env);
         if (!admin) return err('No tenés permisos para crear usuarios', 403);
 
         const { username, email, password, rol, scan_id } = await request.json();
-        if (!username || !email || !password) return err('Completá todos los campos requeridos');
+        if (!username || !email) return err('Username y email son requeridos');
 
         const exists = await env.DB.prepare('SELECT id FROM usuarios WHERE username = ? OR email = ?')
           .bind(username, email).first();
         if (exists) return err('Ese usuario o email ya está registrado');
 
-        const id   = crypto.randomUUID();
-        const hash = await hashPassword(password);
+        const id = crypto.randomUUID();
 
+        if (password) {
+          // Modo clásico (backwards-compatible): admin asigna la contraseña directamente
+          const hash = await hashPassword(password);
+          await env.DB.prepare(
+            'INSERT INTO usuarios (id, username, email, password_hash, rol, scan_id) VALUES (?, ?, ?, ?, ?, ?)'
+          ).bind(id, username, email, hash, rol || 'uploader', scan_id || null).run();
+          return json({ userId: id, message: 'Usuario creado', emailSent: false }, 201);
+        }
+
+        // Modo invitación: cuenta pendiente hasta que el usuario configure su contraseña
         await env.DB.prepare(
-          'INSERT INTO usuarios (id, username, email, password_hash, rol, scan_id) VALUES (?, ?, ?, ?, ?, ?)'
-        ).bind(id, username, email, hash, rol || 'uploader', scan_id || null).run();
+          'INSERT INTO usuarios (id, username, email, password_hash, rol, scan_id, activo) VALUES (?, ?, ?, ?, ?, ?, 0)'
+        ).bind(id, username, email, '__pending__', rol || 'uploader', scan_id || null).run();
 
-        return json({ userId: id, message: 'Usuario creado' }, 201);
+        const token    = crypto.randomUUID();
+        const ttl      = 48 * 60 * 60; // 48 horas en segundos
+        await env.KV.put(`setup:${token}`, JSON.stringify({ userId: id, username, email }), { expirationTtl: ttl });
+
+        const setupUrl = `${env.FRONTEND_URL}/setup-password?token=${token}`;
+        const emailSent = await sendInviteEmail(email, username, setupUrl, env.RESEND_API_KEY, env.RESEND_FROM);
+
+        return json({
+          userId: id,
+          message: emailSent ? `Email de invitación enviado a ${email}` : 'Usuario creado — configurá RESEND_API_KEY para enviar el email',
+          emailSent,
+          setupUrl: emailSent ? undefined : setupUrl, // devuelve el link si no pudo enviar email
+        }, 201);
+      }
+
+      // ── POST /api/auth/setup-password ─────────────────────
+      // v2.0 — el usuario configura su contraseña desde el link del email
+      if (pathname === '/api/auth/setup-password' && method === 'POST') {
+        const { token, password } = await request.json();
+        if (!token) return err('Token requerido');
+        if (!password || password.length < 6) return err('La contraseña debe tener al menos 6 caracteres');
+
+        const raw = await env.KV.get(`setup:${token}`);
+        if (!raw) return err('El link expiró o ya fue usado. Pedile al admin que te reenvíe la invitación.', 410);
+
+        const { userId, username } = JSON.parse(raw);
+
+        const hash = await hashPassword(password);
+        await env.DB.prepare('UPDATE usuarios SET password_hash = ?, activo = 1 WHERE id = ?')
+          .bind(hash, userId).run();
+
+        await env.KV.delete(`setup:${token}`);
+
+        // Auto-login: devuelve token JWT para que el usuario entre directo
+        const jwtToken = await signJWT(
+          { id: userId, username, rol: 'uploader', is_superadmin: false, scan_id: null },
+          env.JWT_SECRET
+        );
+
+        return json({ message: 'Contraseña configurada. ¡Bienvenido!', token: jwtToken, username });
       }
 
       // ── GET /api/auth/me ─────────────────────────────────
