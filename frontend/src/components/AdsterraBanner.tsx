@@ -23,15 +23,38 @@ export default function AdsterraBanner() {
 
     cleanup();
 
+    // Intercepta clicks del ad y los abre en pestaña nueva
+    const handleClick = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement).closest('a');
+      if (link && link.href) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.open(link.href, '_blank', 'noopener,noreferrer');
+      }
+    };
+    container.addEventListener('click', handleClick);
+
+    // MutationObserver: fuerza target="_blank" en cualquier <a> que inyecte el script
+    const observer = new MutationObserver(() => {
+      container.querySelectorAll('a').forEach(a => {
+        a.target = '_blank';
+        a.rel    = 'noopener noreferrer';
+      });
+    });
+    observer.observe(container, { childList: true, subtree: true });
+
     const script = document.createElement('script');
     script.src    = `${SCRIPT_BASE}?t=${Date.now()}`;
     script.async  = true;
     script.setAttribute('data-cfasync', 'false');
     scriptRef.current = script;
-    // Script must be injected after the container div exists in the DOM
     container.insertAdjacentElement('afterend', script);
 
-    return cleanup;
+    return () => {
+      cleanup();
+      container.removeEventListener('click', handleClick);
+      observer.disconnect();
+    };
   }, [pathname]);
 
   return (
