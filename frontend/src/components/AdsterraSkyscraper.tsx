@@ -1,52 +1,28 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
-import { usePathname } from 'next/navigation';
+const AD_KEY = '8ee74c0f889796bc175bf62ab6c3728a';
+const SCRIPT  = `https://www.highperformanceformat.com/${AD_KEY}/invoke.js`;
 
-const SCRIPT_BASE = 'https://www.highperformanceformat.com/8ee74c0f889796bc175bf62ab6c3728a/invoke.js';
-const AD_KEY      = '8ee74c0f889796bc175bf62ab6c3728a';
+// El script corre dentro de un iframe sandboxeado.
+// Sin allow-top-navigation el ad NUNCA puede redirigir la página padre.
+const AD_HTML = [
+  '<!DOCTYPE html><html><head><meta charset="utf-8">',
+  '<style>*{margin:0;padding:0}body{background:transparent}</style>',
+  `<script>var atOptions={key:'${AD_KEY}',format:'iframe',height:300,width:160,params:{}};<\/script>`,
+  `<script src="${SCRIPT}?t=${Date.now()}"><\/script>`,
+  '</head><body></body></html>',
+].join('');
 
 export default function AdsterraSkyscraper() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const scriptRef    = useRef<HTMLScriptElement | null>(null);
-  const pathname     = usePathname();
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    // Cleanup: remove previous script and injected iframe
-    const cleanup = () => {
-      scriptRef.current?.remove();
-      scriptRef.current = null;
-      container.innerHTML = '';
-    };
-
-    cleanup();
-
-    // atOptions must be set synchronously before the script executes
-    (window as any).atOptions = {
-      key:    AD_KEY,
-      format: 'iframe',
-      height: 300,
-      width:  160,
-      params: {},
-    };
-
-    const script = document.createElement('script');
-    // Cache-bust so the browser fetches fresh on every route change
-    script.src   = `${SCRIPT_BASE}?t=${Date.now()}`;
-    script.async = true;
-    scriptRef.current = script;
-    container.appendChild(script);
-
-    return cleanup;
-  }, [pathname]); // re-runs on every client-side navigation
-
   return (
-    <div
-      ref={containerRef}
-      className="flex justify-center items-center overflow-hidden w-full min-h-[300px]"
+    <iframe
+      srcDoc={AD_HTML}
+      sandbox="allow-scripts allow-popups allow-same-origin"
+      width="160"
+      height="300"
+      scrolling="no"
+      style={{ border: 'none', display: 'block' }}
+      title="Publicidad"
     />
   );
 }
