@@ -1220,6 +1220,16 @@ export default {
           return json({ message: 'Usuario actualizado' });
         }
 
+        // Actualizar email — solo superadmin
+        if ('email' in body) {
+          if (!admin.is_superadmin) return err('Solo el superadmin puede cambiar el email', 403);
+          const newEmail = body.email?.trim();
+          if (!newEmail || !newEmail.includes('@')) return err('Email inválido', 400);
+          await env.DB.prepare('UPDATE usuarios SET email = ? WHERE id = ?')
+            .bind(newEmail, editUser[1]).run();
+          return json({ message: 'Email actualizado' });
+        }
+
         if ('scan_id' in body) {
           await env.DB.prepare('UPDATE usuarios SET rol = ?, activo = ?, scan_id = ? WHERE id = ?')
             .bind(rol, activo ? 1 : 0, body.scan_id || null, editUser[1]).run();

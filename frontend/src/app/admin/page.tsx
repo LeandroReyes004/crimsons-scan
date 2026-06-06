@@ -7,7 +7,7 @@ import {
   LayoutDashboard, BookOpen, Clock, Users, LogOut, Plus, Check, X,
   ChevronRight, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
-  Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign,
+  Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign,
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
 
@@ -784,6 +784,30 @@ function SectionUsuarios() {
   const [editScanMsg, setEditScanMsg] = useState<string | null>(null);
   const [editScanLoad, setEditScanLoad] = useState(false);
 
+  // Editar email
+  const [editEmailId, setEditEmailId]   = useState<string | null>(null);
+  const [editEmailVal, setEditEmailVal] = useState('');
+  const [editEmailMsg, setEditEmailMsg] = useState<string | null>(null);
+  const [editEmailLoad, setEditEmailLoad] = useState(false);
+
+  const handleChangeEmail = async (userId: string) => {
+    if (!editEmailVal.trim() || !editEmailVal.includes('@')) { setEditEmailMsg('❌ Email inválido'); return; }
+    setEditEmailLoad(true); setEditEmailMsg(null);
+    try {
+      const res = await fetch(`${API}/api/admin/users/${userId}`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: editEmailVal.trim() }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setEditEmailMsg('✅ Email actualizado');
+      refetch();
+      setTimeout(() => { setEditEmailId(null); setEditEmailMsg(null); }, 1500);
+    } catch (e: any) { setEditEmailMsg(`❌ ${e.message}`); }
+    finally { setEditEmailLoad(false); }
+  };
+
   // Reset contraseña — v2.0: envía email en lugar de ingresar contraseña manual
   const [resetingId, setResetingId] = useState<string | null>(null);
   const [resetMsg, setResetMsg]     = useState<string | null>(null);
@@ -1072,9 +1096,16 @@ function SectionUsuarios() {
                   ))}
                   {/* Cambiar scan — solo superadmin */}
                   {isSuperAdmin && (
-                    <button onClick={() => { setEditScanId(editScanId === u.id ? null : u.id); setEditScanVal(u.scan_id || ''); setEditScanMsg(null); setEditRolId(null); }}
+                    <button onClick={() => { setEditScanId(editScanId === u.id ? null : u.id); setEditScanVal(u.scan_id || ''); setEditScanMsg(null); setEditRolId(null); setEditEmailId(null); }}
                       title="Cambiar scan" className="p-1.5 rounded-lg text-gray-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition">
                       <Layers size={14}/>
+                    </button>
+                  )}
+                  {/* Editar email — solo superadmin */}
+                  {isSuperAdmin && (
+                    <button onClick={() => { setEditEmailId(editEmailId === u.id ? null : u.id); setEditEmailVal(u.email); setEditEmailMsg(null); setEditRolId(null); setEditScanId(null); setResetingId(null); }}
+                      title="Editar email" className="p-1.5 rounded-lg text-gray-400 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 transition">
+                      <AtSign size={14}/>
                     </button>
                   )}
                   {/* Bloquear/activar — superadmin y soporte */}
@@ -1111,6 +1142,31 @@ function SectionUsuarios() {
                       {editScanLoad ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>} Guardar
                     </button>
                     <button onClick={() => { setEditScanId(null); setEditScanMsg(null); }}
+                      className="p-2 rounded-lg text-gray-400 hover:bg-white/10 transition"><X size={14}/></button>
+                  </div>
+                </div>
+              )}
+
+              {/* Panel editar email */}
+              {isSuperAdmin && editEmailId === u.id && (
+                <div className="mx-5 mb-3 bg-sky-50 dark:bg-sky-500/10 border border-sky-200 dark:border-sky-500/20 rounded-xl p-4 animate-in slide-in-from-top-1 duration-200">
+                  <p className="text-xs font-bold text-sky-700 dark:text-sky-400 mb-3 flex items-center gap-1.5">
+                    <AtSign size={13}/> Editar email de <strong>{u.username}</strong>
+                  </p>
+                  {editEmailMsg && (
+                    <p className={`text-xs font-medium mb-2 ${editEmailMsg.startsWith('✅') ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{editEmailMsg}</p>
+                  )}
+                  <div className="flex gap-2">
+                    <input
+                      type="email" value={editEmailVal} onChange={e => setEditEmailVal(e.target.value)}
+                      placeholder="nuevo@email.com" autoFocus
+                      className="flex-1 bg-white dark:bg-black/30 border border-sky-200 dark:border-white/10 px-3 py-2 rounded-lg text-sm dark:text-white focus:border-sky-400 outline-none"
+                    />
+                    <button onClick={() => handleChangeEmail(u.id)} disabled={editEmailLoad}
+                      className="flex items-center gap-1.5 bg-sky-600 hover:bg-sky-500 text-white text-sm font-bold px-4 py-2 rounded-lg transition disabled:opacity-50">
+                      {editEmailLoad ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>} Guardar
+                    </button>
+                    <button onClick={() => { setEditEmailId(null); setEditEmailMsg(null); }}
                       className="p-2 rounded-lg text-gray-400 hover:bg-white/10 transition"><X size={14}/></button>
                   </div>
                 </div>
