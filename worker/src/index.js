@@ -358,16 +358,15 @@ export default {
           WHERE m.scan_id = ? ${adultFilter}
           ORDER BY ultimo_cap_fecha DESC NULLS LAST, m.fecha_actualizacion DESC`;
 
-        // admin_scan ve solo los mangas de su scan (con o sin admin=1)
-        // Si el JWT tiene scan_id stale, buscarlo en DB
+        // admin_scan ve solo los mangas de su scan — leer de DB para evitar FK mismatch con JWT viejo
         let callerScanId = caller?.scan_id;
-        if (isAdmin && isScanAdmin(caller) && !callerScanId) {
+        if (isAdmin && isScanAdmin(caller)) {
           const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id = ?').bind(caller.id).first();
           callerScanId = dbU?.scan_id || null;
         }
         const filterByScan = isScanMember || (isAdmin && isScanAdmin(caller) && callerScanId);
         const { results } = filterByScan
-          ? await env.DB.prepare(query_scan).bind(callerScanId || caller?.scan_id).all()
+          ? await env.DB.prepare(query_scan).bind(callerScanId).all()
           : await env.DB.prepare(query_all).all();
 
         return json({ mangas: results });
@@ -399,28 +398,27 @@ export default {
         const { titulo, titulo_alt, descripcion, generos, tipo, estado, scan_id, es_adulto } = body;
         if (!titulo) return err('El título es obligatorio');
 
-        // admin_scan siempre crea bajo su propio scan
-        // Si el JWT tiene scan_id stale/null, buscarlo en DB
-        let adminScanId = admin.scan_id;
-        if (isScanAdmin(admin) && !adminScanId) {
-          const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id = ?').bind(admin.id).first();
-          adminScanId = dbU?.scan_id || null;
+        // admin_scan siempre crea bajo su propio scan — leer de DB para evitar FK error con JWT viejo
+        let finalScanId;
+        if (isScanAdmin(admin)) {
+          const dbU = await env.DB.prepare(
+            'SELECT u.scan_id FROM usuarios u JOIN scans s ON u.scan_id = s.id WHERE u.id = ?'
+          ).bind(admin.id).first();
+          if (!dbU?.scan_id) return err('Tu cuenta no tiene un scan válido asignado. Contactá al superadmin.', 403);
+          finalScanId = dbU.scan_id;
+        } else {
+          finalScanId = scan_id || null;
         }
-        const finalScanId = isScanAdmin(admin) ? (adminScanId || null) : (scan_id || null);
 
         const id = crypto.randomUUID();
-        try {
-          await env.DB.prepare(
-            `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto)
-             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-          ).bind(
-            id, titulo, titulo_alt || null, descripcion || null,
-            JSON.stringify(generos || []), tipo || 'manga',
-            estado || 'en_curso', admin.id, finalScanId, es_adulto ? 1 : 0
-          ).run();
-        } catch (dbErr) {
-          return err(`DB error: ${dbErr?.message || String(dbErr)}`, 500);
-        }
+        await env.DB.prepare(
+          `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          id, titulo, titulo_alt || null, descripcion || null,
+          JSON.stringify(generos || []), tipo || 'manga',
+          estado || 'en_curso', admin.id, finalScanId, es_adulto ? 1 : 0
+        ).run();
 
         return json({ mangaId: id, message: 'Manga creado' }, 201);
       }
@@ -884,11 +882,12 @@ export default {
         const admin = await requireAdmin(request, env);
         if (!admin) return err('No autorizado', 401);
 
-        // admin_scan solo puede editar mangas de su propio scan
+        // admin_scan solo puede editar mangas de su propio scan — usar DB, no JWT
         const current = await env.DB.prepare('SELECT scan_id FROM mangas WHERE id=?').bind(editManga[1]).first();
         if (!current) return err('Manga no encontrado', 404);
-        if (isScanAdmin(admin) && current.scan_id !== admin.scan_id) {
-          return err('No tenés permiso para editar este manga', 403);
+        if (isScanAdmin(admin)) {
+          const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id=?').bind(admin.id).first();
+          if (current.scan_id !== dbU?.scan_id) return err('No tenés permiso para editar este manga', 403);
         }
 
         const { titulo, titulo_alt, descripcion, generos, tipo, estado, es_adulto, scan_id } = await request.json();
