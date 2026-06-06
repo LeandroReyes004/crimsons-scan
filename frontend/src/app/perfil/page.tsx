@@ -57,8 +57,10 @@ export default function PerfilPage() {
 
   const handleAvatarChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    // limpiar input siempre, sin importar qué pase
+    if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
-    if (file.size > 2 * 1024 * 1024) { setMsg('❌ La imagen debe pesar menos de 2MB'); return; }
+    if (file.size > 3 * 1024 * 1024) { setMsg('❌ La imagen debe pesar menos de 3MB'); return; }
     setUploading(true); setMsg('');
     const fd = new FormData();
     fd.append('avatar', file);
@@ -66,17 +68,13 @@ export default function PerfilPage() {
       const res = await fetch(`${API}/api/upload/avatar`, { method: 'POST', headers: authHeaders(), body: fd });
       const d   = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setImgLoaded(false); // resetea para que cargue la nueva
+      setImgLoaded(false);
       setAvatarKey(k => k + 1);
-      setMsg('✅ Avatar actualizado');
-      // actualizar localStorage
+      setMsg('✅ Foto actualizada');
       const stored = localStorage.getItem('crimson_user');
-      if (stored) {
-        const u = JSON.parse(stored);
-        localStorage.setItem('crimson_user', JSON.stringify({ ...u, avatar_url: d.avatar_url }));
-      }
+      if (stored) localStorage.setItem('crimson_user', JSON.stringify({ ...JSON.parse(stored), avatar_url: d.avatar_url }));
     } catch (err: any) { setMsg(`❌ ${err.message}`); }
-    finally { setUploading(false); e.target.value = ''; }
+    finally { setUploading(false); }
   };
 
   const handleColorChange = async (hex: string) => {
