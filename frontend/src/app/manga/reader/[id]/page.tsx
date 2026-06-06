@@ -5,12 +5,14 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { BookOpen, ChevronLeft, Play, Eye, Tag, Clock, Heart } from 'lucide-react';
 import { useFavorites } from '@/lib/favorites';
+import AdPopUnder from '@/components/AdPopUnder';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
 interface Manga {
   id: string; titulo: string; titulo_alt: string | null; descripcion: string | null;
   generos: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number;
+  es_adulto?: number | boolean;
 }
 interface Capitulo {
   id: string; numero: number; titulo: string | null; views: number; fecha_subida: string;
@@ -74,6 +76,7 @@ export default function MangaDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-white font-sans">
+      {!!manga.es_adulto && <AdPopUnder />}
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-6 flex items-center gap-3">

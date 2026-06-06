@@ -6,12 +6,14 @@ import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Layers, AlignJustify, BookOpen } from 'lucide-react';
 import CanvasPageRenderer from '@/components/CanvasReader';
 import ReaderControls from '@/components/ReaderControls';
+import AdPopUnder from '@/components/AdPopUnder';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
 interface PageData { id: number; numero: number; image_url: string; scramble_map: number[]; }
 interface CapInfo {
   id: string; numero: number; titulo: string | null; manga_id: string;
+  es_adulto: boolean;
   prev_chapter_id: string | null; next_chapter_id: string | null;
 }
 
@@ -260,6 +262,8 @@ export default function ChapterReaderPage() {
           onPrevPage={goPrev}
         />
       )}
+
+      {capInfo?.es_adulto && <AdPopUnder />}
     </div>
   );
 }

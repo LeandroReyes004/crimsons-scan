@@ -4,6 +4,7 @@ import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Search, BookOpen, Eye, Filter, X, ChevronLeft, ShieldAlert, ShieldCheck } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import AdPopUnder from '@/components/AdPopUnder';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 const STORAGE_KEY = 'cs_age_confirmed';
@@ -66,6 +67,8 @@ export default function AdultoPage() {
   if (confirmed === null) return null;
 
   return (
+    <>
+    {confirmed && <AdPopUnder />}
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0c] text-gray-900 dark:text-white font-sans">
 
       {/* Header */}
@@ -268,5 +271,6 @@ export default function AdultoPage() {
         )}
       </main>
     </div>
+    </>
   );
 }
