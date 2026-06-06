@@ -358,9 +358,9 @@ export default {
           WHERE m.scan_id = ? ${adultFilter}
           ORDER BY ultimo_cap_fecha DESC NULLS LAST, m.fecha_actualizacion DESC`;
 
-        // admin_scan ve solo los mangas de su scan — leer de DB para evitar FK mismatch con JWT viejo
+        // admin_scan ve solo los mangas de su scan — leer scan_id de DB, no del JWT
         let callerScanId = caller?.scan_id;
-        if (isAdmin && isScanAdmin(caller)) {
+        if (isScanAdmin(caller) && caller?.id) {
           const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id = ?').bind(caller.id).first();
           callerScanId = dbU?.scan_id || null;
         }
@@ -398,14 +398,12 @@ export default {
         const { titulo, titulo_alt, descripcion, generos, tipo, estado, scan_id, es_adulto } = body;
         if (!titulo) return err('El título es obligatorio');
 
-        // admin_scan siempre crea bajo su propio scan — leer de DB para evitar FK error con JWT viejo
+        // admin_scan siempre crea bajo su propio scan — leer scan_id de DB, no del JWT
         let finalScanId;
         if (isScanAdmin(admin)) {
-          const dbU = await env.DB.prepare(
-            'SELECT u.scan_id FROM usuarios u JOIN scans s ON u.scan_id = s.id WHERE u.id = ?'
-          ).bind(admin.id).first();
-          if (!dbU?.scan_id) return err('Tu cuenta no tiene un scan válido asignado. Contactá al superadmin.', 403);
-          finalScanId = dbU.scan_id;
+          const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id = ?').bind(admin.id).first();
+          finalScanId = dbU?.scan_id || null;
+          if (!finalScanId) return err('Tu cuenta no tiene un scan asignado. Contactá al superadmin.', 403);
         } else {
           finalScanId = scan_id || null;
         }
