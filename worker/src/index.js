@@ -327,9 +327,46 @@ export default {
       if (pathname === '/api/auth/me' && method === 'GET') {
         const user = await getUser(request, env);
         if (!user) return err('No autenticado', 401);
-        const profile = await env.DB.prepare('SELECT id, username, rol, avatar_url FROM usuarios WHERE id = ?')
-          .bind(user.id).first();
+        const profile = await env.DB.prepare(
+          `SELECT id, username, email, rol, avatar_url, color_acento, fecha_registro, is_superadmin, scan_id,
+            (SELECT COUNT(*) FROM comentarios WHERE usuario_id = u.id) as total_comentarios
+           FROM usuarios u WHERE u.id = ?`
+        ).bind(user.id).first();
         return json(profile);
+      }
+
+      // ── PUT /api/auth/me ──────────────────────────────────
+      if (pathname === '/api/auth/me' && method === 'PUT') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autenticado', 401);
+        const { color_acento } = await request.json();
+        await env.DB.prepare('UPDATE usuarios SET color_acento = ? WHERE id = ?')
+          .bind(color_acento || null, user.id).run();
+        return json({ message: 'Perfil actualizado' });
+      }
+
+      // ── POST /api/upload/avatar ───────────────────────────
+      if (pathname === '/api/upload/avatar' && method === 'POST') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autenticado', 401);
+        const fd   = await request.formData();
+        const file = fd.get('avatar');
+        if (!file) return err('Falta el archivo');
+        const ext    = (file.name?.split('.').pop() || 'jpg').toLowerCase();
+        const r2_key = `scancrimson.com/avatars/${user.id}.${ext}`;
+        await env.R2.put(r2_key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type || 'image/jpeg' } });
+        await env.DB.prepare('UPDATE usuarios SET avatar_url = ? WHERE id = ?').bind(r2_key, user.id).run();
+        return json({ avatar_url: r2_key });
+      }
+
+      // ── GET /api/avatar/:userId ───────────────────────────
+      const avatarRoute = pathname.match(/^\/api\/avatar\/([^/]+)$/);
+      if (avatarRoute && method === 'GET') {
+        const u = await env.DB.prepare('SELECT avatar_url FROM usuarios WHERE id = ?').bind(avatarRoute[1]).first();
+        if (!u?.avatar_url) return err('Avatar no encontrado', 404);
+        const object = await env.R2.get(u.avatar_url);
+        if (!object) return err('Imagen no encontrada', 404);
+        return new Response(object.body, { headers: { 'Content-Type': contentType(u.avatar_url), 'Cache-Control': 'public, max-age=86400', ...CORS } });
       }
 
       // ── GET /api/mangas ──────────────────────────────────

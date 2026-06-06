@@ -145,9 +145,13 @@ export default function MangaDetailPage() {
         <div className="ml-auto flex items-center gap-2">
           {user ? (
             <>
-              <span className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-gray-400 px-2 py-1 rounded-full bg-white/5 border border-white/10">
-                <User size={10}/> {user.username}
-              </span>
+              <Link href="/perfil" className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-white/5 transition">
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-rose-600/60 to-orange-500/60 flex items-center justify-center relative shrink-0">
+                  <img src={`${API}/api/avatar/${user.id}`} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display='none'; }}/>
+                  <span className="absolute text-[10px] font-black text-white">{user.username.charAt(0).toUpperCase()}</span>
+                </div>
+                <span className="hidden sm:block text-xs font-semibold text-gray-300">{user.username}</span>
+              </Link>
               <button onClick={handleLogout} className="p-1.5 rounded-full text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 transition" title="Cerrar sesión">
                 <LogOut size={15}/>
               </button>
@@ -353,8 +357,9 @@ export default function MangaDetailPage() {
             <div className="flex flex-col gap-4">
               {comentarios.map(c => (
                 <div key={c.id} className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-600/60 to-orange-500/60 flex items-center justify-center text-white font-bold text-xs shrink-0">
-                    {c.username.charAt(0).toUpperCase()}
+                  <div className="w-8 h-8 rounded-full overflow-hidden bg-gradient-to-br from-rose-600/60 to-orange-500/60 flex items-center justify-center text-white font-bold text-xs shrink-0 relative">
+                    <img src={`${API}/api/avatar/${c.usuario_id}`} alt="" className="w-full h-full object-cover absolute inset-0" onError={e => { e.currentTarget.style.display='none'; }}/>
+                    <span className="relative">{c.username.charAt(0).toUpperCase()}</span>
                   </div>
                   <div className="flex-1 bg-white/5 rounded-xl px-4 py-3 border border-white/5">
                     <div className="flex items-center gap-2 mb-1">

@@ -99,9 +99,13 @@ export default function Home() {
           <ThemeToggle />
           {user ? (
             <div className="flex items-center gap-2">
-              <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 px-2.5 py-1.5 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10">
-                <User size={11}/> {user.username}
-              </span>
+              <Link href="/perfil" className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition group">
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-rose-600/60 to-orange-500/60 flex items-center justify-center shrink-0 relative">
+                  <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/api/avatar/${user.id}`} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display='none'; }}/>
+                  <span className="absolute text-[10px] font-black text-white">{user.username.charAt(0).toUpperCase()}</span>
+                </div>
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition">{user.username}</span>
+              </Link>
               {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') && (
                 <Link href="/admin" className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-rose-500 transition-colors px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30">
                   <Settings size={11}/> Admin
