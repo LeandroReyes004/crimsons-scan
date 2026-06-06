@@ -342,7 +342,19 @@ function SectionDashboard() {
 // ============================================================
 //  SECCIÓN: MANGAS
 // ============================================================
-const GENRES_LIST = ['Acción','Aventura','Comedia','Drama','Fantasía','Horror','Misterio','Psicológico','Romance','Ciencia Ficción','Sobrenatural','Thriller','Deportes','Histórico','Isekai','Mecha','Magia','Artes Marciales','Superpoderes','Reencarnación','Supervivencia','BL','Yuri'];
+const GENRES_LIST = [
+  'Acción','Aventura','Comedia','Drama','Fantasía','Romance','Horror','Misterio','Psicológico',
+  'Ciencia Ficción','Sobrenatural','Thriller','Deportes','Histórico','Isekai','Mecha','Magia',
+  'Artes Marciales','Superpoderes','Reencarnación','Supervivencia','Escolar','Vida Escolar',
+  'Recuentos de la Vida (Slice of Life)','Tragedia','Adulto','Maduro','Ecchi','Harem','Harem Inverso',
+  'Seinen','Shounen','Shoujo','Josei','Género Bender','Crossdressing','Apocalipsis','Postapocalíptico',
+  'Sistema','Videojuegos','VRMMO','Cultivación','Wuxia','Xianxia','Xuanhuan','Murim','Regresión',
+  'Regresor','Viaje en el Tiempo','Venganza','Villana','Realeza','Nobleza','Política','Militar',
+  'Médico','Cocina','Música','Idol','Oficina','Crimen','Detectives','Mafia','Monstruos','Demonios',
+  'Ángeles','Vampiros','Zombies','Mazmorras','Cazadores','Invocación','Magia Oscura','Alquimia',
+  'Bestias Mágicas','Omegaverse','BL (Boys Love)','GL (Girls Love)','Yuri','Yaoi','Shounen Ai',
+  'Josei Ai','Harén Masculino','Harén Femenino',
+];
 
 function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
   initial?: Partial<Manga>;
