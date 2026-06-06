@@ -313,9 +313,10 @@ export default {
 
         await env.KV.delete(`setup:${token}`);
 
-        // Auto-login: devuelve token JWT para que el usuario entre directo
+        // Auto-login: leer rol y scan_id reales del DB para el JWT
+        const dbUser = await env.DB.prepare('SELECT rol, is_superadmin, scan_id FROM usuarios WHERE id = ?').bind(userId).first();
         const jwtToken = await signJWT(
-          { id: userId, username, rol: 'uploader', is_superadmin: false, scan_id: null },
+          { id: userId, username, rol: dbUser?.rol || 'uploader', is_superadmin: !!(dbUser?.is_superadmin), scan_id: dbUser?.scan_id || null },
           env.JWT_SECRET
         );
 
@@ -358,9 +359,15 @@ export default {
           ORDER BY ultimo_cap_fecha DESC NULLS LAST, m.fecha_actualizacion DESC`;
 
         // admin_scan ve solo los mangas de su scan (con o sin admin=1)
-        const filterByScan = isScanMember || (isAdmin && isScanAdmin(caller) && caller.scan_id);
+        // Si el JWT tiene scan_id stale, buscarlo en DB
+        let callerScanId = caller?.scan_id;
+        if (isAdmin && isScanAdmin(caller) && !callerScanId) {
+          const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id = ?').bind(caller.id).first();
+          callerScanId = dbU?.scan_id || null;
+        }
+        const filterByScan = isScanMember || (isAdmin && isScanAdmin(caller) && callerScanId);
         const { results } = filterByScan
-          ? await env.DB.prepare(query_scan).bind(caller.scan_id).all()
+          ? await env.DB.prepare(query_scan).bind(callerScanId || caller?.scan_id).all()
           : await env.DB.prepare(query_all).all();
 
         return json({ mangas: results });
@@ -392,7 +399,13 @@ export default {
         if (!titulo) return err('El título es obligatorio');
 
         // admin_scan siempre crea bajo su propio scan
-        const finalScanId = isScanAdmin(admin) ? (admin.scan_id || null) : (scan_id || null);
+        // Si el JWT tiene scan_id stale/null, buscarlo en DB
+        let adminScanId = admin.scan_id;
+        if (isScanAdmin(admin) && !adminScanId) {
+          const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id = ?').bind(admin.id).first();
+          adminScanId = dbU?.scan_id || null;
+        }
+        const finalScanId = isScanAdmin(admin) ? (adminScanId || null) : (scan_id || null);
 
         const id = crypto.randomUUID();
         await env.DB.prepare(
@@ -427,7 +440,7 @@ export default {
       const chapterPages = pathname.match(/^\/api\/chapters\/([^/]+)\/pages$/);
       if (chapterPages && method === 'GET') {
         const cap = await env.DB.prepare(
-          "SELECT * FROM capitulos WHERE id = ? AND estado = 'publicado'"
+          "SELECT c.*, m.es_adulto FROM capitulos c JOIN mangas m ON m.id = c.manga_id WHERE c.id = ? AND c.estado = 'publicado'"
         ).bind(chapterPages[1]).first();
         if (!cap) return err('Capítulo no encontrado o no publicado', 404);
 
@@ -459,6 +472,7 @@ export default {
           pages,
           capitulo: {
             id: cap.id, numero: cap.numero, titulo: cap.titulo, manga_id: cap.manga_id,
+            es_adulto: !!cap.es_adulto,
             prev_chapter_id: prevCap?.id || null,
             next_chapter_id: nextCap?.id || null,
           },
