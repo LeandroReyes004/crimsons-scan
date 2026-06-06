@@ -31,7 +31,8 @@ export default function PerfilPage() {
   const [perfil, setPerfil]       = useState<Perfil | null>(null);
   const [loading, setLoading]     = useState(true);
   const [avatarKey, setAvatarKey] = useState(0); // force re-render de imagen
-  const [uploading, setUploading] = useState(false);
+  const [uploading, setUploading]   = useState(false);
+  const [imgLoaded, setImgLoaded]   = useState(false);
   const [colorSaving, setColorSaving] = useState(false);
   const [msg, setMsg]             = useState('');
   const [favCount, setFavCount]   = useState(0);
@@ -62,6 +63,7 @@ export default function PerfilPage() {
       const res = await fetch(`${API}/api/upload/avatar`, { method: 'POST', headers: authHeaders(), body: fd });
       const d   = await res.json();
       if (!res.ok) throw new Error(d.error);
+      setImgLoaded(false); // resetea para que cargue la nueva
       setAvatarKey(k => k + 1);
       setMsg('✅ Avatar actualizado');
       // actualizar localStorage
@@ -129,12 +131,15 @@ export default function PerfilPage() {
           <div className="relative shrink-0">
             <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden flex items-center justify-center shadow-2xl relative"
               style={{ border: `4px solid ${acento}`, background: `linear-gradient(135deg, ${acento}99, ${acento}44)` }}>
+              {!imgLoaded && (
+                <span className="text-4xl font-black text-white/90 select-none">
+                  {perfil.username.charAt(0).toUpperCase()}
+                </span>
+              )}
               <img key={avatarKey} src={avatarUrl} alt={perfil.username}
                 className="w-full h-full object-cover absolute inset-0"
-                onError={e => { e.currentTarget.style.display = 'none'; }}/>
-              <span className="text-4xl font-black text-white/90 relative">
-                {perfil.username.charAt(0).toUpperCase()}
-              </span>
+                onLoad={() => setImgLoaded(true)}
+                onError={() => setImgLoaded(false)}/>
             </div>
             <button onClick={() => fileRef.current?.click()} disabled={uploading}
               className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-[#111115] flex items-center justify-center transition shadow-lg"
