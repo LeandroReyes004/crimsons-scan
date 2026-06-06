@@ -21,7 +21,7 @@ const ROL_LABEL: Record<string, string> = {
 interface Perfil {
   id: string; username: string; email: string; rol: string; avatar_url: string | null;
   color_acento: string | null; fecha_registro: string; is_superadmin: number;
-  scan_id: string | null; total_comentarios: number;
+  scan_id: string | null; total_comentarios: number; bio?: string | null;
 }
 
 export default function PerfilPage() {
@@ -37,6 +37,8 @@ export default function PerfilPage() {
   const [editingName, setEditingName]     = useState(false);
   const [newUsername, setNewUsername]     = useState('');
   const [nameSaving, setNameSaving]       = useState(false);
+  const [bioText, setBioText]             = useState('');
+  const [bioSaving, setBioSaving]         = useState(false);
   const [msg, setMsg]                     = useState('');
   const [favCount, setFavCount]   = useState(0);
 
@@ -45,7 +47,7 @@ export default function PerfilPage() {
     if (!token) { router.replace('/'); return; }
     fetch(`${API}/api/auth/me`, { headers: authHeaders() })
       .then(r => r.json())
-      .then(d => { if (d.id) setPerfil(d); else router.replace('/'); })
+      .then(d => { if (d.id) { setPerfil(d); setBioText(d.bio || ''); } else router.replace('/'); })
       .catch(() => router.replace('/'))
       .finally(() => setLoading(false));
     // favoritos de localStorage
@@ -109,6 +111,20 @@ export default function PerfilPage() {
       setEditingName(false);
     } catch (err: any) { setMsg(`❌ ${err.message}`); }
     finally { setNameSaving(false); }
+  };
+
+  const handleSaveBio = async () => {
+    setBioSaving(true); setMsg('');
+    try {
+      const res = await fetch(`${API}/api/auth/me`, {
+        method: 'PUT', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bio: bioText }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setPerfil(p => p ? { ...p, bio: bioText } : p);
+      setMsg('✅ Biografía guardada');
+    } catch (err: any) { setMsg(`❌ ${err.message}`); }
+    finally { setBioSaving(false); }
   };
 
   const avatarUrl = perfil ? `${API}/api/avatar/${perfil.id}?v=${avatarKey}` : '';
@@ -255,6 +271,34 @@ export default function PerfilPage() {
               </button>
             ))}
           </div>
+        </div>
+
+        {/* Biografía */}
+        <div className="rounded-2xl p-5 mb-5" style={{ background: '#111115', border: `1px solid ${acento}20` }}>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-sm font-bold text-white">Biografía</p>
+            <span className="text-xs" style={{ color: bioText.length > 180 ? '#f87171' : acento + '80' }}>
+              {bioText.length}/200
+            </span>
+          </div>
+          <textarea
+            value={bioText}
+            onChange={e => setBioText(e.target.value.slice(0, 200))}
+            rows={3}
+            placeholder="Contá algo sobre vos..."
+            className="w-full bg-white/5 border rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 outline-none resize-none transition"
+            style={{ borderColor: acento + '30' }}
+            onFocus={e => { e.currentTarget.style.borderColor = acento + '80'; }}
+            onBlur={e => { e.currentTarget.style.borderColor = acento + '30'; }}
+          />
+          <button
+            onClick={handleSaveBio}
+            disabled={bioSaving || bioText === (perfil.bio || '')}
+            className="mt-3 flex items-center gap-1.5 text-xs font-bold px-4 py-2 rounded-xl transition disabled:opacity-40"
+            style={{ background: acento + '20', color: acento, border: `1px solid ${acento}40` }}>
+            {bioSaving ? <Loader2 size={12} className="animate-spin"/> : <Check size={12}/>}
+            {bioSaving ? 'Guardando...' : 'Guardar'}
+          </button>
         </div>
 
         {/* Cerrar sesión */}

@@ -328,7 +328,7 @@ export default {
         const user = await getUser(request, env);
         if (!user) return err('No autenticado', 401);
         const profile = await env.DB.prepare(
-          `SELECT id, username, email, rol, avatar_url, color_acento, fecha_registro, is_superadmin, scan_id,
+          `SELECT id, username, email, rol, avatar_url, color_acento, bio, fecha_registro, is_superadmin, scan_id,
             (SELECT COUNT(*) FROM comentarios WHERE usuario_id = u.id) as total_comentarios
            FROM usuarios u WHERE u.id = ?`
         ).bind(user.id).first();
@@ -356,6 +356,12 @@ export default {
           await env.DB.prepare('UPDATE usuarios SET color_acento = ? WHERE id = ?')
             .bind(body.color_acento || null, user.id).run();
           return json({ message: 'Perfil actualizado' });
+        }
+
+        if ('bio' in body) {
+          const bio = body.bio?.trim().slice(0, 200) || null;
+          await env.DB.prepare('UPDATE usuarios SET bio = ? WHERE id = ?').bind(bio, user.id).run();
+          return json({ message: 'Biografía actualizada' });
         }
 
         return json({ message: 'Sin cambios' });
