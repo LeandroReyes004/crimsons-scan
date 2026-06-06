@@ -382,7 +382,7 @@ export default function UploaderPage() {
               <ChevronLeft size={18}/>
             </button>
           )}
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-600 to-orange-500 flex items-center justify-center text-white font-black text-xs shrink-0">CS</div>
+          <img src="/logo.png" alt="CrimsonScan" className="h-7 w-auto object-contain shrink-0" />
           <div className="min-w-0">
             <p className="font-bold text-sm dark:text-white leading-tight truncate">
               {view === 'mangas' ? 'Mis Proyectos' : view === 'chapters' ? selectedManga?.titulo : view === 'batch' ? 'Subir por lotes' : view === 'edit' ? `Editar Cap. ${editingCap?.numero}` : 'Subir Capítulo'}

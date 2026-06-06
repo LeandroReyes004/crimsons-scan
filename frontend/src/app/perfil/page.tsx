@@ -146,7 +146,7 @@ export default function PerfilPage() {
         <Link href="/" className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition">
           <ChevronLeft size={20}/>
         </Link>
-        <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-600 to-orange-500 flex items-center justify-center text-white font-black text-xs">CS</div>
+        <img src="/logo.png" alt="CrimsonScan" className="h-8 w-auto object-contain" />
         <span className="font-bold text-white/90">Mi Perfil</span>
       </header>
 

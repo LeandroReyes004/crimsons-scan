@@ -79,11 +79,8 @@ export default function Home() {
 
       {/* Header */}
       <header className="sticky top-0 z-50 relative bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5 py-4 px-6 md:px-12 flex items-center justify-between shadow-sm dark:shadow-2xl transition-colors duration-300">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-rose-600 to-orange-500 shadow-[0_0_15px_rgba(225,29,72,0.5)] flex items-center justify-center font-bold text-white">CS</div>
-          <h1 className="text-xl font-bold tracking-tight text-gray-900 dark:text-white/90">
-            Crimson<span className="text-rose-500">Scan</span>
-          </h1>
+        <div className="flex items-center gap-2">
+          <img src="/logo.png" alt="CrimsonScan" className="h-10 w-auto object-contain" />
         </div>
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600 dark:text-gray-400">

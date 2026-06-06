@@ -77,8 +77,7 @@ export default function AdultoPage() {
           <Link href="/" className="p-1.5 rounded-lg text-gray-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition">
             <ChevronLeft size={18}/>
           </Link>
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-600 to-orange-500 flex items-center justify-center text-white font-black text-xs">CS</div>
-          <span className="font-bold dark:text-white">Crimson<span className="text-rose-500">Scan</span></span>
+          <img src="/logo.png" alt="CrimsonScan" className="h-8 w-auto object-contain" />
         </div>
         <div className="flex items-center gap-2">
           {confirmed && (

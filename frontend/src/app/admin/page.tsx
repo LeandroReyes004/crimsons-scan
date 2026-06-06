@@ -133,7 +133,7 @@ export default function AdminPage() {
     <div className="min-h-screen bg-[#07070a] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="flex items-center justify-center gap-3 mb-8">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-600 to-orange-500 flex items-center justify-center text-white font-black shadow-lg shadow-rose-500/40">CS</div>
+          <img src="/logo.png" alt="CrimsonScan" className="h-10 w-auto object-contain" />
           <div>
             <p className="font-bold text-white leading-tight">CrimsonHQ</p>
             <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest">⚡ Acceso Restringido</p>
@@ -200,7 +200,7 @@ export default function AdminPage() {
       {/* ── Sidebar ─────────────────────────────────────── */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-60 bg-white dark:bg-[#0d0d10] border-r border-gray-200 dark:border-white/5 flex flex-col transform transition-transform duration-300 lg:static lg:translate-x-0 lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 px-5 flex items-center gap-2.5 border-b border-gray-200 dark:border-white/5">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-600 to-orange-500 flex items-center justify-center text-white font-black text-sm shadow-lg shadow-rose-500/30">CS</div>
+          <img src="/logo.png" alt="CrimsonScan" className="h-8 w-auto object-contain" />
           <div>
             <p className="font-bold text-sm dark:text-white leading-tight">
               {user.is_superadmin ? 'CrimsonHQ' : (user.scan_nombre || 'Admin Panel')}
