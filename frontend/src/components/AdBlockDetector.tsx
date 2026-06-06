@@ -1,6 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { usePathname } from 'next/navigation';
+
+const EXCLUDED = ['/admin', '/uploader'];
 
 // Clases que todos los bloqueadores (incluido Brave) ocultan via CSS
 const BAIT_CLASSES = 'adsbox ad-banner pub_300x250 pub_300x250m text-ad textAd text_ad text_ads ad-unit';
@@ -40,15 +43,18 @@ function detectViaScript(): Promise<boolean> {
 
 export default function AdBlockDetector() {
   const [blocked, setBlocked] = useState(false);
+  const pathname = usePathname();
 
   useEffect(() => {
+    if (EXCLUDED.some(p => pathname?.startsWith(p))) return;
     // Ambos métodos deben coincidir para evitar falsos positivos
     Promise.all([detectViaCSSBait(), detectViaScript()]).then(([cssBait, scriptBait]) => {
       if (cssBait || scriptBait) setBlocked(true);
     });
-  }, []);
+  }, [pathname]);
 
   if (!blocked) return null;
+  if (EXCLUDED.some(p => pathname?.startsWith(p))) return null;
 
   return (
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
