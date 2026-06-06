@@ -111,54 +111,50 @@ export default function PerfilPage() {
         <span className="font-bold text-white/90">Mi Perfil</span>
       </header>
 
-      {/* Banner degradado */}
-      <div className="h-32 sm:h-40 relative overflow-hidden">
-        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${acento}40, ${acento}10, transparent)` }}/>
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent to-[#0a0a0c]"/>
+      {/* Banner con color de acento visible */}
+      <div className="h-36 sm:h-44 relative overflow-hidden">
+        <div className="absolute inset-0" style={{ background: `linear-gradient(135deg, ${acento}cc 0%, ${acento}55 50%, transparent 100%)` }}/>
+        <div className="absolute inset-0" style={{ background: 'linear-gradient(to bottom, transparent 40%, #0a0a0c 100%)' }}/>
+        {/* Círculo decorativo */}
+        <div className="absolute -right-12 -top-12 w-48 h-48 rounded-full opacity-20" style={{ background: acento }}/>
+        <div className="absolute right-20 top-4 w-24 h-24 rounded-full opacity-10" style={{ background: acento }}/>
       </div>
 
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 -mt-16 sm:-mt-20">
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 -mt-20 sm:-mt-24 relative z-10">
 
-        {/* Avatar + nombre */}
-        <div className="flex flex-col sm:flex-row items-center sm:items-end gap-4 mb-8">
+        {/* Avatar + info */}
+        <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 mb-8">
+
+          {/* Avatar */}
           <div className="relative shrink-0">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full overflow-hidden border-4 border-[#0a0a0c] bg-gradient-to-br from-rose-600/60 to-orange-500/60 flex items-center justify-center shadow-xl"
-              style={{ borderColor: acento + '60' }}>
-              <img
-                key={avatarKey}
-                src={avatarUrl}
-                alt={perfil.username}
-                className="w-full h-full object-cover"
-                onError={e => { e.currentTarget.style.display = 'none'; }}
-              />
-              <span className="absolute text-3xl font-black text-white/80 pointer-events-none select-none">
+            <div className="w-28 h-28 sm:w-32 sm:h-32 rounded-full overflow-hidden flex items-center justify-center shadow-2xl relative"
+              style={{ border: `4px solid ${acento}`, background: `linear-gradient(135deg, ${acento}99, ${acento}44)` }}>
+              <img key={avatarKey} src={avatarUrl} alt={perfil.username}
+                className="w-full h-full object-cover absolute inset-0"
+                onError={e => { e.currentTarget.style.display = 'none'; }}/>
+              <span className="text-4xl font-black text-white/90 relative">
                 {perfil.username.charAt(0).toUpperCase()}
               </span>
             </div>
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="absolute bottom-1 right-1 w-8 h-8 rounded-full bg-[#0a0a0c] border-2 border-white/10 flex items-center justify-center hover:border-rose-500/50 transition"
-              title="Cambiar foto"
-            >
-              {uploading ? <Loader2 size={14} className="animate-spin text-rose-400"/> : <Camera size={14} className="text-gray-300"/>}
+            <button onClick={() => fileRef.current?.click()} disabled={uploading}
+              className="absolute bottom-1 right-1 w-9 h-9 rounded-full bg-[#111115] flex items-center justify-center transition shadow-lg"
+              style={{ border: `2px solid ${acento}80` }} title="Cambiar foto">
+              {uploading ? <Loader2 size={15} className="animate-spin" style={{ color: acento }}/> : <Camera size={15} style={{ color: acento }}/>}
             </button>
             <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleAvatarChange}/>
           </div>
 
-          <div className="text-center sm:text-left">
-            <h1 className="text-2xl font-extrabold text-white">{perfil.username}</h1>
-            <p className="text-gray-400 text-sm">{perfil.email}</p>
-            <p className="text-gray-500 text-xs mt-1 flex items-center gap-1 justify-center sm:justify-start">
+          {/* Datos */}
+          <div className="text-center sm:text-left flex-1">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">{perfil.username}</h1>
+            <p className="text-gray-400 text-sm mt-0.5">{perfil.email}</p>
+            <p className="text-gray-500 text-xs mt-1.5 flex items-center gap-1 justify-center sm:justify-start">
               <Calendar size={11}/>
               Miembro desde {new Date(perfil.fecha_registro).toLocaleDateString('es', { day: '2-digit', month: 'long', year: 'numeric' })}
             </p>
-          </div>
-
-          <div className="sm:ml-auto">
-            <span className="flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-full border"
-              style={{ background: acento + '20', borderColor: acento + '40', color: acento }}>
-              <Shield size={11}/>
+            <span className="inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full mt-2"
+              style={{ background: acento + '25', border: `1px solid ${acento}50`, color: acento }}>
+              <Shield size={10}/>
               {perfil.is_superadmin ? 'SuperAdmin' : ROL_LABEL[perfil.rol] || perfil.rol}
             </span>
           </div>
@@ -172,47 +168,47 @@ export default function PerfilPage() {
         )}
 
         {/* Estadísticas */}
-        <div className="grid grid-cols-2 gap-3 mb-8">
-          <div className="bg-white/5 border border-white/5 rounded-2xl p-5 flex flex-col items-center gap-2">
-            <Heart size={22} style={{ color: acento }} fill={acento}/>
-            <span className="text-2xl font-extrabold text-white">{favCount}</span>
-            <span className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Favoritos</span>
+        <div className="grid grid-cols-2 gap-3 mb-5">
+          <div className="rounded-2xl p-5 flex flex-col items-center gap-2"
+            style={{ background: acento + '12', border: `1px solid ${acento}30` }}>
+            <Heart size={24} fill={acento} style={{ color: acento }}/>
+            <span className="text-3xl font-extrabold text-white">{favCount}</span>
+            <span className="text-xs font-semibold uppercase tracking-wide" style={{ color: acento + 'cc' }}>Favoritos</span>
           </div>
           <div className="bg-white/5 border border-white/5 rounded-2xl p-5 flex flex-col items-center gap-2">
-            <MessageCircle size={22} className="text-gray-400"/>
-            <span className="text-2xl font-extrabold text-white">{perfil.total_comentarios}</span>
+            <MessageCircle size={24} style={{ color: acento }}/>
+            <span className="text-3xl font-extrabold text-white">{perfil.total_comentarios}</span>
             <span className="text-xs text-gray-500 font-semibold uppercase tracking-wide">Comentarios</span>
           </div>
         </div>
 
-        {/* Color de acento */}
-        <div className="bg-white/5 border border-white/5 rounded-2xl p-5">
-          <div className="flex items-center gap-2 mb-1">
-            <div className="w-3 h-3 rounded-full" style={{ background: acento }}/>
-            <p className="text-sm font-bold text-white">Color principal</p>
-            {colorSaving && <Loader2 size={13} className="animate-spin text-gray-400 ml-auto"/>}
+        {/* Color principal */}
+        <div className="rounded-2xl p-5 mb-5" style={{ background: '#111115', border: `1px solid ${acento}30` }}>
+          <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2">
+              <div className="w-3.5 h-3.5 rounded-full shadow-lg" style={{ background: acento, boxShadow: `0 0 8px ${acento}80` }}/>
+              <p className="text-sm font-bold text-white">Color principal</p>
+            </div>
+            {colorSaving && <Loader2 size={13} className="animate-spin" style={{ color: acento }}/>}
           </div>
-          <p className="text-xs text-gray-500 mb-4">Personaliza el acento de tu perfil</p>
+          <p className="text-xs text-gray-600 mb-4">Se aplica en tu perfil y comentarios</p>
           <div className="flex flex-wrap gap-3">
             {COLORES.map(hex => (
-              <button
-                key={hex}
-                onClick={() => handleColorChange(hex)}
-                className="w-9 h-9 rounded-full transition-transform hover:scale-110 flex items-center justify-center"
-                style={{ background: hex }}
-                title={hex}
-              >
-                {perfil.color_acento === hex && <Check size={16} className="text-white drop-shadow"/>}
+              <button key={hex} onClick={() => handleColorChange(hex)}
+                className="w-10 h-10 rounded-full transition-all hover:scale-110 flex items-center justify-center shadow-md"
+                style={{ background: hex, boxShadow: perfil.color_acento === hex ? `0 0 0 3px #0a0a0c, 0 0 0 5px ${hex}` : undefined }}>
+                {perfil.color_acento === hex && <Check size={17} className="text-white drop-shadow-lg font-black"/>}
               </button>
             ))}
           </div>
         </div>
 
         {/* Cerrar sesión */}
-        <button
-          onClick={() => { logout(); router.replace('/'); }}
-          className="mt-6 w-full py-3 rounded-2xl text-sm font-bold text-gray-500 border border-white/5 hover:bg-white/5 hover:text-red-400 hover:border-red-500/20 transition"
-        >
+        <button onClick={() => { logout(); router.replace('/'); }}
+          className="w-full py-3.5 rounded-2xl text-sm font-bold transition border"
+          style={{ borderColor: acento + '30', color: acento + 'aa' }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = acento + '15'; }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = 'transparent'; }}>
           Cerrar sesión
         </button>
 
