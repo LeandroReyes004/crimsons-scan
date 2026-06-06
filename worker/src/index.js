@@ -357,7 +357,9 @@ export default {
           WHERE m.scan_id = ? ${adultFilter}
           ORDER BY ultimo_cap_fecha DESC NULLS LAST, m.fecha_actualizacion DESC`;
 
-        const { results } = isScanMember
+        // admin_scan ve solo los mangas de su scan (con o sin admin=1)
+        const filterByScan = isScanMember || (isAdmin && isScanAdmin(caller) && caller.scan_id);
+        const { results } = filterByScan
           ? await env.DB.prepare(query_scan).bind(caller.scan_id).all()
           : await env.DB.prepare(query_all).all();
 
@@ -862,16 +864,17 @@ export default {
       if (editManga && method === 'PUT') {
         const admin = await requireAdmin(request, env);
         if (!admin) return err('No autorizado', 401);
-        const { titulo, titulo_alt, descripcion, generos, tipo, estado, es_adulto, scan_id } = await request.json();
 
-        // Solo superadmin puede cambiar el scan_id
-        let finalScanId;
-        if (admin.is_superadmin) {
-          finalScanId = scan_id || null;
-        } else {
-          const current = await env.DB.prepare('SELECT scan_id FROM mangas WHERE id=?').bind(editManga[1]).first();
-          finalScanId = current?.scan_id ?? null;
+        // admin_scan solo puede editar mangas de su propio scan
+        const current = await env.DB.prepare('SELECT scan_id FROM mangas WHERE id=?').bind(editManga[1]).first();
+        if (!current) return err('Manga no encontrado', 404);
+        if (isScanAdmin(admin) && current.scan_id !== admin.scan_id) {
+          return err('No tenés permiso para editar este manga', 403);
         }
+
+        const { titulo, titulo_alt, descripcion, generos, tipo, estado, es_adulto, scan_id } = await request.json();
+        // Solo superadmin puede cambiar el scan_id
+        const finalScanId = admin.is_superadmin ? (scan_id || null) : (current.scan_id ?? null);
 
         await env.DB.prepare(
           `UPDATE mangas SET titulo=?, titulo_alt=?, descripcion=?, generos=?, tipo=?, estado=?, es_adulto=?, scan_id=?, fecha_actualizacion=datetime('now') WHERE id=?`
