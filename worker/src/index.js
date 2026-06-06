@@ -424,7 +424,9 @@ export default {
       // ── GET /api/mangas/:id ──────────────────────────────
       const mangaById = pathname.match(/^\/api\/mangas\/([^/]+)$/);
       if (mangaById && method === 'GET') {
-        const manga = await env.DB.prepare('SELECT * FROM mangas WHERE id = ?').bind(mangaById[1]).first();
+        const manga = await env.DB.prepare(
+          `SELECT m.*, s.nombre as scan_nombre FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
+        ).bind(mangaById[1]).first();
         if (!manga) return err('Manga no encontrado', 404);
 
         const { results: capitulos } = await env.DB.prepare(
@@ -434,6 +436,22 @@ export default {
         ).bind(mangaById[1]).all();
 
         return json({ manga, capitulos });
+      }
+
+      // ── GET /api/scans/:id ────────────────────────────────
+      const scanById = pathname.match(/^\/api\/scans\/([^/]+)$/);
+      if (scanById && method === 'GET') {
+        const scan = await env.DB.prepare('SELECT id, nombre, descripcion FROM scans WHERE id = ? AND activo = 1').bind(scanById[1]).first();
+        if (!scan) return err('Scan no encontrado', 404);
+        const { results: mangas } = await env.DB.prepare(
+          `SELECT m.id, m.titulo, m.tipo, m.estado, m.cover_r2_key, m.views_total, m.generos, m.es_adulto,
+            (SELECT numero FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_capitulo,
+            (SELECT id FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_capitulo_id,
+            (SELECT fecha_publicacion FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_cap_fecha
+           FROM mangas m WHERE m.scan_id = ?
+           ORDER BY m.fecha_actualizacion DESC`
+        ).bind(scanById[1]).all();
+        return json({ scan, mangas: mangas || [] });
       }
 
       // ── GET /api/chapters/:id/pages ──────────────────────

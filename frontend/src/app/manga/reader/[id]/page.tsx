@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, ChevronLeft, Play, Eye, Tag, Clock, Heart, LogIn, LogOut, User, Send, MessageCircle } from 'lucide-react';
+import { BookOpen, ChevronLeft, Play, Eye, Tag, Clock, Heart, LogIn, LogOut, User, Send, MessageCircle, Layers } from 'lucide-react';
 import { useFavorites } from '@/lib/favorites';
 import { getUser, login, logout, authHeaders } from '@/lib/auth';
 import AdPopUnder from '@/components/AdPopUnder';
@@ -13,7 +13,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 interface Manga {
   id: string; titulo: string; titulo_alt: string | null; descripcion: string | null;
   generos: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number;
-  es_adulto?: number | boolean;
+  es_adulto?: number | boolean; scan_id?: string | null; scan_nombre?: string | null;
 }
 interface Capitulo {
   id: string; numero: number; titulo: string | null; views: number; fecha_subida: string;
@@ -211,9 +211,15 @@ export default function MangaDetailPage() {
               </div>
             )}
 
-            <div className="flex items-center gap-4 text-sm text-gray-400">
+            <div className="flex items-center gap-4 text-sm text-gray-400 flex-wrap">
               <span className="flex items-center gap-1.5"><Eye size={13}/> {manga.views_total.toLocaleString()} vistas</span>
               <span className="flex items-center gap-1.5"><BookOpen size={13}/> {caps.length} caps</span>
+              {manga.scan_id && manga.scan_nombre && (
+                <Link href={`/scan/${manga.scan_id}`}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition text-xs font-semibold">
+                  <Layers size={11}/> {manga.scan_nombre}
+                </Link>
+              )}
             </div>
 
             {caps.length > 0 && (
