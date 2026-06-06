@@ -353,7 +353,7 @@ const GENRES_LIST = [
   'Médico','Cocina','Música','Idol','Oficina','Crimen','Detectives','Mafia','Monstruos','Demonios',
   'Ángeles','Vampiros','Zombies','Mazmorras','Cazadores','Invocación','Magia Oscura','Alquimia',
   'Bestias Mágicas','Omegaverse','BL (Boys Love)','GL (Girls Love)','Yuri','Yaoi','Shounen Ai',
-  'Josei Ai','Harén Masculino','Harén Femenino',
+  'Josei Ai','Harén Masculino','Harén Femenino','Sadomasoquismo',
 ];
 
 function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
