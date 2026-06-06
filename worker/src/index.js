@@ -395,7 +395,8 @@ export default {
         const admin = await requireAdmin(request, env);
         if (!admin) return err('No autorizado', 401);
 
-        const { titulo, titulo_alt, descripcion, generos, tipo, estado, scan_id, es_adulto } = await request.json();
+        const body = await request.json();
+        const { titulo, titulo_alt, descripcion, generos, tipo, estado, scan_id, es_adulto } = body;
         if (!titulo) return err('El título es obligatorio');
 
         // admin_scan siempre crea bajo su propio scan
@@ -408,14 +409,18 @@ export default {
         const finalScanId = isScanAdmin(admin) ? (adminScanId || null) : (scan_id || null);
 
         const id = crypto.randomUUID();
-        await env.DB.prepare(
-          `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
-        ).bind(
-          id, titulo, titulo_alt || null, descripcion || null,
-          JSON.stringify(generos || []), tipo || 'manga',
-          estado || 'en_curso', admin.id, finalScanId, es_adulto ? 1 : 0
-        ).run();
+        try {
+          await env.DB.prepare(
+            `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          ).bind(
+            id, titulo, titulo_alt || null, descripcion || null,
+            JSON.stringify(generos || []), tipo || 'manga',
+            estado || 'en_curso', admin.id, finalScanId, es_adulto ? 1 : 0
+          ).run();
+        } catch (dbErr) {
+          return err(`DB error: ${dbErr?.message || String(dbErr)}`, 500);
+        }
 
         return json({ mangaId: id, message: 'Manga creado' }, 201);
       }
