@@ -389,6 +389,9 @@ export default {
         const { titulo, titulo_alt, descripcion, generos, tipo, estado, scan_id, es_adulto } = await request.json();
         if (!titulo) return err('El título es obligatorio');
 
+        // admin_scan siempre crea bajo su propio scan
+        const finalScanId = isScanAdmin(admin) ? (admin.scan_id || null) : (scan_id || null);
+
         const id = crypto.randomUUID();
         await env.DB.prepare(
           `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto)
@@ -396,7 +399,7 @@ export default {
         ).bind(
           id, titulo, titulo_alt || null, descripcion || null,
           JSON.stringify(generos || []), tipo || 'manga',
-          estado || 'en_curso', admin.id, scan_id || null, es_adulto ? 1 : 0
+          estado || 'en_curso', admin.id, finalScanId, es_adulto ? 1 : 0
         ).run();
 
         return json({ mangaId: id, message: 'Manga creado' }, 201);
@@ -860,9 +863,19 @@ export default {
         const admin = await requireAdmin(request, env);
         if (!admin) return err('No autorizado', 401);
         const { titulo, titulo_alt, descripcion, generos, tipo, estado, es_adulto, scan_id } = await request.json();
+
+        // Solo superadmin puede cambiar el scan_id
+        let finalScanId;
+        if (admin.is_superadmin) {
+          finalScanId = scan_id || null;
+        } else {
+          const current = await env.DB.prepare('SELECT scan_id FROM mangas WHERE id=?').bind(editManga[1]).first();
+          finalScanId = current?.scan_id ?? null;
+        }
+
         await env.DB.prepare(
           `UPDATE mangas SET titulo=?, titulo_alt=?, descripcion=?, generos=?, tipo=?, estado=?, es_adulto=?, scan_id=?, fecha_actualizacion=datetime('now') WHERE id=?`
-        ).bind(titulo, titulo_alt||null, descripcion||null, JSON.stringify(generos||[]), tipo||'manga', estado||'en_curso', es_adulto ? 1 : 0, scan_id||null, editManga[1]).run();
+        ).bind(titulo, titulo_alt||null, descripcion||null, JSON.stringify(generos||[]), tipo||'manga', estado||'en_curso', es_adulto ? 1 : 0, finalScanId, editManga[1]).run();
         return json({ message: 'Manga actualizado' });
       }
 
@@ -1017,6 +1030,25 @@ export default {
         ).run();
 
         return json({ message: 'Capítulo actualizado' });
+      }
+
+      // ── DELETE /api/mangas/:id ────────────────────────────
+      const deleteManga = pathname.match(/^\/api\/mangas\/([^/]+)$/);
+      if (deleteManga && method === 'DELETE') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('Sin permisos', 403);
+
+        // admin_scan solo puede eliminar mangas de su propio scan
+        if (isScanAdmin(admin)) {
+          const manga = await env.DB.prepare('SELECT scan_id FROM mangas WHERE id=?').bind(deleteManga[1]).first();
+          if (!manga) return err('Manga no encontrado', 404);
+          if (manga.scan_id !== admin.scan_id) return err('No tenés permiso para eliminar este manga', 403);
+        }
+
+        await env.DB.prepare('DELETE FROM paginas WHERE capitulo_id IN (SELECT id FROM capitulos WHERE manga_id = ?)').bind(deleteManga[1]).run();
+        await env.DB.prepare('DELETE FROM capitulos WHERE manga_id = ?').bind(deleteManga[1]).run();
+        await env.DB.prepare('DELETE FROM mangas WHERE id = ?').bind(deleteManga[1]).run();
+        return json({ message: 'Manga eliminado' });
       }
 
       // ── DELETE /api/chapters/:id ──────────────────────────

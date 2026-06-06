@@ -344,17 +344,24 @@ function SectionDashboard() {
 // ============================================================
 const GENRES_LIST = ['Acción','Aventura','Comedia','Drama','Fantasía','Horror','Misterio','Psicológico','Romance','Ciencia Ficción','Sobrenatural','Thriller','Deportes','Histórico','Isekai','Mecha','Magia','Artes Marciales','Superpoderes','Reencarnación','Supervivencia','BL','Yuri'];
 
-function MangaForm({ initial, onSave, onCancel, title }: {
+function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
   initial?: Partial<Manga>;
   onSave: (data: any, coverFile: File | null) => Promise<void>;
   onCancel: () => void;
   title: string;
+  isSuperAdmin: boolean;
 }) {
+  const currentUser = getUser();
   const [titulo, setTitulo]       = useState(initial?.titulo || '');
   const [tipo, setTipo]           = useState(initial?.tipo || 'manga');
   const [estado, setEstado]       = useState(initial?.estado || 'en_curso');
   const [descripcion, setDesc]    = useState(initial?.descripcion || '');
-  const [scanId, setScanId]       = useState(initial?.scan_id || '');
+  // Si no es superadmin, el scan_id se fija al del usuario actual (o al del manga si ya tenía uno)
+  const [scanId, setScanId]       = useState(
+    isSuperAdmin
+      ? (initial?.scan_id || '')
+      : (initial?.scan_id || currentUser?.scan_id || '')
+  );
   const [scans, setScans]         = useState<{id:string; nombre:string}[]>([]);
   const [generos, setGeneros]     = useState<string[]>(() => {
     try { return initial ? JSON.parse(initial.generos || '[]') : []; } catch { return []; }
@@ -365,10 +372,11 @@ function MangaForm({ initial, onSave, onCancel, title }: {
   const [feedback, setFeedback]   = useState<string | null>(null);
 
   useEffect(() => {
+    if (!isSuperAdmin) return;
     fetch(`${API}/api/scans`, { headers: authHeaders() })
       .then(r => r.json())
       .then(d => setScans(d.scans || []));
-  }, []);
+  }, [isSuperAdmin]);
 
   const toggleGenre = (g: string) => setGeneros(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
 
@@ -402,16 +410,18 @@ function MangaForm({ initial, onSave, onCancel, title }: {
             <input value={titulo} onChange={e => setTitulo(e.target.value)} required placeholder="Ej: Solo Leveling Ragnarok"
               className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"/>
           </div>
-          <div className="flex flex-col gap-1.5 md:col-span-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><Layers size={11}/> Scan Responsable</label>
-            <select value={scanId} onChange={e => setScanId(e.target.value)}
-              className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
-              <option value="">— Sin asignar —</option>
-              {scans.map(s => (
-                <option key={s.id} value={s.id}>{s.nombre}</option>
-              ))}
-            </select>
-          </div>
+          {isSuperAdmin && (
+            <div className="flex flex-col gap-1.5 md:col-span-2">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><Layers size={11}/> Scan Responsable</label>
+              <select value={scanId} onChange={e => setScanId(e.target.value)}
+                className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
+                <option value="">— Sin asignar —</option>
+                {scans.map(s => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Tipo</label>
             <select value={tipo} onChange={e => setTipo(e.target.value)}
@@ -490,7 +500,9 @@ function SectionMangas() {
   const { data, loading, refetch } = useAPI<{ mangas: Manga[] }>('/api/mangas?admin=1');
   const [showCreate, setShowCreate] = useState(false);
   const [editingManga, setEditing]  = useState<Manga | null>(null);
-  const isReadOnly = getUser()?.rol === 'soporte';
+  const currentUser = getUser();
+  const isReadOnly   = currentUser?.rol === 'soporte';
+  const isSuperAdmin = !!currentUser?.is_superadmin;
 
   const handleCreate = async (formData: any, coverFile: File | null) => {
     const res = await fetch(`${API}/api/mangas`, {
@@ -527,6 +539,13 @@ function SectionMangas() {
     refetch();
   };
 
+  const handleDelete = async (manga: Manga) => {
+    if (!confirm(`¿Eliminar "${manga.titulo}"? Se borrarán todos sus capítulos y páginas. Esta acción no se puede deshacer.`)) return;
+    const res = await fetch(`${API}/api/mangas/${manga.id}`, { method: 'DELETE', headers: authHeaders() });
+    if (!res.ok) { const d = await res.json(); alert(d.error || 'Error al eliminar'); return; }
+    refetch();
+  };
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
@@ -543,11 +562,11 @@ function SectionMangas() {
       </div>
 
       {showCreate && !editingManga && (
-        <MangaForm title="Crear Nueva Obra" onSave={handleCreate} onCancel={() => setShowCreate(false)} />
+        <MangaForm title="Crear Nueva Obra" onSave={handleCreate} onCancel={() => setShowCreate(false)} isSuperAdmin={isSuperAdmin} />
       )}
 
       {editingManga && (
-        <MangaForm title={`Editar: ${editingManga.titulo}`} initial={editingManga} onSave={handleEdit} onCancel={() => setEditing(null)} />
+        <MangaForm title={`Editar: ${editingManga.titulo}`} initial={editingManga} onSave={handleEdit} onCancel={() => setEditing(null)} isSuperAdmin={isSuperAdmin} />
       )}
 
       {loading ? (
@@ -587,6 +606,12 @@ function SectionMangas() {
                   <button onClick={() => { setEditing(m); setShowCreate(false); }}
                     className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition" title="Editar">
                     <Edit3 size={14}/>
+                  </button>
+                )}
+                {!isReadOnly && (
+                  <button onClick={() => handleDelete(m)}
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition" title="Eliminar">
+                    <Trash2 size={14}/>
                   </button>
                 )}
               </div>
