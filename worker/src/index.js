@@ -339,10 +339,26 @@ export default {
       if (pathname === '/api/auth/me' && method === 'PUT') {
         const user = await getUser(request, env);
         if (!user) return err('No autenticado', 401);
-        const { color_acento } = await request.json();
-        await env.DB.prepare('UPDATE usuarios SET color_acento = ? WHERE id = ?')
-          .bind(color_acento || null, user.id).run();
-        return json({ message: 'Perfil actualizado' });
+        const body = await request.json();
+
+        if ('username' in body) {
+          const newUsername = body.username?.trim();
+          if (!newUsername || newUsername.length < 3) return err('El nombre debe tener al menos 3 caracteres', 400);
+          if (newUsername.length > 30) return err('Máximo 30 caracteres', 400);
+          if (!/^[a-zA-Z0-9_\-\.]+$/.test(newUsername)) return err('Solo letras, números, _, - y .', 400);
+          const existing = await env.DB.prepare('SELECT id FROM usuarios WHERE username = ? AND id != ?').bind(newUsername, user.id).first();
+          if (existing) return err('Ese nombre ya está en uso', 409);
+          await env.DB.prepare('UPDATE usuarios SET username = ? WHERE id = ?').bind(newUsername, user.id).run();
+          return json({ message: 'Nombre actualizado', username: newUsername });
+        }
+
+        if ('color_acento' in body) {
+          await env.DB.prepare('UPDATE usuarios SET color_acento = ? WHERE id = ?')
+            .bind(body.color_acento || null, user.id).run();
+          return json({ message: 'Perfil actualizado' });
+        }
+
+        return json({ message: 'Sin cambios' });
       }
 
       // ── POST /api/upload/avatar ───────────────────────────

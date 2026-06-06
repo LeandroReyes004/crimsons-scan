@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ChevronLeft, Camera, Check, Loader2, MessageCircle, Heart, User, Calendar, Shield } from 'lucide-react';
+import { ChevronLeft, Camera, Check, Loader2, MessageCircle, Heart, Calendar, Shield, Pencil, X } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
@@ -33,8 +33,11 @@ export default function PerfilPage() {
   const [avatarKey, setAvatarKey] = useState(0); // force re-render de imagen
   const [uploading, setUploading]   = useState(false);
   const [imgLoaded, setImgLoaded]   = useState(false);
-  const [colorSaving, setColorSaving] = useState(false);
-  const [msg, setMsg]             = useState('');
+  const [colorSaving, setColorSaving]     = useState(false);
+  const [editingName, setEditingName]     = useState(false);
+  const [newUsername, setNewUsername]     = useState('');
+  const [nameSaving, setNameSaving]       = useState(false);
+  const [msg, setMsg]                     = useState('');
   const [favCount, setFavCount]   = useState(0);
 
   useEffect(() => {
@@ -88,6 +91,26 @@ export default function PerfilPage() {
       setMsg('✅ Color guardado');
     } catch (err: any) { setMsg(`❌ ${err.message}`); }
     finally { setColorSaving(false); }
+  };
+
+  const handleSaveName = async () => {
+    if (!newUsername.trim() || newUsername.trim() === perfil?.username) { setEditingName(false); return; }
+    setNameSaving(true); setMsg('');
+    try {
+      const res = await fetch(`${API}/api/auth/me`, {
+        method: 'PUT', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: newUsername.trim() }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setPerfil(p => p ? { ...p, username: newUsername.trim() } : p);
+      // actualizar localStorage
+      const stored = localStorage.getItem('crimson_user');
+      if (stored) localStorage.setItem('crimson_user', JSON.stringify({ ...JSON.parse(stored), username: newUsername.trim() }));
+      setMsg('✅ Nombre actualizado');
+      setEditingName(false);
+    } catch (err: any) { setMsg(`❌ ${err.message}`); }
+    finally { setNameSaving(false); }
   };
 
   const avatarUrl = perfil ? `${API}/api/avatar/${perfil.id}?v=${avatarKey}` : '';
@@ -151,7 +174,35 @@ export default function PerfilPage() {
 
           {/* Datos */}
           <div className="text-center sm:text-left flex-1">
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">{perfil.username}</h1>
+            {editingName ? (
+              <div className="flex items-center gap-2">
+                <input
+                  value={newUsername} onChange={e => setNewUsername(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
+                  maxLength={30} autoFocus
+                  className="bg-white/10 border rounded-xl px-3 py-1.5 text-xl font-extrabold text-white outline-none flex-1 min-w-0"
+                  style={{ borderColor: acento + '80' }}
+                />
+                <button onClick={handleSaveName} disabled={nameSaving}
+                  className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 transition"
+                  style={{ background: acento }}>
+                  {nameSaving ? <Loader2 size={14} className="animate-spin text-white"/> : <Check size={14} className="text-white"/>}
+                </button>
+                <button onClick={() => setEditingName(false)}
+                  className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center shrink-0 hover:bg-white/20 transition">
+                  <X size={14} className="text-gray-300"/>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 justify-center sm:justify-start">
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">{perfil.username}</h1>
+                <button onClick={() => { setNewUsername(perfil.username); setEditingName(true); }}
+                  className="p-1.5 rounded-lg hover:bg-white/10 transition opacity-60 hover:opacity-100"
+                  title="Editar nombre">
+                  <Pencil size={14} style={{ color: acento }}/>
+                </button>
+              </div>
+            )}
             <p className="text-gray-400 text-sm mt-0.5">{perfil.email}</p>
             <p className="text-gray-500 text-xs mt-1.5 flex items-center gap-1 justify-center sm:justify-start">
               <Calendar size={11}/>
