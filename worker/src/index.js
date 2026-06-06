@@ -1264,6 +1264,30 @@ export default {
         return json({ capitulos: results });
       }
 
+      // ── GET /api/mangas/:id/comentarios ─────────────────
+      const getComents = pathname.match(/^\/api\/mangas\/([^/]+)\/comentarios$/);
+      if (getComents && method === 'GET') {
+        const { results } = await env.DB.prepare(
+          `SELECT id, usuario_id, username, contenido, fecha FROM comentarios WHERE manga_id = ? AND es_visible = 1 ORDER BY fecha DESC LIMIT 100`
+        ).bind(getComents[1]).all();
+        return json({ comentarios: results || [] });
+      }
+
+      // ── POST /api/mangas/:id/comentarios ─────────────────
+      const postComent = pathname.match(/^\/api\/mangas\/([^/]+)\/comentarios$/);
+      if (postComent && method === 'POST') {
+        const user = await getUser(request, env);
+        if (!user) return err('Iniciá sesión para comentar', 401);
+        const { contenido } = await request.json();
+        if (!contenido?.trim()) return err('El comentario no puede estar vacío', 400);
+        if (contenido.trim().length > 500) return err('Máximo 500 caracteres', 400);
+        const id = crypto.randomUUID();
+        await env.DB.prepare(
+          `INSERT INTO comentarios (id, manga_id, usuario_id, username, contenido) VALUES (?, ?, ?, ?, ?)`
+        ).bind(id, postComent[1], user.id, user.username, contenido.trim()).run();
+        return json({ id, username: user.username, contenido: contenido.trim(), fecha: new Date().toISOString() }, 201);
+      }
+
       return err('Página no encontrada', 404);
 
     } catch (e) {

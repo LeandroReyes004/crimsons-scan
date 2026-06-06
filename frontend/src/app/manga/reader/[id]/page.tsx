@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
-import { BookOpen, ChevronLeft, Play, Eye, Tag, Clock, Heart } from 'lucide-react';
+import { BookOpen, ChevronLeft, Play, Eye, Tag, Clock, Heart, LogIn, LogOut, User, Send, MessageCircle } from 'lucide-react';
 import { useFavorites } from '@/lib/favorites';
+import { getUser, login, logout, authHeaders } from '@/lib/auth';
 import AdPopUnder from '@/components/AdPopUnder';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
@@ -28,6 +29,61 @@ export default function MangaDetailPage() {
   const [lastChapterId, setLast]  = useState<string | null>(null);
   const { isFav, toggle }         = useFavorites();
 
+  // Auth
+  const [user, setUser]           = useState<ReturnType<typeof getUser>>(null);
+  const [loginOpen, setLoginOpen] = useState(false);
+  const [loginUser, setLoginUser] = useState('');
+  const [loginPass, setLoginPass] = useState('');
+  const [loginErr, setLoginErr]   = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+
+  // Comentarios
+  interface Comentario { id: string; usuario_id: string; username: string; contenido: string; fecha: string; }
+  const [comentarios, setComentarios] = useState<Comentario[]>([]);
+  const [nuevoComent, setNuevoComent] = useState('');
+  const [enviando, setEnviando]       = useState(false);
+  const [comentErr, setComentErr]     = useState('');
+
+  useEffect(() => { setUser(getUser()); }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginErr(''); setLoginLoading(true);
+    try {
+      const u = await login(loginUser, loginPass);
+      setUser(u); setLoginOpen(false); setLoginUser(''); setLoginPass('');
+    } catch (err: any) { setLoginErr(err.message || 'Error al iniciar sesión'); }
+    finally { setLoginLoading(false); }
+  };
+
+  const handleLogout = () => { logout(); setUser(null); };
+
+  const fetchComentarios = () => {
+    if (!id) return;
+    fetch(`${API}/api/mangas/${id}/comentarios`)
+      .then(r => r.json())
+      .then(d => setComentarios(d.comentarios || []))
+      .catch(() => {});
+  };
+
+  const handleComment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!nuevoComent.trim()) return;
+    setEnviando(true); setComentErr('');
+    try {
+      const res = await fetch(`${API}/api/mangas/${id}/comentarios`, {
+        method: 'POST',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ contenido: nuevoComent }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setComentarios(prev => [d, ...prev]);
+      setNuevoComent('');
+    } catch (err: any) { setComentErr(err.message); }
+    finally { setEnviando(false); }
+  };
+
   useEffect(() => {
     const saved = localStorage.getItem(`crimson_last_${id}`);
     if (saved) setLast(saved);
@@ -44,6 +100,7 @@ export default function MangaDetailPage() {
       })
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
+    fetchComentarios();
   }, [id]);
 
   if (loading) return (
@@ -79,12 +136,28 @@ export default function MangaDetailPage() {
       {!!manga.es_adulto && <AdPopUnder />}
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-6 flex items-center gap-3">
+      <header className="sticky top-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-4 sm:px-6 flex items-center gap-3">
         <Link href="/" className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition">
           <ChevronLeft size={20}/>
         </Link>
         <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-rose-600 to-orange-500 flex items-center justify-center text-white font-black text-xs">CS</div>
         <span className="font-bold text-white/90">Crimson<span className="text-rose-500">Scan</span></span>
+        <div className="ml-auto flex items-center gap-2">
+          {user ? (
+            <>
+              <span className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-gray-400 px-2 py-1 rounded-full bg-white/5 border border-white/10">
+                <User size={10}/> {user.username}
+              </span>
+              <button onClick={handleLogout} className="p-1.5 rounded-full text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 transition" title="Cerrar sesión">
+                <LogOut size={15}/>
+              </button>
+            </>
+          ) : (
+            <button onClick={() => setLoginOpen(true)} className="flex items-center gap-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition px-3 py-1.5 rounded-full">
+              <LogIn size={12}/> Iniciar sesión
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Fondo degradado superior */}
@@ -184,7 +257,7 @@ export default function MangaDetailPage() {
         <div>
           <h2 className="text-lg font-extrabold text-white mb-4 flex items-center gap-3">
             <span className="w-1 h-5 bg-rose-500 rounded-full shrink-0"/>
-            Capítulos
+            Capítulos ({caps.length})
           </h2>
 
           {caps.length === 0 ? (
@@ -220,7 +293,106 @@ export default function MangaDetailPage() {
           )}
         </div>
 
+        {/* Comentarios */}
+        <div className="mt-10">
+          <h2 className="text-lg font-extrabold text-white mb-5 flex items-center gap-3">
+            <span className="w-1 h-5 bg-rose-500 rounded-full shrink-0"/>
+            <MessageCircle size={18} className="text-rose-400"/>
+            Comentarios {comentarios.length > 0 && <span className="text-sm font-normal text-gray-500">({comentarios.length})</span>}
+          </h2>
+
+          {/* Formulario */}
+          {user ? (
+            <form onSubmit={handleComment} className="mb-6">
+              <div className="flex gap-3 items-start">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-600 to-orange-500 flex items-center justify-center text-white font-bold text-xs shrink-0 mt-0.5">
+                  {user.username.charAt(0).toUpperCase()}
+                </div>
+                <div className="flex-1 flex flex-col gap-2">
+                  <textarea
+                    value={nuevoComent}
+                    onChange={e => setNuevoComent(e.target.value)}
+                    placeholder="Escribí tu comentario..."
+                    maxLength={500}
+                    rows={3}
+                    className="w-full bg-white/5 border border-white/10 focus:border-rose-500/50 rounded-xl px-4 py-3 text-sm text-white placeholder-gray-500 outline-none resize-none transition"
+                  />
+                  {comentErr && <p className="text-xs text-red-400">{comentErr}</p>}
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs text-gray-600">{nuevoComent.length}/500</span>
+                    <button type="submit" disabled={enviando || !nuevoComent.trim()}
+                      className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-500 disabled:opacity-40 text-white font-bold px-4 py-2 rounded-xl text-xs transition">
+                      <Send size={12}/> {enviando ? 'Enviando...' : 'Comentar'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </form>
+          ) : (
+            <div className="mb-6 bg-white/5 border border-white/10 rounded-xl p-5 flex items-center justify-between gap-4">
+              <p className="text-sm text-gray-400">Iniciá sesión para dejar un comentario</p>
+              <button onClick={() => setLoginOpen(true)} className="flex items-center gap-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 px-3 py-2 rounded-xl transition shrink-0">
+                <LogIn size={12}/> Iniciar sesión
+              </button>
+            </div>
+          )}
+
+          {/* Lista comentarios */}
+          {comentarios.length === 0 ? (
+            <div className="text-center py-10 text-gray-600 text-sm">
+              <MessageCircle size={28} className="mx-auto mb-2 opacity-30"/>
+              Sé el primero en comentar
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {comentarios.map(c => (
+                <div key={c.id} className="flex gap-3">
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-600/60 to-orange-500/60 flex items-center justify-center text-white font-bold text-xs shrink-0">
+                    {c.username.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="flex-1 bg-white/5 rounded-xl px-4 py-3 border border-white/5">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-xs font-bold text-rose-400">{c.username}</span>
+                      <span className="text-[10px] text-gray-600">
+                        {new Date(c.fecha).toLocaleDateString('es', { day:'2-digit', month:'short', year:'numeric' })}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-300 leading-relaxed">{c.contenido}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
       </div>
+
+      {/* Modal login */}
+      {loginOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/70 backdrop-blur-sm p-4" onClick={e => { if (e.target === e.currentTarget) setLoginOpen(false); }}>
+          <div className="bg-[#111114] rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-white/10">
+            <h2 className="text-lg font-extrabold text-white mb-1">Iniciar sesión</h2>
+            <p className="text-sm text-gray-500 mb-5">Ingresá con tu cuenta de Crimson Scan</p>
+            {loginErr && <div className="mb-4 p-3 rounded-xl text-sm font-medium bg-red-500/10 text-red-400">{loginErr}</div>}
+            <form onSubmit={handleLogin} className="flex flex-col gap-3">
+              <input value={loginUser} onChange={e => setLoginUser(e.target.value)} required placeholder="Usuario" autoComplete="username"
+                className="bg-black/30 border border-white/10 px-3 py-2.5 rounded-xl text-sm text-white focus:border-rose-500 outline-none transition"/>
+              <input type="password" value={loginPass} onChange={e => setLoginPass(e.target.value)} required placeholder="Contraseña" autoComplete="current-password"
+                className="bg-black/30 border border-white/10 px-3 py-2.5 rounded-xl text-sm text-white focus:border-rose-500 outline-none transition"/>
+              <div className="flex gap-2 mt-1">
+                <button type="submit" disabled={loginLoading}
+                  className="flex-1 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                  {loginLoading ? 'Entrando...' : 'Entrar'}
+                </button>
+                <button type="button" onClick={() => setLoginOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-white/5 transition">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,10 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Flame, Sparkles, Settings, Menu, X, Heart } from 'lucide-react';
+import { ArrowRight, Flame, Sparkles, Settings, Menu, X, Heart, LogIn, LogOut, User } from 'lucide-react';
 import MangaCard from '@/components/MangaCard';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { getUser } from '@/lib/auth';
+import { getUser, login, logout } from '@/lib/auth';
 import { useFavorites } from '@/lib/favorites';
 
 interface Manga { id: string; titulo: string; generos: string; estado: string; tipo: string; views_total: number; cover_r2_key: string | null; fecha_actualizacion: string; ultimo_capitulo: number | null; ultimo_capitulo_id: string | null; ultimo_cap_fecha: string | null; }
@@ -13,7 +13,27 @@ export default function Home() {
   const [user, setUser]         = useState<ReturnType<typeof getUser>>(null);
   const [mangas, setMangas]     = useState<Manga[]>([]);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [loginOpen, setLoginOpen]   = useState(false);
+  const [loginUser, setLoginUser]   = useState('');
+  const [loginPass, setLoginPass]   = useState('');
+  const [loginErr, setLoginErr]     = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
   const { favorites, toggle, isFav } = useFavorites();
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginErr(''); setLoginLoading(true);
+    try {
+      const u = await login(loginUser, loginPass);
+      setUser(u);
+      setLoginOpen(false);
+      setLoginUser(''); setLoginPass('');
+    } catch (err: any) {
+      setLoginErr(err.message || 'Error al iniciar sesión');
+    } finally { setLoginLoading(false); }
+  };
+
+  const handleLogout = () => { logout(); setUser(null); };
 
   useEffect(() => {
     setUser(getUser());
@@ -77,13 +97,29 @@ export default function Home() {
           </Link>
           <div className="w-px h-4 bg-gray-300 dark:bg-white/10 mx-2"/>
           <ThemeToggle />
-          {user && (
-            <Link
-              href={(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') ? '/admin' : '/uploader'}
-              className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-rose-500 transition-colors px-3 py-1.5 rounded-full border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30"
-            >
-              <Settings size={12}/> {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') ? 'Admin' : 'Uploader'}
-            </Link>
+          {user ? (
+            <div className="flex items-center gap-2">
+              <span className="flex items-center gap-1.5 text-xs font-semibold text-gray-600 dark:text-gray-300 px-2.5 py-1.5 rounded-full bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10">
+                <User size={11}/> {user.username}
+              </span>
+              {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') && (
+                <Link href="/admin" className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-rose-500 transition-colors px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30">
+                  <Settings size={11}/> Admin
+                </Link>
+              )}
+              {user.rol === 'uploader' && (
+                <Link href="/uploader" className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-rose-500 transition-colors px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30">
+                  <Settings size={11}/> Uploader
+                </Link>
+              )}
+              <button onClick={handleLogout} className="p-1.5 rounded-full text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition" title="Cerrar sesión">
+                <LogOut size={14}/>
+              </button>
+            </div>
+          ) : (
+            <button onClick={() => setLoginOpen(true)} className="flex items-center gap-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition px-3 py-1.5 rounded-full shadow-sm shadow-rose-600/30">
+              <LogIn size={12}/> Iniciar sesión
+            </button>
           )}
         </nav>
         {/* Mobile: theme + hamburger */}
@@ -106,10 +142,30 @@ export default function Home() {
               </svg>
               Discord
             </Link>
-            {user && (
-              <Link href={(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') ? '/admin' : '/uploader'} onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-rose-500 transition flex items-center gap-1.5">
-                <Settings size={14}/> {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') ? 'Admin' : 'Uploader'}
-              </Link>
+            {user ? (
+              <>
+                <div className="py-3 flex items-center gap-2 border-b border-gray-100 dark:border-white/5">
+                  <User size={14} className="text-gray-400"/>
+                  <span className="font-semibold text-gray-700 dark:text-gray-200 text-sm">{user.username}</span>
+                </div>
+                {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') && (
+                  <Link href="/admin" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-rose-500 transition flex items-center gap-1.5 border-b border-gray-100 dark:border-white/5">
+                    <Settings size={14}/> Admin
+                  </Link>
+                )}
+                {user.rol === 'uploader' && (
+                  <Link href="/uploader" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-rose-500 transition flex items-center gap-1.5 border-b border-gray-100 dark:border-white/5">
+                    <Settings size={14}/> Uploader
+                  </Link>
+                )}
+                <button onClick={() => { handleLogout(); setMobileOpen(false); }} className="py-3 font-semibold text-rose-500 hover:text-rose-400 transition flex items-center gap-1.5">
+                  <LogOut size={14}/> Cerrar sesión
+                </button>
+              </>
+            ) : (
+              <button onClick={() => { setLoginOpen(true); setMobileOpen(false); }} className="py-3 font-bold text-rose-500 hover:text-rose-400 transition flex items-center gap-1.5">
+                <LogIn size={14}/> Iniciar sesión
+              </button>
             )}
           </div>
         )}
@@ -254,6 +310,41 @@ export default function Home() {
 
 
       </main>
+
+      {/* Modal login */}
+      {loginOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" onClick={e => { if (e.target === e.currentTarget) setLoginOpen(false); }}>
+          <div className="bg-white dark:bg-[#111114] rounded-2xl shadow-2xl w-full max-w-sm p-6 border border-gray-200 dark:border-white/10">
+            <h2 className="text-lg font-extrabold text-gray-900 dark:text-white mb-1">Iniciar sesión</h2>
+            <p className="text-sm text-gray-500 mb-5">Ingresá con tu cuenta de Crimson Scan</p>
+            {loginErr && (
+              <div className="mb-4 p-3 rounded-xl text-sm font-medium bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400">{loginErr}</div>
+            )}
+            <form onSubmit={handleLogin} className="flex flex-col gap-3">
+              <input
+                value={loginUser} onChange={e => setLoginUser(e.target.value)} required
+                placeholder="Usuario" autoComplete="username"
+                className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"
+              />
+              <input
+                type="password" value={loginPass} onChange={e => setLoginPass(e.target.value)} required
+                placeholder="Contraseña" autoComplete="current-password"
+                className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"
+              />
+              <div className="flex gap-2 mt-1">
+                <button type="submit" disabled={loginLoading}
+                  className="flex-1 bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white font-bold py-2.5 rounded-xl text-sm transition">
+                  {loginLoading ? 'Entrando...' : 'Entrar'}
+                </button>
+                <button type="button" onClick={() => setLoginOpen(false)}
+                  className="px-4 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition">
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
