@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { ArrowRight, Flame, Sparkles, Settings, Menu, X, Heart, LogIn, LogOut, User } from 'lucide-react';
 import MangaCard from '@/components/MangaCard';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { getUser, login, logout } from '@/lib/auth';
+import { getUser, login, logout, refreshUser, checkVersion } from '@/lib/auth';
 import { useFavorites } from '@/lib/favorites';
 
 interface Manga { id: string; titulo: string; generos: string; estado: string; tipo: string; views_total: number; cover_r2_key: string | null; fecha_actualizacion: string; ultimo_capitulo: number | null; ultimo_capitulo_id: string | null; ultimo_cap_fecha: string | null; }
@@ -36,7 +36,9 @@ export default function Home() {
   const handleLogout = () => { logout(); setUser(null); };
 
   useEffect(() => {
+    checkVersion();
     setUser(getUser());
+    refreshUser().then(u => { if (u) setUser(u); });
     const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
     fetch(`${API}/api/mangas`)
       .then(r => r.json())

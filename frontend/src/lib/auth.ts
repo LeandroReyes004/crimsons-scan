@@ -1,6 +1,18 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
-const TOKEN_KEY = 'crimson_token';
-const USER_KEY  = 'crimson_user';
+const API_URL   = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
+const TOKEN_KEY  = 'crimson_token';
+const USER_KEY   = 'crimson_user';
+const VER_KEY    = 'crimson_build';
+const BUILD_ID   = process.env.NEXT_PUBLIC_BUILD_ID || '0';
+
+export function checkVersion() {
+  if (typeof window === 'undefined') return;
+  const stored = localStorage.getItem(VER_KEY);
+  if (stored && stored !== BUILD_ID) {
+    localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(USER_KEY);
+  }
+  localStorage.setItem(VER_KEY, BUILD_ID);
+}
 
 export interface CrimsonUser {
   id: string;
@@ -48,4 +60,26 @@ export function isLoggedIn(): boolean {
 export function authHeaders(): Record<string, string> {
   const token = getToken();
   return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
+export async function refreshUser(): Promise<CrimsonUser | null> {
+  const token = getToken();
+  if (!token) return null;
+  try {
+    const res = await fetch(`${API_URL}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+    if (!res.ok) { logout(); return null; }
+    const d = await res.json();
+    const user: CrimsonUser = {
+      id: d.id,
+      username: d.username,
+      rol: d.rol,
+      avatar_url: d.avatar_url || undefined,
+      is_superadmin: !!d.is_superadmin,
+      scan_id: d.scan_id ?? null,
+    };
+    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    return user;
+  } catch { return null; }
 }
