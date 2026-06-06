@@ -82,7 +82,7 @@ export default function UploaderPage() {
   const zipInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetch(`${API}/api/mangas`, { headers: authHeaders() })
+    fetch(`${API}/api/mangas?admin=1`, { headers: authHeaders() })
       .then(r => r.json())
       .then(d => setMangas(d.mangas || []));
   }, []);

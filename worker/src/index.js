@@ -396,8 +396,9 @@ export default {
         const caller    = await getUser(request, env);
         const isAdmin   = caller && (caller.is_superadmin || caller.rol === 'admin' || caller.rol === 'admin_scan' || caller.rol === 'soporte');
         const isScanMember = caller && !isAdmin && caller.scan_id;
-        // Panel admin pasa ?admin=1 para ver todos los mangas incluyendo +18
-        const showAll   = isAdmin && new URL(request.url).searchParams.get('admin') === '1';
+        // Admin o uploader autenticado pasa ?admin=1 para ver todos los mangas incluyendo +18
+        const canSeeAdult = caller && (isAdmin || caller.rol === 'uploader');
+        const showAll   = canSeeAdult && new URL(request.url).searchParams.get('admin') === '1';
 
         const subqueries = `
             (SELECT numero FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_capitulo,
