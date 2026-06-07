@@ -1,13 +1,53 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Flame, Sparkles, Settings, Menu, X, Heart, LogIn, LogOut, User } from 'lucide-react';
+import { ArrowRight, Flame, Sparkles, Settings, Menu, X, Heart, LogIn, LogOut, User, TrendingUp, Clock, Sword, ChevronLeft, ChevronRight } from 'lucide-react';
 import MangaCard from '@/components/MangaCard';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getUser, login, logout, refreshUser, checkVersion } from '@/lib/auth';
 import { useFavorites } from '@/lib/favorites';
 
-interface Manga { id: string; titulo: string; generos: string; estado: string; tipo: string; views_total: number; cover_r2_key: string | null; fecha_actualizacion: string; ultimo_capitulo: number | null; ultimo_capitulo_id: string | null; ultimo_cap_fecha: string | null; }
+interface Manga { id: string; titulo: string; generos: string; estado: string; tipo: string; views_total: number; cover_r2_key: string | null; fecha_actualizacion: string; ultimo_capitulo: number | null; ultimo_capitulo_id: string | null; ultimo_cap_fecha: string | null; scan_id?: string | null; }
+
+function MangaRow({ title, icon, mangas, buildCard, viewAllHref }: {
+  title: string; icon: React.ReactNode; mangas: Manga[];
+  buildCard: (m: Manga, i: number) => React.ReactNode; viewAllHref?: string;
+}) {
+  const ref = useRef<HTMLDivElement>(null);
+  const scroll = (dir: number) => ref.current?.scrollBy({ left: dir * 640, behavior: 'smooth' });
+  if (mangas.length === 0) return null;
+  return (
+    <section className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-4">
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 flex-1">
+          {icon}
+          <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
+          <span className="text-xs text-gray-400 font-medium">{mangas.length} obras</span>
+        </div>
+        <div className="flex items-center gap-2">
+          {viewAllHref && (
+            <Link href={viewAllHref} className="text-xs font-bold text-rose-500 hover:text-rose-400 transition flex items-center gap-1">
+              Ver todo <ArrowRight size={12}/>
+            </Link>
+          )}
+          <button onClick={() => scroll(-1)} className="p-1.5 rounded-full bg-gray-100 dark:bg-white/10 hover:bg-rose-500/20 text-gray-500 dark:text-gray-300 hover:text-rose-500 transition">
+            <ChevronLeft size={14}/>
+          </button>
+          <button onClick={() => scroll(1)} className="p-1.5 rounded-full bg-gray-100 dark:bg-white/10 hover:bg-rose-500/20 text-gray-500 dark:text-gray-300 hover:text-rose-500 transition">
+            <ChevronRight size={14}/>
+          </button>
+        </div>
+      </div>
+      <div ref={ref} className="flex gap-3 overflow-x-auto pb-2 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
+        {mangas.map((m, i) => (
+          <div key={m.id} className="w-[160px] md:w-[180px] shrink-0 snap-start">
+            {buildCard(m, i)}
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
 
 export default function Home() {
   const [user, setUser]         = useState<ReturnType<typeof getUser>>(null);
@@ -46,10 +86,13 @@ export default function Home() {
       .catch(() => {});
   }, []);
 
-  const favMangas = mangas.filter(m => favorites.includes(m.id));
-  const featured  = mangas.length > 0
+  const favMangas  = mangas.filter(m => favorites.includes(m.id));
+  const featured   = mangas.length > 0
     ? [...mangas].sort((a, b) => b.views_total - a.views_total)[0]
     : null;
+  const masLeidos  = useMemo(() => [...mangas].sort((a, b) => b.views_total - a.views_total).slice(0, 20), [mangas]);
+  const recientes  = useMemo(() => [...mangas].slice(0, 20), [mangas]);
+  const delScan    = useMemo(() => mangas.filter(m => m.scan_id === 'scan-001'), [mangas]);
   const API_URL   = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
   const featuredCover = featured?.cover_r2_key ? `${API_URL}/api/cover/${featured.id}` : null;
 
@@ -292,24 +335,43 @@ export default function Home() {
           </section>
         )}
 
-        {/* ÚLTIMAS ACTUALIZACIONES */}
-        <section className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-6">
-          <div className="flex items-center gap-3 border-b border-gray-200 dark:border-white/5 pb-4">
-            <Flame size={28} className="text-orange-500"/>
-            <h3 className="text-2xl font-bold">Últimas Actualizaciones</h3>
+        {mangas.length === 0 ? (
+          <div className="flex flex-col items-center py-16 text-gray-400">
+            <p className="font-medium">Próximamente — el catálogo se está armando</p>
+            <p className="text-sm mt-1">Seguí nuestro Discord para las novedades</p>
           </div>
+        ) : (
+          <>
+            {/* MÁS LEÍDOS */}
+            <MangaRow
+              title="Más Leídos"
+              icon={<TrendingUp size={20} className="text-rose-500"/>}
+              mangas={masLeidos}
+              buildCard={buildCard}
+              viewAllHref="/catalogo"
+            />
 
-          {mangas.length === 0 ? (
-            <div className="flex flex-col items-center py-16 text-gray-400">
-              <p className="font-medium">Próximamente — el catálogo se está armando</p>
-              <p className="text-sm mt-1">Seguí nuestro Discord para las novedades</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {mangas.map((m, i) => buildCard(m, i))}
-            </div>
-          )}
-        </section>
+            {/* RECIENTES */}
+            <MangaRow
+              title="Recién Actualizados"
+              icon={<Clock size={20} className="text-sky-400"/>}
+              mangas={recientes}
+              buildCard={buildCard}
+              viewAllHref="/catalogo"
+            />
+
+            {/* DEL SCAN */}
+            {delScan.length > 0 && (
+              <MangaRow
+                title="Obras de Crimson Scan"
+                icon={<Sword size={20} className="text-orange-400"/>}
+                mangas={delScan}
+                buildCard={buildCard}
+                viewAllHref="/scan/scan-001"
+              />
+            )}
+          </>
+        )}
 
 
       </main>
