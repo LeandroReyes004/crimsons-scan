@@ -658,9 +658,9 @@ export default function UploaderPage() {
                   </p>
                   <div className="mt-2 text-xs text-blue-500 dark:text-blue-400 font-mono bg-blue-100 dark:bg-blue-500/10 rounded-lg px-3 py-2">
                     archivo.zip/<br/>
-                    &nbsp;&nbsp;cap-01/ → 001.jpg, 002.jpg...<br/>
-                    &nbsp;&nbsp;cap-02/ → 001.jpg, 002.jpg...<br/>
-                    &nbsp;&nbsp;cap-03/ → 001.jpg, 002.jpg...
+                    &nbsp;&nbsp;cap-01/ → 001.webp, 002.webp...<br/>
+                    &nbsp;&nbsp;cap-02/ → 001.webp, 002.webp...<br/>
+                    &nbsp;&nbsp;cap-03/ → 001.webp, 002.webp...
                   </div>
                 </div>
 
