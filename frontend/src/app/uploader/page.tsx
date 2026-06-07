@@ -66,6 +66,7 @@ export default function UploaderPage() {
   const [capNumero, setCapNumero]   = useState('');
   const [capTitulo, setCapTitulo]   = useState('');
   const [fechaPub, setFechaPub]     = useState('');
+  const [convertWebP, setConvertWebP] = useState(true);
   const [pages, setPages]           = useState<PageFile[]>([]);
   const [uploading, setUploading]   = useState(false);
   const [capId, setCapId]           = useState<string | null>(null);
@@ -105,8 +106,8 @@ export default function UploaderPage() {
     for (const file of Array.from(files)) {
       if (!ALLOWED_TYPES.includes(file.type)) { rejected.push(file.name); continue; }
       if (file.size > 10 * 1024 * 1024) { rejected.push(`${file.name} (supera 10MB)`); continue; }
-      const webp = await toWebP(file);
-      valid.push({ file: webp, preview: URL.createObjectURL(webp), order: pages.length + valid.length + 1, status: 'pending' });
+      const final = convertWebP ? await toWebP(file) : file;
+      valid.push({ file: final, preview: URL.createObjectURL(final), order: pages.length + valid.length + 1, status: 'pending' });
     }
     if (rejected.length > 0) alert(`Archivos rechazados:\n${rejected.join('\n')}`);
     setPages(prev => [...prev, ...valid.map((p, i) => ({ ...p, order: prev.length + i + 1 }))]);
@@ -531,6 +532,27 @@ export default function UploaderPage() {
                     </div>
                     {createError && <div className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm px-3 py-2 rounded-xl">{createError}</div>}
                   </div>
+                </div>
+
+                {/* Aviso conversión WebP */}
+                <div className={`rounded-2xl border px-4 py-3 flex items-start gap-3 ${convertWebP ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20' : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-bold mb-0.5 ${convertWebP ? 'text-blue-700 dark:text-blue-400' : 'text-gray-500'}`}>
+                      {convertWebP ? '🔄 Conversión a WebP activada' : '📁 Sin conversión'}
+                    </p>
+                    <p className={`text-xs leading-relaxed ${convertWebP ? 'text-blue-600 dark:text-blue-300' : 'text-gray-400'}`}>
+                      {convertWebP
+                        ? 'Los JPG/PNG se convertirán a WebP antes de subirse. Pesan hasta un 50% menos sin perder calidad visible.'
+                        : 'Las imágenes se subirán en su formato original sin modificar.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setConvertWebP(v => !v)}
+                    className={`shrink-0 w-11 h-6 rounded-full transition-colors duration-200 relative ${convertWebP ? 'bg-blue-500' : 'bg-gray-300 dark:bg-white/20'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${convertWebP ? 'translate-x-5' : 'translate-x-0'}`}/>
+                  </button>
                 </div>
 
                 <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4">
