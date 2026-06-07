@@ -54,13 +54,12 @@ export default function ChapterReaderPage() {
       localStorage.setItem('crimson_fp', fp);
     }
 
-    // Verificar si ya contabilizamos esta vista en las últimas 24h (capa cliente)
-    const viewedKey = `crimson_viewed_${chapterId}`;
+    // Dedup por manga (no por capítulo) — 1 vista por manga por 24h por browser
+    const viewedKey = `crimson_manga_view_${mangaId}`;
     const lastView  = parseInt(localStorage.getItem(viewedKey) || '0', 10);
     const now       = Date.now();
-    if (now - lastView < 86400_000) return; // menos de 24h → no llamar
+    if (now - lastView < 86400_000) return;
 
-    // Marcar inmediatamente en localStorage para evitar race conditions (recargas rápidas)
     localStorage.setItem(viewedKey, String(now));
 
     fetch(`${API}/api/chapters/${chapterId}/view`, {

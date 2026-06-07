@@ -152,16 +152,6 @@ export default function Home() {
           <ThemeToggle />
           {user ? (
             <div className="relative" ref={dropdownRef}>
-              {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') && (
-                <Link href="/admin" className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-rose-500 transition-colors px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30 mr-1">
-                  <Settings size={11}/> Admin
-                </Link>
-              )}
-              {user.rol === 'uploader' && (
-                <Link href="/uploader" className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-rose-500 transition-colors px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30 mr-1">
-                  <Settings size={11}/> Uploader
-                </Link>
-              )}
               <button onClick={() => setDropdownOpen(o => !o)} className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition">
                 <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-rose-600/60 to-orange-500/60 flex items-center justify-center shrink-0 relative">
                   <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/api/avatar/${user.id}`} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display='none'; }}/>
@@ -174,6 +164,16 @@ export default function Home() {
                   <Link href="/perfil" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 transition">
                     <UserCircle size={15} className="text-gray-400"/> Mi Perfil
                   </Link>
+                  {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') && (
+                    <Link href="/admin" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 transition">
+                      <Settings size={15} className="text-gray-400"/> Admin
+                    </Link>
+                  )}
+                  {user.rol === 'uploader' && (
+                    <Link href="/uploader" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 transition">
+                      <Settings size={15} className="text-gray-400"/> Uploader
+                    </Link>
+                  )}
                   <div className="h-px bg-gray-100 dark:bg-white/5 mx-3 my-1"/>
                   <button onClick={() => { handleLogout(); setDropdownOpen(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition">
                     <LogOut size={15}/> Cerrar sesión
