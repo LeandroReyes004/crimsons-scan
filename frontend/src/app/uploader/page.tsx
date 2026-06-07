@@ -261,10 +261,11 @@ export default function UploaderPage() {
 
         // Subir páginas
         for (let pi = 0; pi < cap.files.length; pi++) {
+          const image = convertWebP ? await toWebP(cap.files[pi]) : cap.files[pi];
           const fd = new FormData();
           fd.append('capitulo_id', capId);
           fd.append('numero', String(pi + 1));
-          fd.append('image', cap.files[pi]);
+          fd.append('image', image);
           const pr = await fetch(`${API}/api/upload/page`, { method: 'POST', headers: authHeaders(), body: fd });
           if (!pr.ok) {
             const pe = await pr.json();
@@ -661,6 +662,22 @@ export default function UploaderPage() {
                     &nbsp;&nbsp;cap-02/ → 001.jpg, 002.jpg...<br/>
                     &nbsp;&nbsp;cap-03/ → 001.jpg, 002.jpg...
                   </div>
+                </div>
+
+                {/* Toggle WebP batch */}
+                <div className={`rounded-2xl border px-4 py-3 flex items-center justify-between gap-3 ${convertWebP ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20' : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'}`}>
+                  <div>
+                    <p className={`text-xs font-bold mb-0.5 ${convertWebP ? 'text-blue-700 dark:text-blue-400' : 'text-gray-500'}`}>
+                      {convertWebP ? '🔄 Convertir imágenes a WebP' : '📁 Sin conversión'}
+                    </p>
+                    <p className={`text-xs ${convertWebP ? 'text-blue-600 dark:text-blue-300' : 'text-gray-400'}`}>
+                      {convertWebP ? 'Cada imagen del ZIP se convierte antes de subirse.' : 'Se suben los archivos originales del ZIP.'}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setConvertWebP(v => !v)}
+                    className={`shrink-0 w-11 h-6 rounded-full transition-colors duration-200 relative ${convertWebP ? 'bg-blue-500' : 'bg-gray-300 dark:bg-white/20'}`}>
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${convertWebP ? 'translate-x-5' : 'translate-x-0'}`}/>
+                  </button>
                 </div>
 
                 {/* Zona de carga del ZIP */}
