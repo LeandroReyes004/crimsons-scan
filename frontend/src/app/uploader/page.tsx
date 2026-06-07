@@ -326,10 +326,11 @@ export default function UploaderPage() {
     const arr = Array.from(files).filter(f => ALLOWED_TYPES.includes(f.type));
     const startOrden = editPages.length + 1;
     for (let i = 0; i < arr.length; i++) {
+      const file = convertWebP ? await toWebP(arr[i]) : arr[i];
       const fd = new FormData();
       fd.append('capitulo_id', editingCap.id);
       fd.append('numero', String(startOrden + i));
-      fd.append('image', arr[i]);
+      fd.append('image', file);
       await fetch(`${API}/api/upload/page`, { method: 'POST', headers: authHeaders(), body: fd });
       setAddProgress(Math.round(((i + 1) / arr.length) * 100));
     }
@@ -835,7 +836,14 @@ export default function UploaderPage() {
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
                   Páginas ({editPages.length})
                 </p>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-3">
+                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                    <button type="button" onClick={() => setConvertWebP(v => !v)}
+                      className={`w-8 h-4 rounded-full transition-colors duration-200 relative shrink-0 ${convertWebP ? 'bg-blue-500' : 'bg-gray-300 dark:bg-white/20'}`}>
+                      <span className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${convertWebP ? 'translate-x-4' : 'translate-x-0'}`}/>
+                    </button>
+                    <span className={`text-[10px] font-bold ${convertWebP ? 'text-blue-500' : 'text-gray-400'}`}>WebP</span>
+                  </label>
                   {addingPages && <span className="text-xs text-blue-500 font-medium">{addProgress}%</span>}
                   <button onClick={() => editFileRef.current?.click()} disabled={addingPages}
                     className="flex items-center gap-1.5 text-xs font-bold text-rose-500 hover:text-rose-400 disabled:opacity-50 transition">
