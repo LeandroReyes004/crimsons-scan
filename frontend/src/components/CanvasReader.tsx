@@ -20,11 +20,11 @@ const CanvasPageRenderer = ({ imageUrl }: Props) => {
     >
       <div
         className="relative w-full"
-        style={{ maxWidth: nativeWidth ? `${nativeWidth}px` : '100%' }}
+        style={{ maxWidth: nativeWidth ? `${nativeWidth}px` : '100%', minHeight: loaded ? undefined : '60vh' }}
       >
-        {/* Skeleton mientras carga */}
+        {/* Skeleton visible hasta que cargue */}
         {!loaded && (
-          <div className="w-full bg-white/5 animate-pulse" style={{ minHeight: '60vh' }} />
+          <div className="absolute inset-0 bg-white/5 animate-pulse rounded-sm" />
         )}
 
         <img
@@ -32,14 +32,13 @@ const CanvasPageRenderer = ({ imageUrl }: Props) => {
           alt=""
           loading="lazy"
           decoding="async"
-          className="w-full h-auto block"
+          className="w-full h-auto block transition-opacity duration-300"
           style={{
-            display:          loaded ? 'block' : 'none',
+            opacity:          loaded ? 1 : 0,
             userSelect:       'none',
             WebkitUserSelect: 'none',
             pointerEvents:    'none',
             touchAction:      'pan-y',
-            imageRendering:   'auto',
           } as React.CSSProperties}
           onLoad={e => { setNativeWidth(e.currentTarget.naturalWidth); setLoaded(true); }}
           draggable={false}
