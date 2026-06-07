@@ -22,15 +22,12 @@ const CanvasPageRenderer = ({ imageUrl }: Props) => {
         className="relative w-full"
         style={{ maxWidth: nativeWidth ? `${nativeWidth}px` : '100%', minHeight: loaded ? undefined : '60vh' }}
       >
-        {/* Skeleton visible hasta que cargue */}
         {!loaded && (
           <div className="absolute inset-0 bg-white/5 animate-pulse rounded-sm" />
         )}
-
         <img
           src={imageUrl}
           alt=""
-          loading="lazy"
           decoding="async"
           className="w-full h-auto block transition-opacity duration-300"
           style={{
