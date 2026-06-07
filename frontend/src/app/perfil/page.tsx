@@ -19,7 +19,7 @@ const ROL_LABEL: Record<string, string> = {
 };
 
 interface Perfil {
-  id: string; username: string; email: string; rol: string; avatar_url: string | null;
+  id: string; username: string; display_name: string | null; email: string; rol: string; avatar_url: string | null;
   color_acento: string | null; fecha_registro: string; is_superadmin: number;
   scan_id: string | null; total_comentarios: number; bio?: string | null;
 }
@@ -35,7 +35,7 @@ export default function PerfilPage() {
   const [imgLoaded, setImgLoaded]   = useState(false);
   const [colorSaving, setColorSaving]     = useState(false);
   const [editingName, setEditingName]     = useState(false);
-  const [newUsername, setNewUsername]     = useState('');
+  const [newDisplayName, setNewDisplayName] = useState('');
   const [nameSaving, setNameSaving]       = useState(false);
   const [bioText, setBioText]             = useState('');
   const [bioSaving, setBioSaving]         = useState(false);
@@ -47,7 +47,7 @@ export default function PerfilPage() {
     if (!token) { router.replace('/'); return; }
     fetch(`${API}/api/auth/me`, { headers: authHeaders() })
       .then(r => r.json())
-      .then(d => { if (d.id) { setPerfil(d); setBioText(d.bio || ''); } else router.replace('/'); })
+      .then(d => { if (d.id) { setPerfil(d); setBioText(d.bio || ''); setNewDisplayName(d.display_name || ''); } else router.replace('/'); })
       .catch(() => router.replace('/'))
       .finally(() => setLoading(false));
     // favoritos de localStorage
@@ -94,20 +94,20 @@ export default function PerfilPage() {
   };
 
   const handleSaveName = async () => {
-    if (!newUsername.trim() || newUsername.trim() === perfil?.username) { setEditingName(false); return; }
+    const val = newDisplayName.trim();
+    if (val === (perfil?.display_name || '')) { setEditingName(false); return; }
     setNameSaving(true); setMsg('');
     try {
       const res = await fetch(`${API}/api/auth/me`, {
         method: 'PUT', headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: newUsername.trim() }),
+        body: JSON.stringify({ display_name: val || null }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setPerfil(p => p ? { ...p, username: newUsername.trim() } : p);
-      // actualizar localStorage
+      setPerfil(p => p ? { ...p, display_name: val || null } : p);
       const stored = localStorage.getItem('crimson_user');
-      if (stored) localStorage.setItem('crimson_user', JSON.stringify({ ...JSON.parse(stored), username: newUsername.trim() }));
-      setMsg('✅ Nombre actualizado');
+      if (stored) localStorage.setItem('crimson_user', JSON.stringify({ ...JSON.parse(stored), display_name: val || null }));
+      setMsg('✅ Nombre público actualizado');
       setEditingName(false);
     } catch (err: any) { setMsg(`❌ ${err.message}`); }
     finally { setNameSaving(false); }
@@ -191,9 +191,9 @@ export default function PerfilPage() {
             {editingName ? (
               <div className="flex items-center gap-2">
                 <input
-                  value={newUsername} onChange={e => setNewUsername(e.target.value)}
+                  value={newDisplayName} onChange={e => setNewDisplayName(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') handleSaveName(); if (e.key === 'Escape') setEditingName(false); }}
-                  maxLength={30} autoFocus
+                  maxLength={50} autoFocus placeholder="Tu nombre público..."
                   className="bg-white/10 border rounded-xl px-3 py-1.5 text-xl font-extrabold text-white outline-none flex-1 min-w-0"
                   style={{ borderColor: acento + '80' }}
                 />
@@ -209,14 +209,17 @@ export default function PerfilPage() {
               </div>
             ) : (
               <div className="flex items-center gap-2 justify-center sm:justify-start">
-                <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">{perfil.username}</h1>
-                <button onClick={() => { setNewUsername(perfil.username); setEditingName(true); }}
+                <h1 className="text-2xl sm:text-3xl font-extrabold text-white leading-tight">
+                  {perfil.display_name || perfil.username}
+                </h1>
+                <button onClick={() => { setNewDisplayName(perfil.display_name || ''); setEditingName(true); }}
                   className="p-1.5 rounded-lg hover:bg-white/10 transition opacity-60 hover:opacity-100"
-                  title="Editar nombre">
+                  title="Editar nombre público">
                   <Pencil size={14} style={{ color: acento }}/>
                 </button>
               </div>
             )}
+            <p className="text-gray-500 text-xs mt-0.5 font-mono">@{perfil.username}</p>
             <p className="text-gray-400 text-sm mt-0.5">{perfil.email}</p>
             <p className="text-gray-500 text-xs mt-1.5 flex items-center gap-1 justify-center sm:justify-start">
               <Calendar size={11}/>

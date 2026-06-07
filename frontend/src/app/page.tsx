@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect, useMemo, useRef } from 'react';
 import Link from 'next/link';
-import { ArrowRight, Flame, Sparkles, Settings, Menu, X, Heart, LogIn, LogOut, User, TrendingUp, Clock, Sword, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowRight, Flame, Sparkles, Settings, Menu, X, Heart, LogIn, LogOut, User, TrendingUp, Clock, Sword, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
 import MangaCard from '@/components/MangaCard';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import { getUser, login, logout, refreshUser, checkVersion } from '@/lib/auth';
@@ -52,7 +52,9 @@ function MangaRow({ title, icon, mangas, buildCard, viewAllHref }: {
 export default function Home() {
   const [user, setUser]         = useState<ReturnType<typeof getUser>>(null);
   const [mangas, setMangas]     = useState<Manga[]>([]);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [mobileOpen, setMobileOpen]     = useState(false);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const [loginOpen, setLoginOpen]   = useState(false);
   const [loginUser, setLoginUser]   = useState('');
   const [loginPass, setLoginPass]   = useState('');
@@ -74,6 +76,14 @@ export default function Home() {
   };
 
   const handleLogout = () => { logout(); setUser(null); };
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   useEffect(() => {
     checkVersion();
@@ -140,27 +150,35 @@ export default function Home() {
           <div className="w-px h-4 bg-gray-300 dark:bg-white/10 mx-2"/>
           <ThemeToggle />
           {user ? (
-            <div className="flex items-center gap-2">
-              <Link href="/perfil" className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition group">
-                <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-rose-600/60 to-orange-500/60 flex items-center justify-center shrink-0 relative">
-                  <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/api/avatar/${user.id}`} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display='none'; }}/>
-                  <span className="absolute text-[10px] font-black text-white">{user.username.charAt(0).toUpperCase()}</span>
-                </div>
-                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition">{user.username}</span>
-              </Link>
+            <div className="relative" ref={dropdownRef}>
               {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') && (
-                <Link href="/admin" className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-rose-500 transition-colors px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30">
+                <Link href="/admin" className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-rose-500 transition-colors px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30 mr-1">
                   <Settings size={11}/> Admin
                 </Link>
               )}
               {user.rol === 'uploader' && (
-                <Link href="/uploader" className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-rose-500 transition-colors px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30">
+                <Link href="/uploader" className="flex items-center gap-1 text-xs font-bold text-gray-500 hover:text-rose-500 transition-colors px-2.5 py-1.5 rounded-full border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30 mr-1">
                   <Settings size={11}/> Uploader
                 </Link>
               )}
-              <button onClick={handleLogout} className="p-1.5 rounded-full text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition" title="Cerrar sesión">
-                <LogOut size={14}/>
+              <button onClick={() => setDropdownOpen(o => !o)} className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-gray-100 dark:hover:bg-white/5 transition">
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-rose-600/60 to-orange-500/60 flex items-center justify-center shrink-0 relative">
+                  <img src={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/api/avatar/${user.id}`} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display='none'; }}/>
+                  <span className="absolute text-[10px] font-black text-white">{(user.display_name || user.username).charAt(0).toUpperCase()}</span>
+                </div>
+                <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">{user.display_name || user.username}</span>
               </button>
+              {dropdownOpen && (
+                <div className="absolute right-0 top-full mt-2 w-44 bg-white dark:bg-[#18181b] border border-gray-200 dark:border-white/10 rounded-xl shadow-xl py-1 z-50 overflow-hidden">
+                  <Link href="/perfil" onClick={() => setDropdownOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-white/5 transition">
+                    <UserCircle size={15} className="text-gray-400"/> Mi Perfil
+                  </Link>
+                  <div className="h-px bg-gray-100 dark:bg-white/5 mx-3 my-1"/>
+                  <button onClick={() => { handleLogout(); setDropdownOpen(false); }} className="w-full flex items-center gap-2.5 px-4 py-2.5 text-sm text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition">
+                    <LogOut size={15}/> Cerrar sesión
+                  </button>
+                </div>
+              )}
             </div>
           ) : (
             <button onClick={() => setLoginOpen(true)} className="flex items-center gap-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition px-3 py-1.5 rounded-full shadow-sm shadow-rose-600/30">

@@ -17,6 +17,7 @@ export function checkVersion() {
 export interface CrimsonUser {
   id: string;
   username: string;
+  display_name?: string | null;
   rol: 'lector' | 'uploader' | 'admin' | 'admin_scan' | 'soporte';
   avatar_url?: string;
   is_superadmin?: boolean;
@@ -74,6 +75,7 @@ export async function refreshUser(): Promise<CrimsonUser | null> {
     const user: CrimsonUser = {
       id: d.id,
       username: d.username,
+      display_name: d.display_name ?? null,
       rol: d.rol,
       avatar_url: d.avatar_url || undefined,
       is_superadmin: !!d.is_superadmin,

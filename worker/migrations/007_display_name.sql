@@ -1,0 +1,1 @@
+ALTER TABLE usuarios ADD COLUMN display_name TEXT DEFAULT NULL;

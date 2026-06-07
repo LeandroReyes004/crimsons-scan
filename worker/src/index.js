@@ -242,7 +242,7 @@ export default {
 
         return json({
           token,
-          user: { id: user.id, username: user.username, rol: user.rol, avatar_url: user.avatar_url, is_superadmin: user.is_superadmin === 1, scan_id: user.scan_id || null, scan_nombre: user.scan_nombre || null }
+          user: { id: user.id, username: user.username, display_name: user.display_name || null, rol: user.rol, avatar_url: user.avatar_url, is_superadmin: user.is_superadmin === 1, scan_id: user.scan_id || null, scan_nombre: user.scan_nombre || null }
         });
       }
 
@@ -328,7 +328,7 @@ export default {
         const user = await getUser(request, env);
         if (!user) return err('No autenticado', 401);
         const profile = await env.DB.prepare(
-          `SELECT id, username, email, rol, avatar_url, color_acento, bio, fecha_registro, is_superadmin, scan_id,
+          `SELECT id, username, display_name, email, rol, avatar_url, color_acento, bio, fecha_registro, is_superadmin, scan_id,
             (SELECT COUNT(*) FROM comentarios WHERE usuario_id = u.id) as total_comentarios
            FROM usuarios u WHERE u.id = ?`
         ).bind(user.id).first();
@@ -340,6 +340,12 @@ export default {
         const user = await getUser(request, env);
         if (!user) return err('No autenticado', 401);
         const body = await request.json();
+
+        if ('display_name' in body) {
+          const displayName = (body.display_name?.trim() || '').slice(0, 50) || null;
+          await env.DB.prepare('UPDATE usuarios SET display_name = ? WHERE id = ?').bind(displayName, user.id).run();
+          return json({ message: 'Nombre público actualizado', display_name: displayName });
+        }
 
         if ('username' in body) {
           const newUsername = body.username?.trim();
