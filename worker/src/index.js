@@ -502,13 +502,25 @@ export default {
         ).bind(mangaById[1]).first();
         if (!manga) return err('Manga no encontrado', 404);
 
-        const { results: capitulos } = await env.DB.prepare(
-          `SELECT id, numero, titulo, views, fecha_subida
-           FROM capitulos WHERE manga_id = ? AND estado = 'publicado'
-           ORDER BY numero DESC`
-        ).bind(mangaById[1]).all();
+        const url2 = new URL(request.url);
+        const adminReq = url2.searchParams.get('admin') === '1';
+        let capitulosQuery, capitulosResult;
+        if (adminReq) {
+          const adminUser = await requireAdmin(request, env);
+          capitulosResult = await env.DB.prepare(
+            `SELECT id, numero, titulo, views, fecha_subida, estado
+             FROM capitulos WHERE manga_id = ?
+             ORDER BY numero DESC`
+          ).bind(mangaById[1]).all();
+        } else {
+          capitulosResult = await env.DB.prepare(
+            `SELECT id, numero, titulo, views, fecha_subida
+             FROM capitulos WHERE manga_id = ? AND estado = 'publicado'
+             ORDER BY numero DESC`
+          ).bind(mangaById[1]).all();
+        }
 
-        return json({ manga, capitulos });
+        return json({ manga, capitulos: capitulosResult.results });
       }
 
       // ── GET /api/scan-image/:scanId ──────────────────────
@@ -1191,6 +1203,20 @@ export default {
       if (deleteCap && method === 'DELETE') {
         const admin = await requireAdmin(request, env);
         if (!admin) return err('Sin permisos', 403);
+
+        // admin_scan solo puede borrar caps de su propio scan
+        if (isScanAdmin(admin) && admin.scan_id) {
+          const cap = await env.DB.prepare(
+            `SELECT c.id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ? AND m.scan_id = ?`
+          ).bind(deleteCap[1], admin.scan_id).first();
+          if (!cap) return err('No tenés permiso para eliminar este capítulo', 403);
+        }
+
+        // Borrar imágenes de R2
+        const { results: paginas } = await env.DB.prepare(
+          'SELECT r2_key FROM paginas WHERE capitulo_id = ?'
+        ).bind(deleteCap[1]).all();
+        await Promise.all(paginas.map(p => p.r2_key ? env.R2.delete(p.r2_key) : Promise.resolve()));
 
         await env.DB.prepare('DELETE FROM paginas WHERE capitulo_id = ?').bind(deleteCap[1]).run();
         await env.DB.prepare('DELETE FROM capitulos WHERE id = ?').bind(deleteCap[1]).run();

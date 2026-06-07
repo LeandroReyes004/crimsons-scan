@@ -58,6 +58,7 @@ export default function UploaderPage() {
   const [editPages, setEditPages]     = useState<{id:string; orden:number; filename:string; image_url:string}[]>([]);
   const [loadingPages, setLoadingPages] = useState(false);
   const [deletingId, setDeletingId]   = useState<string | null>(null);
+  const [deletingCapId, setDeletingCapId] = useState<string | null>(null);
   const [addingPages, setAddingPages] = useState(false);
   const [addProgress, setAddProgress] = useState(0);
   const editFileRef = useRef<HTMLInputElement>(null);
@@ -286,6 +287,14 @@ export default function UploaderPage() {
     loadChapters(selectedManga);
   };
 
+  const deleteChapter = async (cap: Capitulo) => {
+    if (!confirm(`¿Eliminar Cap. ${cap.numero}? Esta acción no se puede deshacer.`)) return;
+    setDeletingCapId(cap.id);
+    await fetch(`${API}/api/chapters/${cap.id}`, { method: 'DELETE', headers: authHeaders() });
+    setCapitulos(prev => prev.filter(c => c.id !== cap.id));
+    setDeletingCapId(null);
+  };
+
   const openEdit = async (cap: Capitulo) => {
     setEditingCap(cap);
     setEditNumero(String(cap.numero));
@@ -480,6 +489,12 @@ export default function UploaderPage() {
                       className="p-2 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition shrink-0 active:scale-90">
                       <Edit3 size={14}/>
                     </button>
+                    {(user?.rol === 'admin' || user?.rol === 'admin_scan' || user?.is_superadmin) && (
+                      <button onClick={() => deleteChapter(cap)} disabled={deletingCapId === cap.id}
+                        className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition shrink-0 active:scale-90 disabled:opacity-50">
+                        {deletingCapId === cap.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>

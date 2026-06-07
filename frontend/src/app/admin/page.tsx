@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard, BookOpen, Clock, Users, LogOut, Plus, Check, X,
-  ChevronRight, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
+  ChevronRight, ChevronDown, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
   Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign,
 } from 'lucide-react';
@@ -509,13 +509,38 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
   );
 }
 
+interface MangaChapter { id: string; numero: number; titulo: string | null; views: number; fecha_subida: string; estado: string; }
+
 function SectionMangas() {
   const { data, loading, refetch } = useAPI<{ mangas: Manga[] }>('/api/mangas?admin=1');
   const [showCreate, setShowCreate] = useState(false);
   const [editingManga, setEditing]  = useState<Manga | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [capsByManga, setCapsByManga] = useState<Record<string, MangaChapter[]>>({});
+  const [loadingCaps, setLoadingCaps] = useState<string | null>(null);
+  const [deletingCap, setDeletingCap] = useState<string | null>(null);
   const currentUser = getUser();
   const isReadOnly   = currentUser?.rol === 'soporte';
   const isSuperAdmin = !!currentUser?.is_superadmin;
+
+  const toggleCaps = async (mangaId: string) => {
+    if (expandedId === mangaId) { setExpandedId(null); return; }
+    setExpandedId(mangaId);
+    if (capsByManga[mangaId]) return;
+    setLoadingCaps(mangaId);
+    const res = await fetch(`${API}/api/mangas/${mangaId}?admin=1`, { headers: authHeaders() });
+    const d = await res.json();
+    setCapsByManga(prev => ({ ...prev, [mangaId]: d.capitulos || [] }));
+    setLoadingCaps(null);
+  };
+
+  const deleteChapterFromManga = async (mangaId: string, capId: string) => {
+    if (!confirm('¿Eliminar este capítulo? Esta acción no se puede deshacer.')) return;
+    setDeletingCap(capId);
+    await fetch(`${API}/api/chapters/${capId}`, { method: 'DELETE', headers: authHeaders() });
+    setCapsByManga(prev => ({ ...prev, [mangaId]: prev[mangaId].filter(c => c.id !== capId) }));
+    setDeletingCap(null);
+  };
 
   const handleCreate = async (formData: any, coverFile: File | null) => {
     const res = await fetch(`${API}/api/mangas`, {
@@ -594,40 +619,76 @@ function SectionMangas() {
             </div>
           )}
           {data?.mangas?.map((m, i) => (
-            <div key={m.id} className={`flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-4 hover:bg-gray-50 dark:hover:bg-white/2 transition ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
-              <div className="w-10 h-14 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0 flex items-center justify-center text-gray-300">
-                <BookOpen size={16}/>
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-bold text-sm dark:text-white truncate">{m.titulo}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{m.tipo} · <span className="font-mono">{m.id.slice(0,8)}...</span></p>
-                {(m as any).generos && JSON.parse((m as any).generos || '[]').length > 0 && (
-                  <div className="flex flex-wrap gap-1 mt-1">
-                    {JSON.parse((m as any).generos).slice(0,3).map((g: string) => (
-                      <span key={g} className="text-[10px] bg-gray-100 dark:bg-white/5 text-gray-500 px-1.5 py-0.5 rounded-full">{g}</span>
-                    ))}
-                    {JSON.parse((m as any).generos).length > 3 && (
-                      <span className="text-[10px] text-gray-400">+{JSON.parse((m as any).generos).length - 3}</span>
-                    )}
-                  </div>
-                )}
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="text-xs text-gray-400 flex items-center gap-1"><Eye size={12}/>{m.views_total}</span>
-                <Badge estado={m.estado}/>
-                {!isReadOnly && (
-                  <button onClick={() => { setEditing(m); setShowCreate(false); }}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition" title="Editar">
-                    <Edit3 size={14}/>
+            <div key={m.id} className={i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}>
+              <div className="flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-4 hover:bg-gray-50 dark:hover:bg-white/2 transition">
+                <div className="w-10 h-14 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0 flex items-center justify-center text-gray-300">
+                  <BookOpen size={16}/>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm dark:text-white truncate">{m.titulo}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{m.tipo} · <span className="font-mono">{m.id.slice(0,8)}...</span></p>
+                  {(m as any).generos && JSON.parse((m as any).generos || '[]').length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {JSON.parse((m as any).generos).slice(0,3).map((g: string) => (
+                        <span key={g} className="text-[10px] bg-gray-100 dark:bg-white/5 text-gray-500 px-1.5 py-0.5 rounded-full">{g}</span>
+                      ))}
+                      {JSON.parse((m as any).generos).length > 3 && (
+                        <span className="text-[10px] text-gray-400">+{JSON.parse((m as any).generos).length - 3}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-gray-400 flex items-center gap-1"><Eye size={12}/>{m.views_total}</span>
+                  <Badge estado={m.estado}/>
+                  <button onClick={() => toggleCaps(m.id)}
+                    className={`p-1.5 rounded-lg transition ${expandedId === m.id ? 'text-rose-500 bg-rose-50 dark:bg-rose-500/10' : 'text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10'}`}
+                    title="Ver capítulos">
+                    <ChevronDown size={14} className={`transition-transform ${expandedId === m.id ? 'rotate-180' : ''}`}/>
                   </button>
-                )}
-                {!isReadOnly && (
-                  <button onClick={() => handleDelete(m)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition" title="Eliminar">
-                    <Trash2 size={14}/>
-                  </button>
-                )}
+                  {!isReadOnly && (
+                    <button onClick={() => { setEditing(m); setShowCreate(false); }}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition" title="Editar">
+                      <Edit3 size={14}/>
+                    </button>
+                  )}
+                  {!isReadOnly && (
+                    <button onClick={() => handleDelete(m)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition" title="Eliminar">
+                      <Trash2 size={14}/>
+                    </button>
+                  )}
+                </div>
               </div>
+              {expandedId === m.id && (
+                <div className="bg-gray-50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5 px-5 py-3">
+                  {loadingCaps === m.id ? (
+                    <div className="flex justify-center py-4"><Loader2 size={18} className="animate-spin text-rose-500"/></div>
+                  ) : (capsByManga[m.id] || []).length === 0 ? (
+                    <p className="text-xs text-gray-400 text-center py-3">Sin capítulos</p>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      {(capsByManga[m.id] || []).map(cap => (
+                        <div key={cap.id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg hover:bg-white dark:hover:bg-white/5 transition">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Badge estado={cap.estado}/>
+                            <span className="text-sm dark:text-white font-medium">Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}</span>
+                          </div>
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-xs text-gray-400 flex items-center gap-1"><Eye size={10}/>{cap.views}</span>
+                            {!isReadOnly && (
+                              <button onClick={() => deleteChapterFromManga(m.id, cap.id)} disabled={deletingCap === cap.id}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition disabled:opacity-50">
+                                {deletingCap === cap.id ? <Loader2 size={12} className="animate-spin"/> : <Trash2 size={12}/>}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           ))}
         </div>
