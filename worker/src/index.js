@@ -6,7 +6,7 @@
 const CORS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Fingerprint',
 };
 
 // ── Respuestas rápidas ─────────────────────────────────────
@@ -170,9 +170,16 @@ function contentType(key) {
 //  ROUTER PRINCIPAL
 // ============================================================
 export default {
-  // Cron: cada 5 min publica capítulos cuya fecha llegó
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
+
+      // ── Reset mensual de vistas (1° de cada mes a medianoche ARG) ──
+      if (event.cron === '0 3 1 * *') {
+        await env.DB.prepare('UPDATE mangas SET views_mes = 0').run();
+        return;
+      }
+
+      // ── Cada 5 min: publica capítulos programados ──────────────────
       const { results: toPublish } = await env.DB.prepare(
         `SELECT c.id, c.numero, c.titulo, c.manga_id, m.titulo as manga_titulo
          FROM capitulos c JOIN mangas m ON c.manga_id = m.id
@@ -607,7 +614,7 @@ export default {
             counted = true;
           }
           if (!vistoManga) {
-            ops.push(env.DB.prepare('UPDATE mangas SET views_total = views_total + 1 WHERE id = ?').bind(cap.manga_id).run());
+            ops.push(env.DB.prepare('UPDATE mangas SET views_total = views_total + 1, views_mes = views_mes + 1 WHERE id = ?').bind(cap.manga_id).run());
             ops.push(env.KV.put(mangaFpKey, '1', { expirationTtl: TTL }));
           }
           if (ops.length) await Promise.all(ops);
@@ -625,7 +632,7 @@ export default {
             counted = true;
           }
           if (!vistoManga) {
-            ops.push(env.DB.prepare('UPDATE mangas SET views_total = views_total + 1 WHERE id = ?').bind(cap.manga_id).run());
+            ops.push(env.DB.prepare('UPDATE mangas SET views_total = views_total + 1, views_mes = views_mes + 1 WHERE id = ?').bind(cap.manga_id).run());
             ops.push(env.KV.put(mangaIpKey, '1', { expirationTtl: TTL }));
           }
           if (ops.length) await Promise.all(ops);
@@ -643,17 +650,19 @@ export default {
         const { results: scans } = await env.DB.prepare(
           `SELECT s.id, s.nombre,
                   COALESCE(SUM(m.views_total), 0) as total_views,
+                  COALESCE(SUM(m.views_mes), 0)   as views_mes,
                   COUNT(DISTINCT m.id) as total_mangas,
                   COUNT(DISTINCT c.id) as total_capitulos
            FROM scans s
            LEFT JOIN mangas m ON m.scan_id = s.id
            LEFT JOIN capitulos c ON c.manga_id = m.id AND c.estado = 'publicado'
            GROUP BY s.id, s.nombre
-           ORDER BY total_views DESC`
+           ORDER BY views_mes DESC`
         ).all();
 
-        const grandTotal = scans.reduce((sum, s) => sum + (s.total_views || 0), 0);
-        return json({ scans, grand_total: grandTotal });
+        const grandTotal    = scans.reduce((sum, s) => sum + (s.total_views || 0), 0);
+        const grandTotalMes = scans.reduce((sum, s) => sum + (s.views_mes || 0), 0);
+        return json({ scans, grand_total: grandTotal, grand_total_mes: grandTotalMes });
       }
 
       // ── GET /api/admin/revenue/:scanId ───────────────────
@@ -671,8 +680,8 @@ export default {
         if (isSoporte(caller)) return err('No tenés permisos para ver revenue', 403);
 
         const { results: mangas } = await env.DB.prepare(
-          `SELECT id, titulo, views_total, tipo, estado
-           FROM mangas WHERE scan_id = ? ORDER BY views_total DESC`
+          `SELECT id, titulo, views_total, views_mes, tipo, estado
+           FROM mangas WHERE scan_id = ? ORDER BY views_mes DESC`
         ).bind(revenueScan[1]).all();
 
         const mangasConCaps = await Promise.all(mangas.map(async (manga) => {
@@ -683,8 +692,9 @@ export default {
           return { ...manga, capitulos: caps };
         }));
 
-        const scanTotal = mangasConCaps.reduce((s, m) => s + (m.views_total || 0), 0);
-        return json({ mangas: mangasConCaps, scan_total: scanTotal });
+        const scanTotal    = mangasConCaps.reduce((s, m) => s + (m.views_total || 0), 0);
+        const scanTotalMes = mangasConCaps.reduce((s, m) => s + (m.views_mes || 0), 0);
+        return json({ mangas: mangasConCaps, scan_total: scanTotal, scan_total_mes: scanTotalMes });
       }
 
       // ── GET /api/reader/:chapterId/:pageOrder ────────────

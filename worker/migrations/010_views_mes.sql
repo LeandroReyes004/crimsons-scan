@@ -1,0 +1,1 @@
+ALTER TABLE mangas ADD COLUMN views_mes INTEGER DEFAULT 0;

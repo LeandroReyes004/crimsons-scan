@@ -1238,11 +1238,11 @@ interface ScanDetail { scan: Scan; mangas: any[]; miembros: any[]; totalViews: n
 //  SECCIÓN: REVENUE SHARE
 // ============================================================
 interface RevenueScan {
-  id: string; nombre: string; total_views: number;
+  id: string; nombre: string; total_views: number; views_mes: number;
   total_mangas: number; total_capitulos: number;
 }
 interface RevenueManga {
-  id: string; titulo: string; views_total: number; tipo: string; estado: string;
+  id: string; titulo: string; views_total: number; views_mes: number; tipo: string; estado: string;
   capitulos: { id: string; numero: number; titulo: string | null; views: number }[];
 }
 
@@ -1252,11 +1252,11 @@ function SectionRevenue() {
   // admin_scan ve solo su propio scan, cargado automáticamente
   const ownScanId    = (!isSuperAdmin && currentUser?.scan_id) ? currentUser.scan_id : null;
 
-  const { data, loading, refetch } = useAPI<{ scans: RevenueScan[]; grand_total: number }>(
+  const { data, loading, refetch } = useAPI<{ scans: RevenueScan[]; grand_total: number; grand_total_mes: number }>(
     isSuperAdmin ? '/api/admin/revenue' : '/api/admin/revenue/__skip__'
   );
   const [expandedScan, setExpandedScan]     = useState<string | null>(ownScanId);
-  const [scanDetail, setScanDetail]         = useState<Record<string, { mangas: RevenueManga[]; scan_total: number }>>({});
+  const [scanDetail, setScanDetail]         = useState<Record<string, { mangas: RevenueManga[]; scan_total: number; scan_total_mes: number }>>({});
   const [loadingDetail, setLoadingDetail]   = useState<string | null>(null);
   const [expandedManga, setExpandedManga]   = useState<string | null>(null);
 
@@ -1295,16 +1295,25 @@ function SectionRevenue() {
           <h2 className="text-2xl font-extrabold dark:text-white flex items-center gap-2">
             <DollarSign size={22} className="text-emerald-500"/> Revenue — Mi Scan
           </h2>
-          <p className="text-gray-500 text-sm mt-1">Vistas acumuladas de tu scan</p>
+          <p className="text-gray-500 text-sm mt-1">Vistas de tu scan — se reinician el 1° de cada mes</p>
         </div>
         {isLoading && <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>}
         {det && (
           <>
-            <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-5">
-              <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400"><Eye size={22}/></div>
-              <div>
-                <p className="text-3xl font-black dark:text-white">{det.scan_total.toLocaleString()}</p>
-                <p className="text-sm text-gray-500 font-semibold">vistas totales en tu scan</p>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400"><Eye size={20}/></div>
+                <div>
+                  <p className="text-2xl font-black dark:text-white">{(det.scan_total_mes ?? 0).toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 font-semibold">vistas este mes</p>
+                </div>
+              </div>
+              <div className="bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 rounded-2xl p-5 flex items-center gap-4">
+                <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-400"><TrendingUp size={20}/></div>
+                <div>
+                  <p className="text-2xl font-black dark:text-white">{det.scan_total.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500 font-semibold">vistas históricas</p>
+                </div>
               </div>
             </div>
             <div className="flex flex-col gap-2">
@@ -1319,8 +1328,10 @@ function SectionRevenue() {
                         <p className="text-[10px] text-gray-400">{manga.capitulos.length} caps publicados</p>
                       </div>
                       <div className="flex items-center gap-3 shrink-0">
-                        <span className="text-sm font-bold dark:text-white tabular-nums">{manga.views_total.toLocaleString()}</span>
-                        <span className="text-xs text-gray-400">{pct(manga.views_total, det.scan_total)}%</span>
+                        <div className="text-right">
+                          <p className="text-sm font-black dark:text-white tabular-nums">{(manga.views_mes ?? 0).toLocaleString()} <span className="text-xs text-emerald-500 font-bold">mes</span></p>
+                          <p className="text-[10px] text-gray-400 tabular-nums">{manga.views_total.toLocaleString()} total</p>
+                        </div>
                         <ChevronRight size={12} className={`text-gray-400 transition-transform ${isMangaExpanded ? 'rotate-90' : ''}`}/>
                       </div>
                     </button>
@@ -1366,13 +1377,20 @@ function SectionRevenue() {
 
       {/* Tarjeta total global */}
       {!loading && data && (
-        <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-5">
-          <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <Eye size={22}/>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400"><Eye size={20}/></div>
+            <div>
+              <p className="text-2xl font-black dark:text-white">{(data.grand_total_mes ?? 0).toLocaleString()}</p>
+              <p className="text-xs text-gray-500 font-semibold">vistas este mes (todos los scans)</p>
+            </div>
           </div>
-          <div>
-            <p className="text-3xl font-black dark:text-white">{data.grand_total.toLocaleString()}</p>
-            <p className="text-sm text-gray-500 font-semibold">vistas totales en todos los scans</p>
+          <div className="bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 rounded-2xl p-5 flex items-center gap-4">
+            <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-400"><TrendingUp size={20}/></div>
+            <div>
+              <p className="text-2xl font-black dark:text-white">{data.grand_total.toLocaleString()}</p>
+              <p className="text-xs text-gray-500 font-semibold">vistas históricas totales</p>
+            </div>
           </div>
         </div>
       )}
@@ -1399,10 +1417,8 @@ function SectionRevenue() {
                     <p className="text-xs text-gray-400">{scan.total_mangas} obras · {scan.total_capitulos} caps publicados</p>
                   </div>
                   <div className="hidden md:flex flex-col items-end gap-0.5 shrink-0">
-                    <p className="text-xl font-black dark:text-white">{scan.total_views.toLocaleString()}</p>
-                    <p className="text-xs text-gray-400 flex items-center gap-1">
-                      <TrendingUp size={11} className="text-emerald-500"/> {pctGlobal}% del total
-                    </p>
+                    <p className="text-xl font-black dark:text-white">{(scan.views_mes ?? 0).toLocaleString()} <span className="text-xs text-emerald-500 font-bold">mes</span></p>
+                    <p className="text-xs text-gray-400 tabular-nums">{scan.total_views.toLocaleString()} histórico</p>
                   </div>
                   {/* Barra de porcentaje */}
                   <div className="hidden lg:block w-32">
@@ -1426,7 +1442,7 @@ function SectionRevenue() {
                         <BookOpen size={12}/> Desglose por obra
                       </p>
                       <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                        Total scan: {det.scan_total.toLocaleString()} vistas
+                        Este mes: {(det.scan_total_mes ?? 0).toLocaleString()} · Histórico: {det.scan_total.toLocaleString()}
                       </p>
                     </div>
                     <div className="flex flex-col gap-2">
