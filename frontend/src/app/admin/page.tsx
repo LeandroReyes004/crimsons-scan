@@ -10,6 +10,7 @@ import {
   Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign,
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
+import { toWebP } from '@/lib/webp';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
@@ -488,7 +489,7 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
 
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5"><ImageIcon size={12}/> Portada</label>
-          <input type="file" accept="image/*" onChange={e => setCoverFile(e.target.files?.[0] || null)}
+          <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; setCoverFile(f ? await toWebP(f, 800) : null); }}
             className="text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-rose-50 file:text-rose-700 dark:file:bg-rose-500/10 dark:file:text-rose-400 cursor-pointer"/>
         </div>
 
@@ -1830,11 +1831,12 @@ function SectionConfig({ scanId }: { scanId: string }) {
   };
 
   const handleImgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+    const raw = e.target.files?.[0];
     if (imgRef.current) imgRef.current.value = '';
-    if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setImgMsg('❌ Máximo 5MB'); return; }
+    if (!raw) return;
+    if (raw.size > 5 * 1024 * 1024) { setImgMsg('❌ Máximo 5MB'); return; }
     setImgUploading(true); setImgMsg(null);
+    const file = await toWebP(raw, 1200);
     const fd = new FormData();
     fd.append('imagen', file);
     try {

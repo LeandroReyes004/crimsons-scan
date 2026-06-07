@@ -9,6 +9,7 @@ import {
   Package, FileArchive, Edit3,
 } from 'lucide-react';
 import { getUser, authHeaders, logout } from '@/lib/auth';
+import { toWebP } from '@/lib/webp';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
@@ -97,17 +98,18 @@ export default function UploaderPage() {
 
   const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 
-  const handleFiles = (files: FileList | null) => {
+  const handleFiles = async (files: FileList | null) => {
     if (!files) return;
     const valid: PageFile[] = [];
     const rejected: string[] = [];
-    Array.from(files).forEach((file, i) => {
-      if (!ALLOWED_TYPES.includes(file.type)) { rejected.push(file.name); return; }
-      if (file.size > 10 * 1024 * 1024) { rejected.push(`${file.name} (supera 10MB)`); return; }
-      valid.push({ file, preview: URL.createObjectURL(file), order: pages.length + i + 1, status: 'pending' });
-    });
+    for (const file of Array.from(files)) {
+      if (!ALLOWED_TYPES.includes(file.type)) { rejected.push(file.name); continue; }
+      if (file.size > 10 * 1024 * 1024) { rejected.push(`${file.name} (supera 10MB)`); continue; }
+      const webp = await toWebP(file);
+      valid.push({ file: webp, preview: URL.createObjectURL(webp), order: pages.length + valid.length + 1, status: 'pending' });
+    }
     if (rejected.length > 0) alert(`Archivos rechazados:\n${rejected.join('\n')}`);
-    setPages(prev => [...prev, ...valid]);
+    setPages(prev => [...prev, ...valid.map((p, i) => ({ ...p, order: prev.length + i + 1 }))]);
   };
 
   const moveUp   = (i: number) => { if (i === 0) return; const a = [...pages]; [a[i-1], a[i]] = [a[i], a[i-1]]; setPages(a.map((p,j) => ({ ...p, order: j+1 }))); };
