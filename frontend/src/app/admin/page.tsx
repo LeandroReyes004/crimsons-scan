@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -1754,6 +1754,10 @@ function SectionConfig({ scanId }: { scanId: string }) {
   const [saving, setSaving]   = useState(false);
   const [testing, setTesting] = useState(false);
   const [testMsg, setTestMsg] = useState<string | null>(null);
+  const [imgKey, setImgKey]   = useState(0);
+  const [imgUploading, setImgUploading] = useState(false);
+  const [imgMsg, setImgMsg]   = useState<string | null>(null);
+  const imgRef = useRef<HTMLInputElement>(null);
   const { data: scanData, loading, refetch } = useAPI<any>(`/api/scans/${scanId}/details`);
 
   // Nuevo miembro
@@ -1825,11 +1829,54 @@ function SectionConfig({ scanId }: { scanId: string }) {
     finally { setCreating(false); }
   };
 
+  const handleImgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (imgRef.current) imgRef.current.value = '';
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) { setImgMsg('❌ Máximo 5MB'); return; }
+    setImgUploading(true); setImgMsg(null);
+    const fd = new FormData();
+    fd.append('imagen', file);
+    try {
+      const res = await fetch(`${API}/api/upload/scan-image`, { method: 'POST', headers: authHeaders(), body: fd });
+      const d   = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setImgKey(k => k + 1);
+      setImgMsg('✅ Imagen actualizada');
+    } catch (err: any) { setImgMsg(`❌ ${err.message}`); }
+    finally { setImgUploading(false); }
+  };
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300 max-w-xl">
       <div>
         <h2 className="text-2xl font-extrabold dark:text-white">Mi Scan</h2>
         <p className="text-gray-500 text-sm mt-1">Miembros y notificaciones</p>
+      </div>
+
+      {/* Imagen del scan */}
+      <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 flex flex-col gap-4">
+        <h3 className="font-bold dark:text-white flex items-center gap-2"><ImageIcon size={16} className="text-rose-500"/> Imagen del Scan</h3>
+        <div className="flex items-center gap-4">
+          <div className="w-24 h-24 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-gray-200 dark:border-white/10 shrink-0 relative">
+            <img
+              key={imgKey}
+              src={`${API}/api/scan-image/${scanId}?v=${imgKey}`}
+              alt=""
+              className="w-full h-full object-cover"
+              onError={e => { e.currentTarget.style.display = 'none'; }}
+            />
+          </div>
+          <div className="flex flex-col gap-2 flex-1">
+            <p className="text-sm text-gray-500">Sube una imagen de portada para tu scan (PNG, JPG — máx 5MB). Se mostrará en la página de comunidad.</p>
+            <button onClick={() => imgRef.current?.click()} disabled={imgUploading}
+              className="flex items-center gap-2 text-sm font-bold text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 px-4 py-2 rounded-xl transition w-fit">
+              {imgUploading ? <><Loader2 size={14} className="animate-spin"/> Subiendo...</> : <><Upload size={14}/> Cambiar imagen</>}
+            </button>
+            <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={handleImgUpload}/>
+            {imgMsg && <p className={`text-xs font-medium ${imgMsg.startsWith('✅') ? 'text-emerald-400' : 'text-red-400'}`}>{imgMsg}</p>}
+          </div>
+        </div>
       </div>
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>

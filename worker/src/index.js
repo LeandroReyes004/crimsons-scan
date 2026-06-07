@@ -504,10 +504,20 @@ export default {
         return json({ manga, capitulos });
       }
 
+      // ── GET /api/scan-image/:scanId ──────────────────────
+      const scanImage = pathname.match(/^\/api\/scan-image\/([^/]+)$/);
+      if (scanImage && method === 'GET') {
+        const s = await env.DB.prepare('SELECT imagen_url FROM scans WHERE id = ?').bind(scanImage[1]).first();
+        if (!s?.imagen_url) return err('Imagen no encontrada', 404);
+        const object = await env.R2.get(s.imagen_url);
+        if (!object) return err('Imagen no encontrada', 404);
+        return new Response(object.body, { headers: { 'Content-Type': contentType(s.imagen_url), 'Cache-Control': 'public, max-age=300', ...CORS } });
+      }
+
       // ── GET /api/scans/:id ────────────────────────────────
       const scanById = pathname.match(/^\/api\/scans\/([^/]+)$/);
       if (scanById && method === 'GET') {
-        const scan = await env.DB.prepare('SELECT id, nombre, descripcion FROM scans WHERE id = ? AND activo = 1').bind(scanById[1]).first();
+        const scan = await env.DB.prepare('SELECT id, nombre, descripcion, imagen_url FROM scans WHERE id = ? AND activo = 1').bind(scanById[1]).first();
         if (!scan) return err('Scan no encontrado', 404);
         const { results: mangas } = await env.DB.prepare(
           `SELECT m.id, m.titulo, m.tipo, m.estado, m.cover_r2_key, m.views_total, m.generos, m.es_adulto,
@@ -1186,10 +1196,37 @@ export default {
         return json({ message: 'Capítulo rechazado' });
       }
 
+      // ── POST /api/upload/scan-image ──────────────────────
+      if (pathname === '/api/upload/scan-image' && method === 'POST') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('No autorizado', 401);
+        let scanId;
+        if (isScanAdmin(admin)) {
+          const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id = ?').bind(admin.id).first();
+          scanId = dbU?.scan_id;
+          if (!scanId) return err('Tu cuenta no tiene un scan asignado', 403);
+        } else if (admin.is_superadmin) {
+          const url = new URL(request.url);
+          scanId = url.searchParams.get('scan_id');
+          if (!scanId) return err('Falta scan_id', 400);
+        } else {
+          return err('Sin permisos', 403);
+        }
+        const fd   = await request.formData();
+        const file = fd.get('imagen');
+        if (!file) return err('Falta el archivo');
+        const ext    = (file.name?.split('.').pop() || 'jpg').toLowerCase();
+        const r2_key = `scancrimson.com/scans/${scanId}.${ext}`;
+        await env.R2.put(r2_key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type || 'image/jpeg' } });
+        await env.DB.prepare('UPDATE scans SET imagen_url = ? WHERE id = ?').bind(r2_key, scanId).run();
+        return json({ imagen_url: r2_key });
+      }
+
       // ── GET /api/scans ───────────────────────────────────
       if (pathname === '/api/scans' && method === 'GET') {
         const { results } = await env.DB.prepare(
-          `SELECT s.*, COUNT(u.id) as miembros
+          `SELECT s.id, s.nombre, s.descripcion, s.imagen_url, COUNT(u.id) as miembros,
+            (SELECT COUNT(*) FROM mangas WHERE scan_id = s.id) as total_mangas
            FROM scans s LEFT JOIN usuarios u ON u.scan_id = s.id
            WHERE s.activo = 1
            GROUP BY s.id ORDER BY s.nombre`

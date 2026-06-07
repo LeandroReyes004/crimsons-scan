@@ -1,0 +1,1 @@
+ALTER TABLE scans ADD COLUMN imagen_url TEXT DEFAULT NULL;
