@@ -11,9 +11,9 @@ import AdPopUnder from '@/components/AdPopUnder';
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
 interface Manga {
-  id: string; titulo: string; titulo_alt: string | null; descripcion: string | null;
+  id: string; slug?: string | null; titulo: string; titulo_alt: string | null; descripcion: string | null;
   generos: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number;
-  es_adulto?: number | boolean; scan_id?: string | null; scan_nombre?: string | null;
+  es_adulto?: number | boolean; scan_id?: string | null; scan_nombre?: string | null; scan_slug?: string | null;
 }
 interface Capitulo {
   id: string; numero: number; titulo: string | null; views: number; fecha_subida: string;
@@ -218,7 +218,7 @@ export default function MangaDetailPage() {
               <span className="flex items-center gap-1.5"><Eye size={13}/> {manga.views_total.toLocaleString()} vistas</span>
               <span className="flex items-center gap-1.5"><BookOpen size={13}/> {caps.length} caps</span>
               {manga.scan_id && manga.scan_nombre && (
-                <Link href={`/scan/${manga.scan_id}`}
+                <Link href={`/scan/${manga.scan_slug ?? manga.scan_id}`}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition text-xs font-semibold">
                   <Layers size={11}/> {manga.scan_nombre}
                 </Link>

@@ -180,6 +180,32 @@ function isSoporte(user) {
   return user?.rol === 'soporte' && !user?.is_superadmin;
 }
 
+// ── Slugs para URLs amigables ──────────────────────────────
+function slugify(str) {
+  return str
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')  // quitar tildes: á→a, ñ→n, etc.
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-')
+    .slice(0, 80);
+}
+
+async function uniqueSlug(base, table, env, excludeId = null) {
+  let slug = slugify(base) || 'item';
+  let candidate = slug;
+  let n = 2;
+  while (true) {
+    const row = excludeId
+      ? await env.DB.prepare(`SELECT id FROM ${table} WHERE slug = ? AND id != ?`).bind(candidate, excludeId).first()
+      : await env.DB.prepare(`SELECT id FROM ${table} WHERE slug = ?`).bind(candidate).first();
+    if (!row) return candidate;
+    candidate = `${slug}-${n++}`;
+  }
+}
+
 // ── Scramble map para ofuscar páginas ─────────────────────
 function generateScrambleMap(size = 9) {
   const map = Array.from({ length: size }, (_, i) => i);
@@ -514,25 +540,26 @@ export default {
           finalScanId = scan_id || null;
         }
 
-        const id = crypto.randomUUID();
+        const id   = crypto.randomUUID();
+        const slug = await uniqueSlug(titulo, 'mangas', env);
         await env.DB.prepare(
-          `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto, slug)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           id, titulo, titulo_alt || null, descripcion || null,
           JSON.stringify(generos || []), tipo || 'manga',
-          estado || 'en_curso', admin.id, finalScanId, es_adulto ? 1 : 0
+          estado || 'en_curso', admin.id, finalScanId, es_adulto ? 1 : 0, slug
         ).run();
 
-        return json({ mangaId: id, message: 'Manga creado' }, 201);
+        return json({ mangaId: id, slug, message: 'Manga creado' }, 201);
       }
 
       // ── GET /api/mangas/:id ──────────────────────────────
       const mangaById = pathname.match(/^\/api\/mangas\/([^/]+)$/);
       if (mangaById && method === 'GET') {
         const manga = await env.DB.prepare(
-          `SELECT m.*, s.nombre as scan_nombre FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
-        ).bind(mangaById[1]).first();
+          `SELECT m.*, s.nombre as scan_nombre, s.slug as scan_slug FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ? OR m.slug = ?`
+        ).bind(mangaById[1], mangaById[1]).first();
         if (!manga) return err('Manga no encontrado', 404);
 
         const url2 = new URL(request.url);
@@ -559,7 +586,7 @@ export default {
       // ── GET /api/scan-image/:scanId ──────────────────────
       const scanImage = pathname.match(/^\/api\/scan-image\/([^/]+)$/);
       if (scanImage && method === 'GET') {
-        const s = await env.DB.prepare('SELECT imagen_url FROM scans WHERE id = ?').bind(scanImage[1]).first();
+        const s = await env.DB.prepare('SELECT imagen_url FROM scans WHERE id = ? OR slug = ?').bind(scanImage[1], scanImage[1]).first();
         if (!s?.imagen_url) return err('Imagen no encontrada', 404);
         const object = await env.R2.get(s.imagen_url);
         if (!object) return err('Imagen no encontrada', 404);
@@ -569,7 +596,7 @@ export default {
       // ── GET /api/scans/:id ────────────────────────────────
       const scanById = pathname.match(/^\/api\/scans\/([^/]+)$/);
       if (scanById && method === 'GET') {
-        const scan = await env.DB.prepare('SELECT id, nombre, descripcion, imagen_url FROM scans WHERE id = ? AND activo = 1').bind(scanById[1]).first();
+        const scan = await env.DB.prepare('SELECT id, nombre, descripcion, imagen_url, slug FROM scans WHERE (id = ? OR slug = ?) AND activo = 1').bind(scanById[1], scanById[1]).first();
         if (!scan) return err('Scan no encontrado', 404);
         const { results: mangas } = await env.DB.prepare(
           `SELECT m.id, m.titulo, m.tipo, m.estado, m.cover_r2_key, m.views_total, m.generos, m.es_adulto,
@@ -1020,8 +1047,8 @@ export default {
       // Sirve la portada desde R2 públicamente (las covers no necesitan token)
       const coverRoute = pathname.match(/^\/api\/cover\/([^/]+)$/);
       if (coverRoute && method === 'GET') {
-        const manga = await env.DB.prepare('SELECT cover_r2_key FROM mangas WHERE id = ?')
-          .bind(coverRoute[1]).first();
+        const manga = await env.DB.prepare('SELECT cover_r2_key FROM mangas WHERE id = ? OR slug = ?')
+          .bind(coverRoute[1], coverRoute[1]).first();
         if (!manga?.cover_r2_key) return err('Portada no encontrada', 404);
 
         const object = await env.R2.get(manga.cover_r2_key);
@@ -1054,9 +1081,17 @@ export default {
         // Solo superadmin puede cambiar el scan_id
         const finalScanId = admin.is_superadmin ? (scan_id || null) : (current.scan_id ?? null);
 
-        await env.DB.prepare(
-          `UPDATE mangas SET titulo=?, titulo_alt=?, descripcion=?, generos=?, tipo=?, estado=?, es_adulto=?, scan_id=?, fecha_actualizacion=datetime('now') WHERE id=?`
-        ).bind(titulo, titulo_alt||null, descripcion||null, JSON.stringify(generos||[]), tipo||'manga', estado||'en_curso', es_adulto ? 1 : 0, finalScanId, editManga[1]).run();
+        // Generar slug solo si todavía no tiene uno
+        if (!current.slug) {
+          const newSlug = await uniqueSlug(titulo, 'mangas', env, editManga[1]);
+          await env.DB.prepare(
+            `UPDATE mangas SET titulo=?, titulo_alt=?, descripcion=?, generos=?, tipo=?, estado=?, es_adulto=?, scan_id=?, slug=?, fecha_actualizacion=datetime('now') WHERE id=?`
+          ).bind(titulo, titulo_alt||null, descripcion||null, JSON.stringify(generos||[]), tipo||'manga', estado||'en_curso', es_adulto ? 1 : 0, finalScanId, newSlug, editManga[1]).run();
+        } else {
+          await env.DB.prepare(
+            `UPDATE mangas SET titulo=?, titulo_alt=?, descripcion=?, generos=?, tipo=?, estado=?, es_adulto=?, scan_id=?, fecha_actualizacion=datetime('now') WHERE id=?`
+          ).bind(titulo, titulo_alt||null, descripcion||null, JSON.stringify(generos||[]), tipo||'manga', estado||'en_curso', es_adulto ? 1 : 0, finalScanId, editManga[1]).run();
+        }
         return json({ message: 'Manga actualizado' });
       }
 
@@ -1324,12 +1359,13 @@ export default {
         const { nombre, descripcion } = await request.json();
         if (!nombre) return err('El nombre es obligatorio');
 
-        const id = `scan-${crypto.randomUUID().slice(0, 8)}`;
+        const id   = `scan-${crypto.randomUUID().slice(0, 8)}`;
+        const slug = await uniqueSlug(nombre, 'scans', env);
         await env.DB.prepare(
-          'INSERT INTO scans (id, nombre, descripcion) VALUES (?, ?, ?)'
-        ).bind(id, nombre, descripcion || null).run();
+          'INSERT INTO scans (id, nombre, descripcion, slug) VALUES (?, ?, ?, ?)'
+        ).bind(id, nombre, descripcion || null, slug).run();
 
-        return json({ scanId: id, message: 'Scan creado' }, 201);
+        return json({ scanId: id, slug, message: 'Scan creado' }, 201);
       }
 
       // ── PUT /api/scans/:id ───────────────────────────────
@@ -1481,8 +1517,10 @@ export default {
       const getComents = pathname.match(/^\/api\/mangas\/([^/]+)\/comentarios$/);
       if (getComents && method === 'GET') {
         const { results } = await env.DB.prepare(
-          `SELECT id, usuario_id, username, contenido, fecha FROM comentarios WHERE manga_id = ? AND es_visible = 1 ORDER BY fecha DESC LIMIT 100`
-        ).bind(getComents[1]).all();
+          `SELECT id, usuario_id, username, contenido, fecha FROM comentarios
+           WHERE manga_id = (SELECT id FROM mangas WHERE id = ? OR slug = ?) AND es_visible = 1
+           ORDER BY fecha DESC LIMIT 100`
+        ).bind(getComents[1], getComents[1]).all();
         return json({ comentarios: results || [] });
       }
 
@@ -1494,11 +1532,38 @@ export default {
         const { contenido } = await request.json();
         if (!contenido?.trim()) return err('El comentario no puede estar vacío', 400);
         if (contenido.trim().length > 500) return err('Máximo 500 caracteres', 400);
+        const mangaRow = await env.DB.prepare('SELECT id FROM mangas WHERE id = ? OR slug = ?')
+          .bind(postComent[1], postComent[1]).first();
+        if (!mangaRow) return err('Manga no encontrado', 404);
         const id = crypto.randomUUID();
         await env.DB.prepare(
           `INSERT INTO comentarios (id, manga_id, usuario_id, username, contenido) VALUES (?, ?, ?, ?, ?)`
-        ).bind(id, postComent[1], user.id, user.username, contenido.trim()).run();
+        ).bind(id, mangaRow.id, user.id, user.username, contenido.trim()).run();
         return json({ id, username: user.username, contenido: contenido.trim(), fecha: new Date().toISOString() }, 201);
+      }
+
+      // ── POST /api/admin/migrate-slugs ────────────────────
+      // Endpoint de uso único: genera slugs para registros sin slug
+      if (pathname === '/api/admin/migrate-slugs' && method === 'POST') {
+        const sa = await requireSuperAdmin(request, env);
+        if (!sa) return err('Solo el superadmin puede ejecutar migraciones', 403);
+
+        const { results: mangas } = await env.DB.prepare("SELECT id, titulo FROM mangas WHERE slug IS NULL OR slug = ''").all();
+        const { results: scans }  = await env.DB.prepare("SELECT id, nombre FROM scans WHERE slug IS NULL OR slug = ''").all();
+
+        let mangasOk = 0, scansOk = 0;
+        for (const m of mangas) {
+          const slug = await uniqueSlug(m.titulo, 'mangas', env, m.id);
+          await env.DB.prepare('UPDATE mangas SET slug = ? WHERE id = ?').bind(slug, m.id).run();
+          mangasOk++;
+        }
+        for (const s of scans) {
+          const slug = await uniqueSlug(s.nombre, 'scans', env, s.id);
+          await env.DB.prepare('UPDATE scans SET slug = ? WHERE id = ?').bind(slug, s.id).run();
+          scansOk++;
+        }
+
+        return json({ message: 'Migración completada', mangas: mangasOk, scans: scansOk });
       }
 
       return err('Página no encontrada', 404);

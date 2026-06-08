@@ -7,7 +7,7 @@ import { ThemeToggle } from '@/components/ThemeToggle';
 import { getUser, login, logout, refreshUser, checkVersion } from '@/lib/auth';
 import { useFavorites } from '@/lib/favorites';
 
-interface Manga { id: string; titulo: string; generos: string; estado: string; tipo: string; views_total: number; cover_r2_key: string | null; fecha_actualizacion: string; ultimo_capitulo: number | null; ultimo_capitulo_id: string | null; ultimo_cap_fecha: string | null; scan_id?: string | null; }
+interface Manga { id: string; slug?: string | null; titulo: string; generos: string; estado: string; tipo: string; views_total: number; cover_r2_key: string | null; fecha_actualizacion: string; ultimo_capitulo: number | null; ultimo_capitulo_id: string | null; ultimo_cap_fecha: string | null; scan_id?: string | null; }
 
 function MangaRow({ title, icon, mangas, buildCard, viewAllHref }: {
   title: string; icon: React.ReactNode; mangas: Manga[];
@@ -114,10 +114,11 @@ export default function Home() {
       <MangaCard
         key={m.id}
         id={m.id}
+        slug={m.slug}
         title={m.titulo}
-        imageUrl={m.cover_r2_key ? `${API}/api/cover/${m.id}` : `https://picsum.photos/400/600?random=${i}`}
+        imageUrl={m.cover_r2_key ? `${API}/api/cover/${m.slug ?? m.id}` : `https://picsum.photos/400/600?random=${i}`}
         chapter={m.ultimo_capitulo != null ? String(m.ultimo_capitulo) : null}
-        chapterUrl={m.ultimo_capitulo_id ? `/manga/reader/${m.id}/chapter/${m.ultimo_capitulo_id}` : null}
+        chapterUrl={m.ultimo_capitulo_id ? `/manga/reader/${m.slug ?? m.id}/chapter/${m.ultimo_capitulo_id}` : null}
         updatedAt={m.ultimo_cap_fecha}
         tags={tags}
         isHot={m.views_total > 1000}
