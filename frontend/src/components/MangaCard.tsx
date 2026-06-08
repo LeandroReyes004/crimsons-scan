@@ -57,7 +57,6 @@ export default function MangaCard({ id, slug, title, imageUrl, chapter, chapterU
           src={imageUrl}
           alt={title}
           className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
-          onError={e => { e.currentTarget.src = '/portada.jpg'; }}
         />
         <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0c] via-[#0a0a0c]/20 to-transparent"/>
       </div>
