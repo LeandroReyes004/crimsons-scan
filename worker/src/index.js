@@ -1,6 +1,6 @@
 // ============================================================
 //  Crimson Scan — Cloudflare Worker
-//  DB: D1  |  Storage: R2  |  Tokens: KV
+//  DB: D1  |  Storage: R2  |  Imágenes: HMAC stateless (sin KV)
 // ============================================================
 
 const CORS = {
@@ -49,6 +49,39 @@ async function verifyJWT(token, secret) {
     return payload;
   } catch {
     return null;
+  }
+}
+
+// ── HMAC para URLs firmadas de imágenes (stateless, cero KV) ──
+// Firma: HMAC-SHA256 sobre "chapterId:pageOrder:expires"
+// TTL por defecto: 6 horas. Sin estado, sin escrituras a KV.
+async function signImageToken(chapterId, pageOrder, expires, secret) {
+  const key = await crypto.subtle.importKey(
+    'raw', new TextEncoder().encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const msg = new TextEncoder().encode(`${chapterId}:${pageOrder}:${expires}`);
+  const buf = await crypto.subtle.sign('HMAC', key, msg);
+  return btoa(String.fromCharCode(...new Uint8Array(buf)))
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+async function verifyImageToken(chapterId, pageOrder, ts, sig, secret) {
+  if (!ts || !sig || !secret) return false;
+  if (parseInt(ts) < Math.floor(Date.now() / 1000)) return false;
+  try {
+    const key = await crypto.subtle.importKey(
+      'raw', new TextEncoder().encode(secret),
+      { name: 'HMAC', hash: 'SHA-256' }, false, ['verify']
+    );
+    const sigBytes = Uint8Array.from(
+      atob(sig.replace(/-/g, '+').replace(/_/g, '/')),
+      c => c.charCodeAt(0)
+    );
+    const msg = new TextEncoder().encode(`${chapterId}:${pageOrder}:${ts}`);
+    return await crypto.subtle.verify('HMAC', key, sigBytes, msg);
+  } catch {
+    return false;
   }
 }
 
@@ -562,15 +595,17 @@ export default {
           'SELECT * FROM paginas WHERE capitulo_id = ? ORDER BY orden ASC'
         ).bind(chapterPages[1]).all();
 
-        const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
-        const origin   = new URL(request.url).origin;
+        const origin  = new URL(request.url).origin;
+        const expires = Math.floor(Date.now() / 1000) + 6 * 3600; // firma válida 6 horas
 
-        // URL directa: /api/reader/:chapterId/:orden — sin tokens, sin KV
-        const pages = paginas.map(pag => ({
-          id:           pag.id,
-          numero:       pag.numero,
-          scramble_map: JSON.parse(pag.scramble_map || '[]'),
-          image_url:    `${origin}/api/reader/${chapterPages[1]}/${pag.orden}`,
+        const pages = await Promise.all(paginas.map(async pag => {
+          const sig = await signImageToken(chapterPages[1], String(pag.orden), expires, env.IMG_SECRET);
+          return {
+            id:           pag.id,
+            numero:       pag.numero,
+            scramble_map: JSON.parse(pag.scramble_map || '[]'),
+            image_url:    `${origin}/api/reader/${chapterPages[1]}/${pag.orden}?ts=${expires}&sig=${sig}`,
+          };
         }));
 
         const [prevCap, nextCap] = await Promise.all([
@@ -710,24 +745,19 @@ export default {
       }
 
       // ── GET /api/reader/:chapterId/:pageOrder ────────────
-      // Proxy directo: lookup en D1 → sirve desde R2
+      // Verifica firma HMAC stateless → sirve imagen desde R2. Sin KV.
       const readerPage = pathname.match(/^\/api\/reader\/([^/]+)\/(\d+)$/);
       if (readerPage && method === 'GET') {
         const [, chapterId, pageOrder] = readerPage;
-        const clientIp = request.headers.get('CF-Connecting-IP') || 'unknown';
+        const { searchParams } = new URL(request.url);
+        const ts  = searchParams.get('ts');
+        const sig = searchParams.get('sig');
 
-        // Rate limit: 500 páginas por IP por hora
-        const rlKey   = `rl:${clientIp}`;
-        const rlRaw   = await env.KV.get(rlKey);
-        const rlCount = rlRaw ? parseInt(rlRaw) : 0;
-        if (rlCount >= 500) {
-          return new Response(JSON.stringify({ error: 'Límite de lectura alcanzado.' }), {
-            status: 429, headers: { 'Content-Type': 'application/json', 'Retry-After': '3600', ...CORS },
-          });
+        if (!await verifyImageToken(chapterId, pageOrder, ts, sig, env.IMG_SECRET)) {
+          return err('Acceso denegado', 403);
         }
-        await env.KV.put(rlKey, String(rlCount + 1), { expirationTtl: 3600 });
 
-        // Buscar r2_key en D1 (cualquier estado — el UUID del capítulo ya es suficiente seguridad)
+        // Buscar r2_key en D1
         const pag = await env.DB.prepare(
           `SELECT p.r2_key FROM paginas p WHERE p.capitulo_id = ? AND p.orden = ?`
         ).bind(chapterId, parseInt(pageOrder)).first();
@@ -757,14 +787,18 @@ export default {
         const { results } = await env.DB.prepare(
           'SELECT id, numero, orden, r2_key FROM paginas WHERE capitulo_id = ? ORDER BY orden ASC'
         ).bind(pagesList[1]).all();
-        const origin = new URL(request.url).origin;
+        const origin  = new URL(request.url).origin;
+        const expires = Math.floor(Date.now() / 1000) + 6 * 3600;
         return json({
-          pages: results.map(p => ({
-            id: p.id,
-            orden: p.orden,
-            numero: p.numero,
-            filename: p.r2_key.split('/').pop(),
-            image_url: `${origin}/api/reader/${pagesList[1]}/${p.orden}`,
+          pages: await Promise.all(results.map(async p => {
+            const sig = await signImageToken(pagesList[1], String(p.orden), expires, env.IMG_SECRET);
+            return {
+              id: p.id,
+              orden: p.orden,
+              numero: p.numero,
+              filename: p.r2_key.split('/').pop(),
+              image_url: `${origin}/api/reader/${pagesList[1]}/${p.orden}?ts=${expires}&sig=${sig}`,
+            };
           }))
         });
       }

@@ -23,6 +23,7 @@ FRONTEND_URL = "https://scancrimson.com"
 
 # Secrets — configurar con Cloudflare CLI:
 # wrangler secret put JWT_SECRET
+# wrangler secret put IMG_SECRET       (clave HMAC para firmar URLs de imágenes — generar con: openssl rand -hex 32)
 # v2.0 — Email de invitación (Resend):
 # wrangler secret put RESEND_API_KEY   (obtener en resend.com)
 # wrangler secret put RESEND_FROM      (ej: "Crimson's Scan <noreply@scancrimson.com>")
