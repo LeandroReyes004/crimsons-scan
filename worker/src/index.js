@@ -867,7 +867,7 @@ export default {
         const user = await getUser(request, env);
         if (!user) return err('Necesitás iniciar sesión para continuar', 401);
 
-        const { manga_id, numero, titulo, fecha_publicacion } = await request.json();
+        const { manga_id, numero, titulo, fecha_publicacion, notify_discord } = await request.json();
         if (!manga_id || numero === undefined) return err('Faltó indicar el manga y el número de capítulo');
 
         // Validar que el usuario pertenece al scan del manga
@@ -895,6 +895,37 @@ export default {
         await env.DB.prepare(
           'INSERT INTO capitulos (id, manga_id, numero, titulo, uploader_id, estado, fecha_publicacion) VALUES (?, ?, ?, ?, ?, ?, ?)'
         ).bind(id, manga_id, numero, titulo || null, user.id, estado, fechaPub).run();
+
+        // Notificar Discord si se pidió y el capítulo quedó publicado
+        if (notify_discord && estado === 'publicado') {
+          ctx.waitUntil((async () => {
+            try {
+              const scanWh = await env.DB.prepare(
+                `SELECT s.webhook_discord FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id
+                 WHERE m.id = ? AND s.webhook_discord IS NOT NULL`
+              ).bind(manga_id).first();
+              const webhookUrl = scanWh?.webhook_discord || env.DISCORD_WEBHOOK_URL;
+              if (!webhookUrl) return;
+              const manga = await env.DB.prepare('SELECT titulo FROM mangas WHERE id = ?').bind(manga_id).first();
+              const capTitle = titulo ? ` — ${titulo}` : '';
+              const mangaUrl = `${env.FRONTEND_URL}/manga/reader/${manga_id}`;
+              await fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  embeds: [{
+                    title: '📖 Nuevo capítulo publicado',
+                    description: `**${manga?.titulo}** — Capítulo ${numero}${capTitle}\n\n[👁 Leer ahora](${mangaUrl})`,
+                    color: 0xe11d48,
+                    url: mangaUrl,
+                    footer: { text: "Crimson's Scan" },
+                    timestamp: new Date().toISOString(),
+                  }]
+                })
+              });
+            } catch {}
+          })());
+        }
 
         return json({ capituloId: id, estado, fecha_publicacion: fechaPub }, 201);
       }

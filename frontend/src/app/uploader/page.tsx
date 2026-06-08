@@ -68,6 +68,7 @@ export default function UploaderPage() {
   const [capTitulo, setCapTitulo]   = useState('');
   const [fechaPub, setFechaPub]     = useState('');
   const [convertWebP, setConvertWebP] = useState(true);
+  const [notifyDiscord, setNotifyDiscord] = useState(true);
   const [pages, setPages]           = useState<PageFile[]>([]);
   const [uploading, setUploading]   = useState(false);
   const [capId, setCapId]           = useState<string | null>(null);
@@ -130,7 +131,7 @@ export default function UploaderPage() {
         const res = await fetch(`${API}/api/chapters`, {
           method: 'POST',
           headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ manga_id: selectedManga.id, numero: num, titulo: capTitulo || null, fecha_publicacion: fechaPub || null }),
+          body: JSON.stringify({ manga_id: selectedManga.id, numero: num, titulo: capTitulo || null, fecha_publicacion: fechaPub || null, notify_discord: notifyDiscord }),
         });
         const d = await res.json();
         if (!res.ok) { setCreateError(d.error || 'Error al crear'); setUploading(false); return; }
@@ -253,7 +254,7 @@ export default function UploaderPage() {
         const res = await fetch(`${API}/api/chapters`, {
           method: 'POST',
           headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ manga_id: selectedManga.id, numero: num, titulo: null, fecha_publicacion: null }),
+          body: JSON.stringify({ manga_id: selectedManga.id, numero: num, titulo: null, fecha_publicacion: null, notify_discord: notifyDiscord }),
         });
         const d = await res.json();
         if (!res.ok) throw new Error(d.error || 'Error al crear capítulo');
@@ -572,6 +573,26 @@ export default function UploaderPage() {
                   </button>
                 </div>
 
+                <div className={`rounded-2xl border px-4 py-3 flex items-start gap-3 ${notifyDiscord ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20' : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'}`}>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-xs font-bold mb-0.5 ${notifyDiscord ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-500'}`}>
+                      {notifyDiscord ? '🔔 Avisar en Discord' : '🔕 Sin aviso en Discord'}
+                    </p>
+                    <p className={`text-xs leading-relaxed ${notifyDiscord ? 'text-indigo-600 dark:text-indigo-300' : 'text-gray-400'}`}>
+                      {notifyDiscord
+                        ? 'Se enviará una notificación al canal de Discord del scan cuando se publique.'
+                        : 'No se enviará ninguna notificación a Discord.'}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setNotifyDiscord(v => !v)}
+                    className={`shrink-0 w-11 h-6 rounded-full transition-colors duration-200 relative ${notifyDiscord ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-white/20'}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${notifyDiscord ? 'translate-x-5' : 'translate-x-0'}`}/>
+                  </button>
+                </div>
+
                 <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4">
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Páginas ({pages.length})</p>
@@ -692,6 +713,22 @@ export default function UploaderPage() {
                   <button type="button" onClick={() => setConvertWebP(v => !v)}
                     className={`shrink-0 w-11 h-6 rounded-full transition-colors duration-200 relative ${convertWebP ? 'bg-blue-500' : 'bg-gray-300 dark:bg-white/20'}`}>
                     <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${convertWebP ? 'translate-x-5' : 'translate-x-0'}`}/>
+                  </button>
+                </div>
+
+                {/* Toggle Discord batch */}
+                <div className={`rounded-2xl border px-4 py-3 flex items-center justify-between gap-3 ${notifyDiscord ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20' : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'}`}>
+                  <div>
+                    <p className={`text-xs font-bold mb-0.5 ${notifyDiscord ? 'text-indigo-700 dark:text-indigo-400' : 'text-gray-500'}`}>
+                      {notifyDiscord ? '🔔 Avisar en Discord' : '🔕 Sin aviso en Discord'}
+                    </p>
+                    <p className={`text-xs ${notifyDiscord ? 'text-indigo-600 dark:text-indigo-300' : 'text-gray-400'}`}>
+                      {notifyDiscord ? 'Se enviará una notificación por cada capítulo publicado.' : 'No se notificará a Discord.'}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setNotifyDiscord(v => !v)}
+                    className={`shrink-0 w-11 h-6 rounded-full transition-colors duration-200 relative ${notifyDiscord ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-white/20'}`}>
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${notifyDiscord ? 'translate-x-5' : 'translate-x-0'}`}/>
                   </button>
                 </div>
 
