@@ -90,7 +90,7 @@ export default function ScanPage() {
                       id={m.id}
                       slug={m.slug}
                       title={m.titulo}
-                      imageUrl={m.cover_r2_key ? `${API}/api/cover/${m.slug ?? m.id}` : `https://picsum.photos/400/600?random=${i}`}
+                      imageUrl={m.cover_r2_key ? `${API}/api/cover/${m.slug ?? m.id}` : '/portada.jpg'}
                       chapter={m.ultimo_capitulo != null ? String(m.ultimo_capitulo) : null}
                       chapterUrl={m.ultimo_capitulo_id ? `/manga/reader/${m.slug ?? m.id}/chapter/${m.ultimo_capitulo_id}` : null}
                       updatedAt={m.ultimo_cap_fecha}
