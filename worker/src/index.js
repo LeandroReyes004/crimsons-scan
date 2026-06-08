@@ -571,13 +571,13 @@ export default {
             `SELECT id, numero, titulo, views, fecha_subida, estado
              FROM capitulos WHERE manga_id = ?
              ORDER BY numero DESC`
-          ).bind(mangaById[1]).all();
+          ).bind(manga.id).all();
         } else {
           capitulosResult = await env.DB.prepare(
             `SELECT id, numero, titulo, views, fecha_subida
              FROM capitulos WHERE manga_id = ? AND estado = 'publicado'
              ORDER BY numero DESC`
-          ).bind(mangaById[1]).all();
+          ).bind(manga.id).all();
         }
 
         return json({ manga, capitulos: capitulosResult.results });
