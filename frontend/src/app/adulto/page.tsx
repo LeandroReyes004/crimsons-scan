@@ -105,7 +105,7 @@ export default function AdultoPage() {
   const featured   = mangas.length > 0 ? [...mangas].sort((a, b) => b.views_total - a.views_total)[0] : null;
   const masLeidos  = useMemo(() => [...mangas].sort((a, b) => b.views_total - a.views_total).slice(0, 20), [mangas]);
   const recientes  = useMemo(() => [...mangas].slice(0, 20), [mangas]);
-  const featuredCover = featured?.cover_r2_key ? `${API_URL}/api/cover/${featured.slug ?? featured.id}` : null;
+  const featuredCover = featured?.cover_r2_key ? `${API_URL}/api/cover/${featured.id}` : null;
 
   const buildCard = (m: Manga, i: number) => {
     let tags: string[] = [];
@@ -116,7 +116,7 @@ export default function AdultoPage() {
         id={m.id}
         slug={m.slug}
         title={m.titulo}
-        imageUrl={m.cover_r2_key ? `${API_URL}/api/cover/${m.slug ?? m.id}` : '/portada.jpg'}
+        imageUrl={m.cover_r2_key ? `${API_URL}/api/cover/${m.id}` : '/portada.jpg'}
         chapter={m.ultimo_capitulo != null ? String(m.ultimo_capitulo) : null}
         chapterUrl={m.ultimo_capitulo_id ? `/manga/reader/${m.slug ?? m.id}/chapter/${m.ultimo_capitulo_id}` : null}
         updatedAt={m.ultimo_cap_fecha}

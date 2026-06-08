@@ -671,45 +671,31 @@ export default {
         ).bind(capId).first();
         if (!cap) return json({ counted: false, reason: 'not_found' });
 
-        const TTL = 86400; // 24 horas
+        const TTL = 86400;
         let counted = false;
 
-        if (fingerprint) {
-          const fpKey      = `view:fp:${capId}:${fingerprint}`;
-          const mangaFpKey = `view:manga:fp:${cap.manga_id}:${fingerprint}`;
-          const [vistoCap, vistoManga] = await Promise.all([
-            env.KV.get(fpKey),
-            env.KV.get(mangaFpKey),
-          ]);
+        try {
+          const key1 = fingerprint ? `view:fp:${capId}:${fingerprint}` : `view:ip:${capId}:${clientIp}`;
+          const key2 = fingerprint ? `view:manga:fp:${cap.manga_id}:${fingerprint}` : `view:manga:ip:${cap.manga_id}:${clientIp}`;
+          const [vistoCap, vistoManga] = await Promise.all([env.KV.get(key1), env.KV.get(key2)]);
           const ops = [];
           if (!vistoCap) {
             ops.push(env.DB.prepare('UPDATE capitulos SET views = views + 1 WHERE id = ?').bind(capId).run());
-            ops.push(env.KV.put(fpKey, '1', { expirationTtl: TTL }));
+            ops.push(env.KV.put(key1, '1', { expirationTtl: TTL }));
             counted = true;
           }
           if (!vistoManga) {
             ops.push(env.DB.prepare('UPDATE mangas SET views_total = views_total + 1, views_mes = views_mes + 1 WHERE id = ?').bind(cap.manga_id).run());
-            ops.push(env.KV.put(mangaFpKey, '1', { expirationTtl: TTL }));
+            ops.push(env.KV.put(key2, '1', { expirationTtl: TTL }));
           }
           if (ops.length) await Promise.all(ops);
-        } else {
-          const ipKey      = `view:ip:${capId}:${clientIp}`;
-          const mangaIpKey = `view:manga:ip:${cap.manga_id}:${clientIp}`;
-          const [vistoCap, vistoManga] = await Promise.all([
-            env.KV.get(ipKey),
-            env.KV.get(mangaIpKey),
-          ]);
-          const ops = [];
-          if (!vistoCap) {
-            ops.push(env.DB.prepare('UPDATE capitulos SET views = views + 1 WHERE id = ?').bind(capId).run());
-            ops.push(env.KV.put(ipKey, '1', { expirationTtl: TTL }));
-            counted = true;
-          }
-          if (!vistoManga) {
-            ops.push(env.DB.prepare('UPDATE mangas SET views_total = views_total + 1, views_mes = views_mes + 1 WHERE id = ?').bind(cap.manga_id).run());
-            ops.push(env.KV.put(mangaIpKey, '1', { expirationTtl: TTL }));
-          }
-          if (ops.length) await Promise.all(ops);
+        } catch {
+          // KV sin cuota (límite diario free tier) — contar igual sin dedup
+          await Promise.all([
+            env.DB.prepare('UPDATE capitulos SET views = views + 1 WHERE id = ?').bind(capId).run(),
+            env.DB.prepare('UPDATE mangas SET views_total = views_total + 1, views_mes = views_mes + 1 WHERE id = ?').bind(cap.manga_id).run(),
+          ]).catch(() => {});
+          counted = true;
         }
 
         return json({ counted });

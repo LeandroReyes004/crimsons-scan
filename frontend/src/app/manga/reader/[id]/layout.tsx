@@ -14,7 +14,7 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
     const description = manga.descripcion
       ? manga.descripcion.slice(0, 160)
       : `Lee ${manga.titulo} en Crimson's Scan con la mejor calidad y traducción.`;
-    const coverUrl = manga.cover_r2_key ? `${API}/api/cover/${id}` : null;
+    const coverUrl = manga.cover_r2_key ? `${API}/api/cover/${manga.id}` : null;
 
     return {
       title,
