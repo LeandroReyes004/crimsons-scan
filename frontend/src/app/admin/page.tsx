@@ -20,7 +20,7 @@ type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'con
 interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; }
 interface Manga { id: string; titulo: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number; fecha_actualizacion: string; scan_nombre?: string; descripcion?: string | null; es_adulto?: number; scan_id?: string | null; generos?: string; }
 interface Capitulo { id: string; numero: number; titulo: string; estado: string; manga_titulo: string; manga_id: string; uploader_username: string; notas_admin: string | null; fecha_subida: string; num_paginas?: number; }
-interface Usuario { id: string; username: string; email: string; rol: string; activo: number; fecha_registro: string; ultimo_acceso: string | null; scan_id?: string; scan_nombre?: string; password_hash?: string; }
+interface Usuario { id: string; username: string; email: string; rol: string; activo: number; fecha_registro: string; ultimo_acceso: string | null; scan_id?: string; scan_nombre?: string; cuenta_pendiente?: number | boolean; }
 interface Scan { id: string; nombre: string; descripcion: string | null; activo: number; miembros: number; }
 
 // ── Hook: fetch con auth ───────────────────────────────────
@@ -1126,13 +1126,13 @@ function SectionUsuarios() {
                   )}
                   <Badge estado={u.rol}/>
                   <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                    u.password_hash === '__pending__'
+                    !!u.cuenta_pendiente
                       ? 'bg-sky-100 text-sky-700 dark:bg-sky-500/20 dark:text-sky-400'
                       : u.activo
                         ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400'
                         : 'bg-gray-100 text-gray-500 dark:bg-white/5'
                   }`}>
-                    {u.password_hash === '__pending__' ? 'Pendiente' : u.activo ? 'Activo' : 'Bloqueado'}
+                    {!!u.cuenta_pendiente ? 'Pendiente' : u.activo ? 'Activo' : 'Bloqueado'}
                   </span>
                 </div>
               </div>
@@ -1189,9 +1189,9 @@ function SectionUsuarios() {
                   </button>
                   {/* Resetear contraseña — superadmin y soporte */}
                   <button onClick={() => { setResetingId(resetingId === u.id ? null : u.id); setResetMsg(null); setEditScanId(null); setEditRolId(null); }}
-                    title={u.password_hash === '__pending__' ? 'Reenviar invitación' : 'Resetear contraseña por email'}
-                    className={`p-1.5 rounded-lg transition ${u.password_hash === '__pending__' ? 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10'}`}>
-                    {u.password_hash === '__pending__' ? <Mail size={14}/> : <ShieldCheck size={14}/>}
+                    title={!!u.cuenta_pendiente ? 'Reenviar invitación' : 'Resetear contraseña por email'}
+                    className={`p-1.5 rounded-lg transition ${!!u.cuenta_pendiente ? 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10'}`}>
+                    {!!u.cuenta_pendiente ? <Mail size={14}/> : <ShieldCheck size={14}/>}
                   </button>
                 </div>
               )}
@@ -1249,18 +1249,18 @@ function SectionUsuarios() {
               {/* Panel reset/reenvío invitación — v2.0: siempre envía email */}
               {isSuperAdmin && resetingId === u.id && (
                 <div className={`mx-5 mb-3 rounded-xl p-4 animate-in slide-in-from-top-1 duration-200 border ${
-                  u.password_hash === '__pending__'
+                  !!u.cuenta_pendiente
                     ? 'bg-sky-50 dark:bg-sky-500/10 border-sky-200 dark:border-sky-500/20'
                     : 'bg-amber-50 dark:bg-amber-500/10 border-amber-200 dark:border-amber-500/20'
                 }`}>
                   <p className={`text-xs font-bold mb-2 flex items-center gap-1.5 ${
-                    u.password_hash === '__pending__' ? 'text-sky-700 dark:text-sky-400' : 'text-amber-700 dark:text-amber-400'
+                    !!u.cuenta_pendiente ? 'text-sky-700 dark:text-sky-400' : 'text-amber-700 dark:text-amber-400'
                   }`}>
-                    {u.password_hash === '__pending__' ? <Mail size={13}/> : <ShieldCheck size={13}/>}
-                    {u.password_hash === '__pending__' ? 'Reenviar invitación' : 'Reset de contraseña'} — <strong>{u.username}</strong>
+                    {!!u.cuenta_pendiente ? <Mail size={13}/> : <ShieldCheck size={13}/>}
+                    {!!u.cuenta_pendiente ? 'Reenviar invitación' : 'Reset de contraseña'} — <strong>{u.username}</strong>
                   </p>
-                  <p className={`text-xs mb-3 ${u.password_hash === '__pending__' ? 'text-sky-600 dark:text-sky-400/70' : 'text-amber-600 dark:text-amber-400/70'}`}>
-                    Se enviará un email a <strong>{u.email}</strong> con un link para {u.password_hash === '__pending__' ? 'activar su cuenta' : 'configurar una nueva contraseña'}. El link expira en 48 hs.
+                  <p className={`text-xs mb-3 ${!!u.cuenta_pendiente ? 'text-sky-600 dark:text-sky-400/70' : 'text-amber-600 dark:text-amber-400/70'}`}>
+                    Se enviará un email a <strong>{u.email}</strong> con un link para {!!u.cuenta_pendiente ? 'activar su cuenta' : 'configurar una nueva contraseña'}. El link expira en 48 hs.
                   </p>
                   {resetMsg && (
                     <p className={`text-xs font-medium mb-3 break-all ${resetMsg.startsWith('✅') ? 'text-emerald-600' : resetMsg.startsWith('⚠️') ? 'text-amber-600' : 'text-red-600'}`}>
@@ -1270,12 +1270,12 @@ function SectionUsuarios() {
                   <div className="flex gap-2">
                     <button onClick={() => handleResetPassword(u.id)} disabled={resetLoading}
                       className={`flex items-center gap-1.5 text-white text-sm font-bold px-4 py-2 rounded-lg transition disabled:opacity-50 ${
-                        u.password_hash === '__pending__'
+                        !!u.cuenta_pendiente
                           ? 'bg-sky-500 hover:bg-sky-400'
                           : 'bg-amber-500 hover:bg-amber-400'
                       }`}>
-                      {resetLoading ? <Loader2 size={14} className="animate-spin"/> : u.password_hash === '__pending__' ? <Mail size={14}/> : <ShieldCheck size={14}/>}
-                      {u.password_hash === '__pending__' ? 'Reenviar invitación' : 'Enviar email de reset'}
+                      {resetLoading ? <Loader2 size={14} className="animate-spin"/> : !!u.cuenta_pendiente ? <Mail size={14}/> : <ShieldCheck size={14}/>}
+                      {!!u.cuenta_pendiente ? 'Reenviar invitación' : 'Enviar email de reset'}
                     </button>
                     <button onClick={() => { setResetingId(null); setResetMsg(null); }}
                       className="p-2 rounded-lg text-gray-400 hover:bg-white/10 transition"><X size={14}/></button>

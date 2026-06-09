@@ -115,7 +115,7 @@ async function hashPassword(password) {
 }
 
 async function verifyPassword(password, stored) {
-  if (!stored.includes(':')) return password === stored; // contraseñas viejas plain text
+  if (!stored || !stored.includes(':')) return false; // rechazar hashes no migrados
   const [saltHex, hashHex] = stored.split(':');
   const salt = new Uint8Array(saltHex.match(/.{2}/g).map(b => parseInt(b, 16)));
   const key  = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveBits']);
@@ -176,9 +176,16 @@ async function getUser(request, env) {
   return await verifyJWT(auth.slice(7), env.JWT_SECRET);
 }
 
+async function checkActive(user, env) {
+  if (!user) return null;
+  const row = await env.DB.prepare('SELECT activo FROM usuarios WHERE id = ?').bind(user.id).first();
+  return row?.activo ? user : null;
+}
+
 async function requireAdmin(request, env) {
   const user = await getUser(request, env);
-  return (user?.is_superadmin || user?.rol === 'admin' || user?.rol === 'admin_scan') ? user : null;
+  if (!user?.is_superadmin && user?.rol !== 'admin' && user?.rol !== 'admin_scan') return null;
+  return checkActive(user, env);
 }
 
 function isScanAdmin(user) {
@@ -187,13 +194,15 @@ function isScanAdmin(user) {
 
 async function requireSuperAdmin(request, env) {
   const user = await getUser(request, env);
-  return user?.is_superadmin ? user : null;
+  if (!user?.is_superadmin) return null;
+  return checkActive(user, env);
 }
 
 // Permite soporte + todos los niveles de admin
 async function requireSupport(request, env) {
   const user = await getUser(request, env);
-  return (user?.is_superadmin || user?.rol === 'admin' || user?.rol === 'admin_scan' || user?.rol === 'soporte') ? user : null;
+  if (!user?.is_superadmin && user?.rol !== 'admin' && user?.rol !== 'admin_scan' && user?.rol !== 'soporte') return null;
+  return checkActive(user, env);
 }
 
 function isSoporte(user) {
@@ -466,9 +475,12 @@ export default {
         const fd   = await request.formData();
         const file = fd.get('avatar');
         if (!file) return err('Falta el archivo');
-        const ext    = (file.name?.split('.').pop() || 'jpg').toLowerCase();
+        const ALLOWED_IMG = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        const ext = (file.name?.split('.').pop() || '').toLowerCase();
+        if (!ALLOWED_IMG.includes(ext)) return err('Formato no permitido. Usá JPG, PNG, WebP o GIF', 400);
+        const safeType = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp', gif:'image/gif' }[ext];
         const r2_key = `scancrimson.com/avatars/${user.id}.${ext}`;
-        await env.R2.put(r2_key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type || 'image/jpeg' } });
+        await env.R2.put(r2_key, await file.arrayBuffer(), { httpMetadata: { contentType: safeType } });
         await env.DB.prepare('UPDATE usuarios SET avatar_url = ? WHERE id = ?').bind(r2_key, user.id).run();
         return json({ avatar_url: r2_key });
       }
@@ -587,6 +599,7 @@ export default {
         let capitulosQuery, capitulosResult;
         if (adminReq) {
           const adminUser = await requireAdmin(request, env);
+          if (!adminUser) return err('No autorizado', 403);
           capitulosResult = await env.DB.prepare(
             `SELECT id, numero, titulo, views, fecha_subida, estado
              FROM capitulos WHERE manga_id = ?
@@ -843,11 +856,19 @@ export default {
         const user = await getUser(request, env);
         if (!user) return err('No autorizado', 401);
 
-        // Query simple sin JOIN para evitar problemas de columnas ambiguas
         const page = await env.DB.prepare(
           'SELECT id, capitulo_id, r2_key, orden FROM paginas WHERE id = ?'
         ).bind(deletePage[1]).first();
         if (!page) return err('Página no encontrada', 404);
+
+        const cap = await env.DB.prepare(
+          'SELECT c.uploader_id, m.scan_id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?'
+        ).bind(page.capitulo_id).first();
+
+        const isOwner = cap?.uploader_id === user.id;
+        const isAdmin = user.is_superadmin || user.rol === 'admin' ||
+          (user.rol === 'admin_scan' && cap?.scan_id === user.scan_id);
+        if (!isOwner && !isAdmin) return err('Sin permisos para eliminar esta página', 403);
 
         // Borrar de R2 (ignorar error si ya no existe)
         try { await env.R2.delete(page.r2_key); } catch {}
@@ -1056,11 +1077,14 @@ export default {
 
         if (!manga_id || !file) return err('Faltan manga_id y cover');
 
-        const ext    = file.name.split('.').pop().toLowerCase();
+        const ALLOWED_IMG = ['jpg', 'jpeg', 'png', 'webp'];
+        const ext = (file.name?.split('.').pop() || '').toLowerCase();
+        if (!ALLOWED_IMG.includes(ext)) return err('Formato no permitido. Usá JPG, PNG o WebP', 400);
+        const safeType = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp' }[ext];
         const r2_key = `scancrimson.com/covers/${manga_id}.${ext}`;
 
         await env.R2.put(r2_key, await file.arrayBuffer(), {
-          httpMetadata: { contentType: file.type },
+          httpMetadata: { contentType: safeType },
         });
 
         await env.DB.prepare('UPDATE mangas SET cover_r2_key = ? WHERE id = ?')
@@ -1438,10 +1462,9 @@ export default {
         const admin = await requireSupport(request, env);
         if (!admin) return err('No autorizado', 401);
 
-        // Admin de scan: solo ve usuarios de su propio scan
-        // v2.0 — incluye password_hash para detectar cuentas pendientes ('__pending__') en el frontend
         const base = `SELECT u.id, u.username, u.email, u.rol, u.activo, u.fecha_registro,
-                             u.ultimo_acceso, u.scan_id, s.nombre as scan_nombre, u.password_hash
+                             u.ultimo_acceso, u.scan_id, s.nombre as scan_nombre,
+                             (u.password_hash = '__pending__') as cuenta_pendiente
                       FROM usuarios u LEFT JOIN scans s ON u.scan_id = s.id`;
 
         const { results } = isScanAdmin(admin) && admin.scan_id
