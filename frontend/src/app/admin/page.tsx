@@ -1826,12 +1826,24 @@ function SectionScans() {
 // ============================================================
 //  SECCIÓN: CONFIGURACIÓN DEL SCAN (webhook Discord)
 // ============================================================
+const DEFAULT_DISCORD_TEMPLATE = '📖 **{{manga}}** — Capítulo {{capitulo}}{{titulo}}\n\n[👁 Leer ahora]({{url}})';
+
+function previewTemplate(tpl: string) {
+  return (tpl || DEFAULT_DISCORD_TEMPLATE)
+    .replace(/\{\{manga\}\}/g, 'Atados por el Pecado')
+    .replace(/\{\{capitulo\}\}/g, '42')
+    .replace(/\{\{titulo\}\}/g, ' — El reencuentro')
+    .replace(/\{\{url\}\}/g, 'https://scancrimson.com/manga/reader/...')
+    .replace(/\*\*(.*?)\*\*/g, '$1');
+}
+
 function SectionConfig({ scanId }: { scanId: string }) {
-  const [webhook, setWebhook] = useState('');
-  const [saved, setSaved]     = useState<string | null>(null);
-  const [saving, setSaving]   = useState(false);
-  const [testing, setTesting] = useState(false);
-  const [testMsg, setTestMsg] = useState<string | null>(null);
+  const [webhook, setWebhook]               = useState('');
+  const [discordTemplate, setDiscordTemplate] = useState('');
+  const [saved, setSaved]                   = useState<string | null>(null);
+  const [saving, setSaving]                 = useState(false);
+  const [testing, setTesting]               = useState(false);
+  const [testMsg, setTestMsg]               = useState<string | null>(null);
   const [imgKey, setImgKey]   = useState(0);
   const [imgUploading, setImgUploading] = useState(false);
   const [imgMsg, setImgMsg]   = useState<string | null>(null);
@@ -1849,6 +1861,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
 
   useEffect(() => {
     if (scanData?.scan?.webhook_discord) setWebhook(scanData.scan.webhook_discord);
+    if (scanData?.scan?.discord_template) setDiscordTemplate(scanData.scan.discord_template);
   }, [scanData]);
 
   const handleSave = async () => {
@@ -1857,7 +1870,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
       const res = await fetch(`${API}/api/admin/scans/${scanId}/webhook`, {
         method: 'PUT',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webhook_discord: webhook || null }),
+        body: JSON.stringify({ webhook_discord: webhook || null, discord_template: discordTemplate || null }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
@@ -2068,6 +2081,30 @@ function SectionConfig({ scanId }: { scanId: string }) {
                 placeholder="https://discord.com/api/webhooks/..."
                 className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition font-mono"
               />
+            </div>
+            <div className="flex flex-col gap-1.5 mb-4">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Mensaje del Discord</label>
+              <p className="text-xs text-gray-400">Usá las variables de abajo. Si lo dejás vacío se usa el mensaje por defecto. Soporta Markdown de Discord.</p>
+              <div className="flex flex-wrap gap-1.5 mb-1">
+                {['{{manga}}', '{{capitulo}}', '{{titulo}}', '{{url}}'].map(v => (
+                  <button key={v} type="button"
+                    onClick={() => setDiscordTemplate(t => (t || DEFAULT_DISCORD_TEMPLATE) + v)}
+                    className="text-[11px] font-mono bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-500/25 transition">
+                    {v}
+                  </button>
+                ))}
+              </div>
+              <textarea
+                rows={4}
+                value={discordTemplate}
+                onChange={e => { setDiscordTemplate(e.target.value); setSaved(null); }}
+                placeholder={DEFAULT_DISCORD_TEMPLATE}
+                className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition font-mono resize-none"
+              />
+              <div className="bg-[#1e1f22] rounded-xl p-3 mt-1">
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 font-bold">Vista previa</p>
+                <p className="text-sm text-gray-200 whitespace-pre-wrap">{previewTemplate(discordTemplate)}</p>
+              </div>
             </div>
             <div className="flex gap-3 flex-wrap">
               <button onClick={handleSave} disabled={saving}

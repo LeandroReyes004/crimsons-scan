@@ -15,6 +15,26 @@ const json  = (data, status = 200) =>
 
 const err   = (msg, status = 400) => json({ error: msg }, status);
 
+// ── Discord: aplica template con variables ─────────────────
+const DEFAULT_DISCORD_TEMPLATE = '📖 **{{manga}}** — Capítulo {{capitulo}}{{titulo}}\n\n[👁 Leer ahora]({{url}})';
+
+function buildDiscordBody(template, vars) {
+  const desc = (template || DEFAULT_DISCORD_TEMPLATE)
+    .replace(/\{\{manga\}\}/g, vars.manga)
+    .replace(/\{\{capitulo\}\}/g, vars.capitulo)
+    .replace(/\{\{titulo\}\}/g, vars.titulo ? ` — ${vars.titulo}` : '')
+    .replace(/\{\{url\}\}/g, vars.url);
+  return JSON.stringify({
+    embeds: [{
+      description: desc,
+      color: 0xe11d48,
+      url: vars.url,
+      footer: { text: "Crimson's Scan" },
+      timestamp: new Date().toISOString(),
+    }]
+  });
+}
+
 // ── JWT (Web Crypto nativo — sin dependencias) ─────────────
 async function signJWT(payload, secret) {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -252,25 +272,25 @@ export default {
          WHERE estado = 'programado' AND fecha_publicacion <= datetime('now')`
       ).run();
 
-      if (env.DISCORD_WEBHOOK_URL) {
-        for (const cap of toPublish) {
-          const capTitle = cap.titulo ? ` — ${cap.titulo}` : '';
+      for (const cap of toPublish) {
+        try {
+          const scanData = await env.DB.prepare(
+            `SELECT s.webhook_discord, s.discord_template FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
+          ).bind(cap.manga_id).first();
+          const webhookUrl = scanData?.webhook_discord || env.DISCORD_WEBHOOK_URL;
+          if (!webhookUrl) continue;
           const mangaUrl = `${env.FRONTEND_URL}/manga/reader/${cap.manga_id}`;
-          await fetch(env.DISCORD_WEBHOOK_URL, {
+          await fetch(webhookUrl, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              embeds: [{
-                title: '📖 Nuevo capítulo publicado',
-                description: `**${cap.manga_titulo}** — Capítulo ${cap.numero}${capTitle}\n\n[👁 Leer ahora](${mangaUrl})`,
-                color: 0xe11d48,
-                url: mangaUrl,
-                footer: { text: "Crimson's Scan" },
-                timestamp: new Date().toISOString(),
-              }]
-            })
-          }).catch(() => {});
-        }
+            body: buildDiscordBody(scanData?.discord_template, {
+              manga: cap.manga_titulo,
+              capitulo: cap.numero,
+              titulo: cap.titulo || '',
+              url: mangaUrl,
+            }),
+          });
+        } catch {}
       }
     })());
   },
@@ -886,28 +906,22 @@ export default {
         if (notify_discord && estado === 'publicado') {
           ctx.waitUntil((async () => {
             try {
-              const scanWh = await env.DB.prepare(
-                `SELECT s.webhook_discord FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id
-                 WHERE m.id = ? AND s.webhook_discord IS NOT NULL`
+              const scanData = await env.DB.prepare(
+                `SELECT s.webhook_discord, s.discord_template, m.titulo as manga_titulo
+                 FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
               ).bind(manga_id).first();
-              const webhookUrl = scanWh?.webhook_discord || env.DISCORD_WEBHOOK_URL;
+              const webhookUrl = scanData?.webhook_discord || env.DISCORD_WEBHOOK_URL;
               if (!webhookUrl) return;
-              const manga = await env.DB.prepare('SELECT titulo FROM mangas WHERE id = ?').bind(manga_id).first();
-              const capTitle = titulo ? ` — ${titulo}` : '';
               const mangaUrl = `${env.FRONTEND_URL}/manga/reader/${manga_id}`;
               await fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  embeds: [{
-                    title: '📖 Nuevo capítulo publicado',
-                    description: `**${manga?.titulo}** — Capítulo ${numero}${capTitle}\n\n[👁 Leer ahora](${mangaUrl})`,
-                    color: 0xe11d48,
-                    url: mangaUrl,
-                    footer: { text: "Crimson's Scan" },
-                    timestamp: new Date().toISOString(),
-                  }]
-                })
+                body: buildDiscordBody(scanData?.discord_template, {
+                  manga: scanData?.manga_titulo || '',
+                  capitulo: numero,
+                  titulo: titulo || '',
+                  url: mangaUrl,
+                }),
               });
             } catch {}
           })());
@@ -943,44 +957,39 @@ export default {
         if (capForWh) {
           ctx.waitUntil((async () => {
             try {
-              // 1. Buscar webhook del scan del manga
-              // 2. Si no, buscar webhook del scan del admin que publica
-              // 3. Fallback al global DISCORD_WEBHOOK_URL
               let webhookUrl = env.DISCORD_WEBHOOK_URL;
+              let discordTemplate = null;
               try {
-                const scanWh = await env.DB.prepare(
-                  `SELECT s.webhook_discord
-                   FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id
-                   WHERE m.id = ? AND s.webhook_discord IS NOT NULL`
+                const scanData = await env.DB.prepare(
+                  `SELECT s.webhook_discord, s.discord_template
+                   FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
                 ).bind(capForWh.manga_id).first();
-                if (scanWh?.webhook_discord) {
-                  webhookUrl = scanWh.webhook_discord;
+                if (scanData?.webhook_discord) {
+                  webhookUrl = scanData.webhook_discord;
+                  discordTemplate = scanData.discord_template;
                 } else if (admin.scan_id) {
-                  // Fallback: webhook del scan del admin que pulsa Publicar
-                  const adminScanWh = await env.DB.prepare(
-                    `SELECT webhook_discord FROM scans WHERE id = ? AND webhook_discord IS NOT NULL`
+                  const adminScanData = await env.DB.prepare(
+                    `SELECT webhook_discord, discord_template FROM scans WHERE id = ?`
                   ).bind(admin.scan_id).first();
-                  if (adminScanWh?.webhook_discord) webhookUrl = adminScanWh.webhook_discord;
+                  if (adminScanData?.webhook_discord) {
+                    webhookUrl = adminScanData.webhook_discord;
+                    discordTemplate = adminScanData.discord_template;
+                  }
                 }
               } catch {}
 
               if (!webhookUrl) return;
 
-              const capTitle = capForWh.titulo ? ` — ${capForWh.titulo}` : '';
               const mangaUrl = `${env.FRONTEND_URL}/manga/reader/${capForWh.manga_id}`;
               await fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                  embeds: [{
-                    title: '📖 Nuevo capítulo publicado',
-                    description: `**${capForWh.manga_titulo}** — Capítulo ${capForWh.numero}${capTitle}\n\n[👁 Leer ahora](${mangaUrl})`,
-                    color: 0xe11d48,
-                    url: mangaUrl,
-                    footer: { text: "Crimson's Scan" },
-                    timestamp: new Date().toISOString(),
-                  }]
-                })
+                body: buildDiscordBody(discordTemplate, {
+                  manga: capForWh.manga_titulo,
+                  capitulo: capForWh.numero,
+                  titulo: capForWh.titulo || '',
+                  url: mangaUrl,
+                }),
               });
             } catch {}
           })());
@@ -1408,9 +1417,9 @@ export default {
         if (isScanAdmin(admin) && admin.scan_id !== editWebhook[1]) {
           return err('Solo podés configurar tu propio scan', 403);
         }
-        const { webhook_discord } = await request.json();
-        await env.DB.prepare('UPDATE scans SET webhook_discord = ? WHERE id = ?')
-          .bind(webhook_discord || null, editWebhook[1]).run();
+        const { webhook_discord, discord_template } = await request.json();
+        await env.DB.prepare('UPDATE scans SET webhook_discord = ?, discord_template = ? WHERE id = ?')
+          .bind(webhook_discord || null, discord_template || null, editWebhook[1]).run();
         return json({ message: 'Webhook actualizado' });
       }
 
