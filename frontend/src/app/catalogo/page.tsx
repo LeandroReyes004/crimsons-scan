@@ -198,7 +198,7 @@ export default function CatalogoPage() {
                   {/* Portada */}
                   <div className="aspect-[3/4] overflow-hidden bg-gradient-to-br from-rose-900/20 to-gray-900 relative">
                     {m.cover_r2_key ? (
-                      <img src={`${API}/api/cover/${m.id}`} alt={m.titulo} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
+                      <img src={`${API}/api/cover/${m.id}`} alt={m.titulo} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-600">
                         <BookOpen size={32}/>

@@ -247,6 +247,7 @@ export default function Home() {
             <img
               src={featuredCover || '/portada.jpg'}
               alt=""
+              fetchPriority="high"
               className="w-full h-full object-cover opacity-25 blur-sm scale-105 transition-all duration-700"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-slate-50 dark:from-[#0a0a0c] via-slate-50/50 dark:via-black/50 to-transparent"/>
@@ -320,7 +321,7 @@ export default function Home() {
                   <Link href={`/manga/reader/${featured.id}`}
                     className="block rotate-y-[-8deg] rotate-x-[3deg] rounded-xl overflow-hidden shadow-[0_20px_50px_rgba(0,0,0,0.6)] border-2 border-white/10 transition-all duration-500 hover:rotate-y-0 hover:rotate-x-0 hover:scale-105">
                     {featuredCover ? (
-                      <img src={featuredCover} alt={featured.titulo} className="w-full h-auto aspect-[3/4] object-cover"/>
+                      <img src={featuredCover} alt={featured.titulo} fetchPriority="high" className="w-full h-auto aspect-[3/4] object-cover"/>
                     ) : (
                       <div className="w-full aspect-[3/4] bg-gradient-to-br from-rose-900/40 to-gray-900 flex items-center justify-center">
                         <span className="text-4xl font-black text-white/20">{featured.titulo.charAt(0)}</span>
