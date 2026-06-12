@@ -492,7 +492,7 @@ export default {
         if (!u?.avatar_url) return err('Avatar no encontrado', 404);
         const object = await env.R2.get(u.avatar_url);
         if (!object) return err('Imagen no encontrada', 404);
-        return new Response(object.body, { headers: { 'Content-Type': contentType(u.avatar_url), 'Cache-Control': 'public, max-age=300', ...CORS } });
+        return new Response(object.body, { headers: { 'Content-Type': contentType(u.avatar_url), 'Cache-Control': 'public, max-age=3600', ...CORS } });
       }
 
       // ── GET /api/mangas ──────────────────────────────────
@@ -623,7 +623,7 @@ export default {
         if (!s?.imagen_url) return err('Imagen no encontrada', 404);
         const object = await env.R2.get(s.imagen_url);
         if (!object) return err('Imagen no encontrada', 404);
-        return new Response(object.body, { headers: { 'Content-Type': contentType(s.imagen_url), 'Cache-Control': 'public, max-age=300', ...CORS } });
+        return new Response(object.body, { headers: { 'Content-Type': contentType(s.imagen_url), 'Cache-Control': 'public, max-age=3600', ...CORS } });
       }
 
       // ── GET /api/scans/:id ────────────────────────────────
