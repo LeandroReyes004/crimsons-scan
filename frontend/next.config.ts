@@ -2,13 +2,17 @@ import type { NextConfig } from "next";
 
 const BUILD_ID = Date.now().toString();
 
+const WORKER = "https://crimson-api.leandro-reyes1025.workers.dev";
+const AD_SCRIPTS = "https://static.cloudflareinsights.com https://*.effectivecpmnetwork.com https://*.highperformanceformat.com https://*.adsterra.com";
+
 const CSP = [
   "default-src 'self'",
-  "script-src 'self' 'unsafe-inline'",
+  `script-src 'self' 'unsafe-inline' ${AD_SCRIPTS}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://scancrimson.com https://crimson-api.leandro-reyes1025.workers.dev https://picsum.photos",
-  "connect-src 'self' https://crimson-api.leandro-reyes1025.workers.dev",
-  "font-src 'self'",
+  `img-src 'self' data: blob: https:`,
+  `connect-src 'self' ${WORKER} https://cloudflareinsights.com https://*.effectivecpmnetwork.com https://*.highperformanceformat.com https://*.adsterra.com`,
+  "font-src 'self' https://fonts.gstatic.com",
+  `frame-src https://*.effectivecpmnetwork.com https://*.highperformanceformat.com https://*.adsterra.com`,
   "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self'",

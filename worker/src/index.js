@@ -3,17 +3,26 @@
 //  DB: D1  |  Storage: R2  |  Imágenes: HMAC stateless (sin KV)
 // ============================================================
 
-const CORS = {
-  'Access-Control-Allow-Origin': 'https://scancrimson.com',
+const ALLOWED_ORIGINS = ['https://scancrimson.com', 'https://www.scancrimson.com'];
+
+const BASE_CORS = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Fingerprint',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
+  'Vary': 'Origin',
 };
 
-// ── Respuestas rápidas ─────────────────────────────────────
+function makeCORS(origin) {
+  return {
+    ...BASE_CORS,
+    'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+  };
+}
+
+// ── Respuestas rápidas (se sobreescriben por versiones locales dentro del fetch handler) ──
 const json  = (data, status = 200) =>
-  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
+  new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...makeCORS('') } });
 
 const err   = (msg, status = 400) => json({ error: msg }, status);
 
@@ -309,6 +318,11 @@ export default {
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
     const method = request.method;
+
+    const CORS = makeCORS(request.headers.get('Origin') || '');
+    const json = (data, status = 200) =>
+      new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
+    const err = (msg, status = 400) => json({ error: msg }, status);
 
     if (method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
 
