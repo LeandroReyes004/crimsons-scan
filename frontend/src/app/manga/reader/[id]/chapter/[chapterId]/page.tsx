@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Layers, AlignJustify, BookOpen } from 'lucide-react';
@@ -26,6 +26,8 @@ export default function ChapterReaderPage() {
   const [error, setError]             = useState<string | null>(null);
   const [readingMode, setReadingMode] = useState<'webtoon' | 'paged'>('webtoon');
   const [currentPage, setCurrentPage] = useState(0);
+  const [chromeVisible, setChromeVisible] = useState(true);
+  const chromeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     const saved = localStorage.getItem('crimson_reader_mode');
@@ -33,6 +35,28 @@ export default function ChapterReaderPage() {
     const savedPage = localStorage.getItem(`crimson_page_${chapterId}`);
     if (savedPage) setCurrentPage(parseInt(savedPage) || 0);
   }, [chapterId]);
+
+  // Auto-ocultar header + controls al scrollear
+  useEffect(() => {
+    if (readingMode === 'paged') {
+      setChromeVisible(true);
+      clearTimeout(chromeTimer.current);
+      return;
+    }
+    const show = () => {
+      setChromeVisible(true);
+      clearTimeout(chromeTimer.current);
+      chromeTimer.current = setTimeout(() => setChromeVisible(false), 2500);
+    };
+    window.addEventListener('scroll', show, { passive: true });
+    window.addEventListener('touchstart', show, { passive: true });
+    chromeTimer.current = setTimeout(() => setChromeVisible(false), 3000);
+    return () => {
+      window.removeEventListener('scroll', show);
+      window.removeEventListener('touchstart', show);
+      clearTimeout(chromeTimer.current);
+    };
+  }, [readingMode]);
 
   // Guardar último capítulo leído por manga
   useEffect(() => {
@@ -124,7 +148,7 @@ export default function ChapterReaderPage() {
     <div className="min-h-screen bg-[#111] text-white font-sans pb-32 select-none">
 
       {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-3 sm:px-6 flex items-center justify-between gap-2">
+      <header className={`fixed top-0 left-0 right-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-3 sm:px-6 flex items-center justify-between gap-2 transition-transform duration-300 ${chromeVisible ? 'translate-y-0' : '-translate-y-full'}`}>
         <div className="flex items-center gap-1">
           <Link href={`/manga/reader/${mangaId}`}
             className="flex items-center gap-1 text-gray-400 hover:text-white transition text-sm font-medium min-h-[44px] min-w-[44px] justify-center sm:justify-start sm:min-w-0 sm:px-2">
@@ -177,7 +201,7 @@ export default function ChapterReaderPage() {
         </div>
       </header>
 
-      <main className={`flex flex-col items-center mt-0 ${readingMode === 'webtoon' ? 'w-full max-w-[900px] mx-auto' : 'max-w-4xl mx-auto px-2'}`}>
+      <main className={`flex flex-col items-center pt-14 ${readingMode === 'webtoon' ? 'w-full max-w-[900px] mx-auto' : 'max-w-4xl mx-auto px-2'}`}>
 
         {loading && (
           <div className="flex flex-col items-center gap-4 mt-24">
