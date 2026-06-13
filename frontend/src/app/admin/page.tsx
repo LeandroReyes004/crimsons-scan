@@ -1844,7 +1844,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
   const [saving, setSaving]                 = useState(false);
   const [testing, setTesting]               = useState(false);
   const [testMsg, setTestMsg]               = useState<string | null>(null);
-  const [imgKey, setImgKey]   = useState(0);
+  const [imgKey, setImgKey]   = useState(() => Date.now());
   const [imgUploading, setImgUploading] = useState(false);
   const [imgMsg, setImgMsg]   = useState<string | null>(null);
   const imgRef = useRef<HTMLInputElement>(null);
@@ -1933,7 +1933,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
       const res = await fetch(`${API}/api/upload/scan-image`, { method: 'POST', headers: authHeaders(), body: fd });
       const d   = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setImgKey(k => k + 1);
+      setImgKey(Date.now());
       setImgMsg('✅ Imagen actualizada');
     } catch (err: any) { setImgMsg(`❌ ${err.message}`); }
     finally { setImgUploading(false); }
