@@ -21,7 +21,7 @@ export default function ReaderControls({
   onPrevPage,
 }: ReaderControlsProps) {
   const [visible, setVisible] = useState(true);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   useEffect(() => {
     const show = () => {
