@@ -288,7 +288,7 @@ export default function MangaDetailPage() {
                         Capítulo {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {new Date(cap.fecha_subida).toLocaleDateString('es', { day:'2-digit', month:'short', year:'numeric' })}
+                        {(() => { try { return new Date(cap.fecha_subida).toLocaleDateString('es', { day:'2-digit', month:'short', year:'numeric' }); } catch { return cap.fecha_subida?.slice(0, 10) ?? ''; } })()}
                       </p>
                     </div>
                   </div>
