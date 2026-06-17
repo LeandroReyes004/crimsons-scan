@@ -282,14 +282,14 @@ export default {
       const { results: toPublish } = await env.DB.prepare(
         `SELECT c.id, c.numero, c.titulo, c.manga_id, m.titulo as manga_titulo
          FROM capitulos c JOIN mangas m ON c.manga_id = m.id
-         WHERE c.estado = 'programado' AND c.fecha_publicacion <= datetime('now')`
+         WHERE c.estado = 'programado' AND datetime(c.fecha_publicacion) <= datetime('now')`
       ).all();
 
       if (toPublish.length === 0) return;
 
       await env.DB.prepare(
         `UPDATE capitulos SET estado = 'publicado'
-         WHERE estado = 'programado' AND fecha_publicacion <= datetime('now')`
+         WHERE estado = 'programado' AND datetime(fecha_publicacion) <= datetime('now')`
       ).run();
 
       for (const cap of toPublish) {
@@ -930,7 +930,7 @@ export default {
 
         // Determinar estado y fecha de publicación
         const ahora = new Date().toISOString();
-        const esFuturo = fecha_publicacion && fecha_publicacion > ahora;
+        const esFuturo = fecha_publicacion && new Date(fecha_publicacion) > new Date(ahora);
         const estado   = esFuturo ? 'programado' : 'publicado';
         const fechaPub = fecha_publicacion || ahora;
 
@@ -1263,7 +1263,7 @@ export default {
 
         const { fecha_publicacion } = await request.json();
         const ahora = new Date().toISOString();
-        const esFuturo = fecha_publicacion && fecha_publicacion > ahora;
+        const esFuturo = fecha_publicacion && new Date(fecha_publicacion) > new Date(ahora);
         const estado = esFuturo ? 'programado' : 'publicado';
         const fechaPub = fecha_publicacion || ahora;
 
