@@ -26,8 +26,8 @@ export default function ChapterReaderPage() {
   const [error, setError]             = useState<string | null>(null);
   const [readingMode, setReadingMode] = useState<'webtoon' | 'paged'>('webtoon');
   const [currentPage, setCurrentPage] = useState(0);
-  const [chromeVisible, setChromeVisible] = useState(true);
-  const chromeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const [isNavVisible, setIsNavVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
 
   useEffect(() => {
     const saved = localStorage.getItem('crimson_reader_mode');
@@ -36,27 +36,7 @@ export default function ChapterReaderPage() {
     if (savedPage) setCurrentPage(parseInt(savedPage) || 0);
   }, [chapterId]);
 
-  // Auto-ocultar header + controls al scrollear
-  useEffect(() => {
-    if (readingMode === 'paged') {
-      setChromeVisible(true);
-      clearTimeout(chromeTimer.current);
-      return;
-    }
-    const show = () => {
-      setChromeVisible(true);
-      clearTimeout(chromeTimer.current);
-      chromeTimer.current = setTimeout(() => setChromeVisible(false), 2500);
-    };
-    window.addEventListener('scroll', show, { passive: true });
-    window.addEventListener('touchstart', show, { passive: true });
-    chromeTimer.current = setTimeout(() => setChromeVisible(false), 3000);
-    return () => {
-      window.removeEventListener('scroll', show);
-      window.removeEventListener('touchstart', show);
-      clearTimeout(chromeTimer.current);
-    };
-  }, [readingMode]);
+
 
   // Guardar último capítulo leído por manga
   useEffect(() => {
@@ -139,6 +119,26 @@ export default function ChapterReaderPage() {
     return () => window.removeEventListener('keydown', onKey);
   }, [goNext, goPrev, readingMode]);
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      
+      // Si scrolleamos hacia abajo más de 50px ocultamos los navs
+      if (currentScrollY > lastScrollY && currentScrollY > 50) {
+        setIsNavVisible(false);
+      } 
+      // Si scrolleamos hacia arriba los mostramos
+      else if (currentScrollY < lastScrollY) {
+        setIsNavVisible(true);
+      }
+      
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
+
   const visiblePages = useMemo(() => {
     if (readingMode === 'webtoon') return pages;
     return pages.length > 0 ? [pages[currentPage]] : [];
@@ -148,7 +148,7 @@ export default function ChapterReaderPage() {
     <div className="min-h-screen bg-[#111] text-white font-sans pb-32 select-none">
 
       {/* Header */}
-      <header className={`fixed top-0 left-0 right-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-3 sm:px-6 flex items-center justify-between gap-2 transition-transform duration-300 ${chromeVisible ? 'translate-y-0' : '-translate-y-full'}`}>
+      <header className={`fixed top-0 inset-x-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-3 sm:px-6 flex items-center justify-between gap-2 transition-all duration-300 ${!isNavVisible ? '-translate-y-full opacity-0 pointer-events-none' : 'translate-y-0 opacity-100 pointer-events-auto'}`}>
         <div className="flex items-center gap-1">
           <Link href={`/manga/reader/${mangaId}`}
             className="flex items-center gap-1 text-gray-400 hover:text-white transition text-sm font-medium min-h-[44px] min-w-[44px] justify-center sm:justify-start sm:min-w-0 sm:px-2">
@@ -283,6 +283,7 @@ export default function ChapterReaderPage() {
           totalPages={pages.length}
           onNextPage={goNext}
           onPrevPage={goPrev}
+          visible={isNavVisible}
         />
       )}
 
