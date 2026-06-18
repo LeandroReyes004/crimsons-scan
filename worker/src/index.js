@@ -654,7 +654,7 @@ export default {
             (SELECT fecha_publicacion FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_cap_fecha
            FROM mangas m WHERE m.scan_id = ?
            ORDER BY m.fecha_actualizacion DESC`
-        ).bind(scanById[1]).all();
+        ).bind(scan.id).all();
         return json({ scan, mangas: mangas || [] });
       }
 

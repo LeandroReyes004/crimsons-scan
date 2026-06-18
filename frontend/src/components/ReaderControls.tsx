@@ -1,6 +1,5 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, LayoutTemplate, Layers } from 'lucide-react';
 
 interface ReaderControlsProps {
