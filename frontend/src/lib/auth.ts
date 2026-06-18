@@ -43,6 +43,11 @@ export function logout() {
   localStorage.removeItem(USER_KEY);
 }
 
+export function setToken(token: string, user: CrimsonUser) {
+  localStorage.setItem(TOKEN_KEY, token);
+  localStorage.setItem(USER_KEY, JSON.stringify(user));
+}
+
 export function getToken(): string | null {
   if (typeof window === 'undefined') return null;
   return localStorage.getItem(TOKEN_KEY);
