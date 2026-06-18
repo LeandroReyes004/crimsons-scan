@@ -14,7 +14,7 @@ import { toWebP } from '@/lib/webp';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
-type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'config' | 'revenue';
+type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'config' | 'revenue' | 'seguridad';
 
 // ── Tipos ──────────────────────────────────────────────────
 interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; }
@@ -222,6 +222,7 @@ export default function AdminPage() {
             { id: 'scans',     icon: <Layers size={16}/>,          label: 'Scans',     show: !!user.is_superadmin },
             { id: 'revenue',   icon: <BarChart2 size={16}/>,       label: 'Revenue',   show: !!user.is_superadmin || ((user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id) },
             { id: 'usuarios',  icon: <Users size={16}/>,           label: 'Usuarios',  show: !!user.is_superadmin || user.rol === 'soporte' },
+            { id: 'seguridad', icon: <ShieldCheck size={16}/>,     label: 'Auditoría / Logs', show: !!user.is_superadmin || user.rol === 'soporte' },
             { id: 'config',    icon: <Settings size={16}/>,        label: 'Mi Scan',   show: !user.is_superadmin && (user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id },
           ] as const).filter(item => item.show).map(item => (
             <button
@@ -276,6 +277,7 @@ export default function AdminPage() {
           {section === 'scans'     && <SectionScans />}
           {section === 'revenue'   && <SectionRevenue />}
           {section === 'usuarios'  && <SectionUsuarios />}
+          {section === 'seguridad' && <SectionSeguridad />}
           {section === 'config'    && <SectionConfig scanId={user.scan_id!} />}
         </main>
       </div>
@@ -842,7 +844,8 @@ function SectionUsuarios() {
   const [saving, setSaving]         = useState(false);
   const [feedback, setFeedback]     = useState<string | null>(null);
 
-  // Filtros
+  // Filtros y Tabs
+  const [tab, setTab]               = useState<'staff'|'lectores'>('staff');
   const [searchQ, setSearchQ]       = useState('');
   const [scanFilter, setScanFilter] = useState('');
   const [rolFilter, setRolFilter]   = useState('');
@@ -898,7 +901,8 @@ function SectionUsuarios() {
     const matchQ   = !q || u.username.toLowerCase().includes(q) || u.email.toLowerCase().includes(q);
     const matchScan = !scanFilter || (scanFilter === '__none__' ? !u.scan_id : u.scan_id === scanFilter);
     const matchRol  = !rolFilter || u.rol === rolFilter;
-    return matchQ && matchScan && matchRol;
+    const matchTab  = tab === 'lectores' ? u.rol === 'lector' : u.rol !== 'lector';
+    return matchQ && matchScan && matchRol && matchTab;
   });
 
   // v2.0 — envía email de reset en lugar de ingresar contraseña manual
@@ -1003,6 +1007,18 @@ function SectionUsuarios() {
             <UserPlus size={16}/> Nuevo Usuario
           </button>
         )}
+      </div>
+
+      {/* Tabs de Staff vs Lectores */}
+      <div className="flex items-center gap-4 border-b border-gray-200 dark:border-white/10 mb-2">
+        <button onClick={() => setTab('staff')}
+          className={`pb-3 text-sm font-bold transition-all border-b-2 ${tab === 'staff' ? 'border-rose-500 text-rose-500' : 'border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}>
+          Staff y Scans
+        </button>
+        <button onClick={() => setTab('lectores')}
+          className={`pb-3 text-sm font-bold transition-all border-b-2 ${tab === 'lectores' ? 'border-rose-500 text-rose-500' : 'border-transparent text-gray-500 hover:text-gray-900 dark:hover:text-white'}`}>
+          Lectores
+        </button>
       </div>
 
       {/* Barra de filtros */}
@@ -1420,6 +1436,76 @@ function SectionRevenue() {
       </div>
     );
   }
+
+// ============================================================
+//  SECCIÓN: SEGURIDAD (Logs)
+// ============================================================
+function SectionSeguridad() {
+  const { data, loading, refetch } = useAPI<{ logs: any[] }>('/api/admin/logs');
+
+  return (
+    <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-extrabold dark:text-white flex items-center gap-2">
+            <ShieldCheck size={22} className="text-rose-500"/> Auditoría y Logs
+          </h2>
+          <p className="text-gray-500 text-sm mt-1">Registro de errores del sistema e intentos de robo de imágenes</p>
+        </div>
+        <button onClick={refetch} className="flex items-center gap-2 text-sm text-gray-500 hover:text-rose-500 transition-colors">
+          <RefreshCw size={15}/> Actualizar
+        </button>
+      </div>
+
+      {loading ? (
+        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
+      ) : (
+        <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
+          {(data?.logs ?? []).length === 0 ? (
+            <div className="flex flex-col items-center py-16 text-gray-400">
+              <ShieldCheck size={40} className="mb-3 opacity-30"/>
+              <p className="font-medium">No hay registros de seguridad</p>
+              <p className="text-sm">Todo está funcionando correctamente</p>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              {(data?.logs ?? []).map((log: any, i: number) => {
+                const esRobo = log.tipo === 'robo_imagenes';
+                return (
+                  <div key={log.id} className={`p-4 sm:p-5 flex flex-col sm:flex-row gap-4 hover:bg-gray-50 dark:hover:bg-white/2 transition ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                      esRobo ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' 
+                             : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
+                    }`}>
+                      {esRobo ? <AlertCircle size={20}/> : <AlertCircle size={20}/>}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+                        <p className="font-bold text-sm dark:text-white">
+                          {esRobo ? 'Intento de robo bloqueado' : 'Error del Sistema (Bug)'}
+                        </p>
+                        <span className="text-xs text-gray-400 flex items-center gap-1">
+                          <Clock size={12}/> {new Date(log.fecha).toLocaleString()}
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500 mb-2">
+                        <span><strong>IP:</strong> {log.ip || 'Desconocida'}</span>
+                        <span className="truncate max-w-xs" title={log.user_agent}><strong>UA:</strong> {log.user_agent || 'Desconocido'}</span>
+                      </div>
+                      <div className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-lg p-3 text-xs font-mono overflow-x-auto text-gray-600 dark:text-gray-400">
+                        {log.detalles}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">

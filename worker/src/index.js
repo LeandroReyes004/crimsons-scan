@@ -180,6 +180,25 @@ async function sendInviteEmail(to, username, setupUrl, apiKey, from) {
   }
 }
 
+async function sendAlertEmail(to, subject, text, apiKey, from) {
+  if (!apiKey) return false;
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        from: from || "Crimson's Scan <noreply@scancrimson.com>",
+        to: [to],
+        subject: subject,
+        text: text
+      }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 // ── Middleware de auth ─────────────────────────────────────
 async function getUser(request, env) {
   const auth = request.headers.get('Authorization');
@@ -355,6 +374,35 @@ export default {
           token,
           user: { id: user.id, username: user.username, display_name: user.display_name || null, rol: user.rol, avatar_url: user.avatar_url, is_superadmin: user.is_superadmin === 1, scan_id: user.scan_id || null, scan_nombre: user.scan_nombre || null }
         });
+      }
+
+      // ── POST /api/auth/signup (Registro público) ────────────────
+      if (pathname === '/api/auth/signup' && method === 'POST') {
+        const { username, display_name, email, password, fecha_nacimiento } = await request.json();
+        if (!username || !email || !password || !fecha_nacimiento) return err('Todos los campos son requeridos');
+        if (password.length < 6) return err('La contraseña debe tener al menos 6 caracteres');
+
+        const exists = await env.DB.prepare('SELECT id FROM usuarios WHERE username = ? OR email = ?')
+          .bind(username, email).first();
+        if (exists) return err('Ese usuario o email ya está registrado');
+
+        const id = crypto.randomUUID();
+        const hash = await hashPassword(password);
+        
+        await env.DB.prepare(
+          'INSERT INTO usuarios (id, username, display_name, email, password_hash, rol, activo, fecha_nacimiento) VALUES (?, ?, ?, ?, ?, ?, 1, ?)'
+        ).bind(id, username, display_name || null, email, hash, 'lector', fecha_nacimiento).run();
+
+        // Auto-login
+        const token = await signJWT(
+          { id, username, rol: 'lector', is_superadmin: false, scan_id: null },
+          env.JWT_SECRET
+        );
+
+        return json({
+          token,
+          user: { id, username, display_name: display_name || null, rol: 'lector', avatar_url: null, is_superadmin: false, scan_id: null, scan_nombre: null }
+        }, 201);
       }
 
       // ── POST /api/auth/register (solo admin puede crear usuarios) ──
@@ -816,6 +864,15 @@ export default {
         const sig = searchParams.get('sig');
 
         if (!await verifyImageToken(chapterId, pageOrder, ts, sig, env.IMG_SECRET)) {
+          const logId = crypto.randomUUID();
+          const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
+          const ua = request.headers.get('user-agent') || '';
+          const detalles = JSON.stringify({ chapterId, pageOrder, ts, sig });
+          try {
+            await env.DB.prepare('INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)')
+              .bind(logId, 'robo_imagenes', ip, ua, detalles).run();
+            await sendAlertEmail('leandro.elias1025@gmail.com', '🚨 Intento de robo de imagen bloqueado', `Se bloqueó un intento de acceso sin token válido a la imagen del capítulo ${chapterId}, página ${pageOrder}.\nIP: ${ip}\nUser-Agent: ${ua}`, env.RESEND_API_KEY, env.RESEND_FROM);
+          } catch(e) {}
           return err('Acceso denegado', 403);
         }
 
@@ -1631,10 +1688,25 @@ export default {
         return json({ message: 'Migración completada', mangas: mangasOk, scans: scansOk });
       }
 
+      // ── GET /api/admin/logs ─────────────────────────────
+      if (pathname === '/api/admin/logs' && method === 'GET') {
+        const admin = await requireSupport(request, env);
+        if (!admin) return err('No autorizado', 403);
+
+        const { results } = await env.DB.prepare('SELECT * FROM system_logs ORDER BY fecha DESC LIMIT 100').all();
+        return json({ logs: results || [] });
+      }
+
       return err('Página no encontrada', 404);
 
     } catch (e) {
       console.error(e);
+      const logId = crypto.randomUUID();
+      try {
+        await env.DB.prepare('INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)')
+          .bind(logId, 'error_sistema', request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '', request.headers.get('user-agent') || '', String(e.stack || e.message)).run();
+        await sendAlertEmail('leandro.elias1025@gmail.com', 'Error del Sistema (Bug)', `Ocurrió un error en el worker: ${e.message}\nLog ID: ${logId}`, env.RESEND_API_KEY, env.RESEND_FROM);
+      } catch (err) {}
       return err('Ocurrió un error inesperado. Intentá de nuevo más tarde.', 500);
     }
   },
