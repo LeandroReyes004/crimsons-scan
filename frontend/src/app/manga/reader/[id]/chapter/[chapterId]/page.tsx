@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight, Layers, AlignJustify, BookOpen } from 'lucide-react';
+import { Turnstile } from '@marsidev/react-turnstile';
 import CanvasPageRenderer from '@/components/CanvasReader';
 import ReaderControls from '@/components/ReaderControls';
 import AdPopUnder from '@/components/AdPopUnder';
@@ -28,6 +29,9 @@ export default function ChapterReaderPage() {
   const [currentPage, setCurrentPage] = useState(0);
   const [isNavVisible, setIsNavVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const [isHuman, setIsHuman] = useState(!turnstileSiteKey);
 
   useEffect(() => {
     const saved = localStorage.getItem('crimson_reader_mode');
@@ -84,7 +88,7 @@ export default function ChapterReaderPage() {
   }, [currentPage, chapterId]);
 
   useEffect(() => {
-    if (!chapterId) return;
+    if (!chapterId || !isHuman) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
@@ -99,7 +103,7 @@ export default function ChapterReaderPage() {
       .catch(e => { if (!cancelled) setError(e.message); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [chapterId]);
+  }, [chapterId, isHuman]);
 
   const goNext = useCallback(() => {
     if (currentPage < pages.length - 1) { setCurrentPage(p => p + 1); window.scrollTo({ top: 0, behavior: 'smooth' }); }
@@ -203,7 +207,19 @@ export default function ChapterReaderPage() {
 
       <main className={`flex flex-col items-center pt-14 ${readingMode === 'webtoon' ? 'w-full max-w-[900px] mx-auto' : 'max-w-4xl mx-auto px-2'}`}>
 
-        {loading && (
+        {!isHuman && turnstileSiteKey && (
+          <div className="flex flex-col items-center gap-6 mt-24">
+            <div className="w-10 h-10 rounded-full border-4 border-t-rose-500 border-rose-900/30 animate-spin"/>
+            <p className="text-gray-400 text-sm tracking-wider">Verificando conexión segura...</p>
+            <Turnstile 
+              siteKey={turnstileSiteKey} 
+              onSuccess={() => setIsHuman(true)}
+              options={{ theme: 'dark' }}
+            />
+          </div>
+        )}
+
+        {isHuman && loading && (
           <div className="flex flex-col items-center gap-4 mt-24">
             <div className="w-10 h-10 rounded-full border-4 border-t-rose-500 border-rose-900/30 animate-spin"/>
             <p className="text-gray-500 text-sm tracking-wider">Cargando páginas...</p>
