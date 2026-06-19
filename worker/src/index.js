@@ -804,7 +804,7 @@ export default {
 
         try {
           const fecha = new Date().toISOString().split('T')[0];
-          const viewer_key = fingerprint ? `fp:${fingerprint}` : `ip:${clientIp}`;
+          const viewer_key = `ip:${clientIp}`;
 
           // Insertamos en batch para reducir llamadas remotas a la base de datos
           const insertBatch = await env.DB.batch([
