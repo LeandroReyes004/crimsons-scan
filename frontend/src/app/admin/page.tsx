@@ -1,13 +1,13 @@
 'use client';
 
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard, BookOpen, Clock, Users, LogOut, Plus, Check, X,
   ChevronRight, ChevronDown, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
-  Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign,
+  Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign, Search,
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
 import { toWebP } from '@/lib/webp';
@@ -2156,6 +2156,25 @@ function SectionConfig({ scanId }: { scanId: string }) {
 // ============================================================
 function SectionSeguridad() {
   const { data, loading, refetch } = useAPI<{ logs: any[] }>('/api/admin/logs');
+  const [search, setSearch] = useState('');
+  const [filterTipo, setFilterTipo] = useState('');
+
+  const filteredLogs = useMemo(() => {
+    return (data?.logs ?? []).filter((log: any) => {
+      if (filterTipo && log.tipo !== filterTipo) return false;
+      const q = search.toLowerCase().trim();
+      if (q) {
+        const detalles = (log.detalles || '').toLowerCase();
+        const ip = (log.ip || '').toLowerCase();
+        const ua = (log.user_agent || '').toLowerCase();
+        const tipo = (log.tipo || '').toLowerCase();
+        if (!detalles.includes(q) && !ip.includes(q) && !ua.includes(q) && !tipo.includes(q)) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [data?.logs, search, filterTipo]);
 
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">
@@ -2171,19 +2190,53 @@ function SectionSeguridad() {
         </button>
       </div>
 
+      {/* Controles de Búsqueda y Filtros */}
+      <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 p-4 rounded-2xl shadow-sm">
+        <div className="relative w-full sm:max-w-xs">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Buscar por IP, detalles..."
+            className="w-full pl-9 pr-8 py-2 bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"
+          />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+              <X size={14}/>
+            </button>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <span className="text-xs font-bold text-gray-400 uppercase tracking-wider shrink-0 hidden sm:inline">Tipo:</span>
+          <select
+            value={filterTipo}
+            onChange={e => setFilterTipo(e.target.value)}
+            className="w-full sm:w-auto bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition cursor-pointer"
+          >
+            <option value="">Todos los eventos</option>
+            <option value="registro_usuario">Nuevos Registros</option>
+            <option value="login_exitoso">Conexiones Exitosas</option>
+            <option value="login_fallido">Conexiones Fallidas</option>
+            <option value="robo_imagenes">Robo de Imágenes</option>
+            <option value="error_sistema">Errores de Sistema</option>
+          </select>
+        </div>
+      </div>
+
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
       ) : (
         <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
-          {(data?.logs ?? []).length === 0 ? (
+          {filteredLogs.length === 0 ? (
             <div className="flex flex-col items-center py-16 text-gray-400">
               <ShieldCheck size={40} className="mb-3 opacity-30"/>
-              <p className="font-medium">No hay registros de seguridad</p>
-              <p className="text-sm">Todo está funcionando correctamente</p>
+              <p className="font-medium">No se encontraron registros de seguridad</p>
+              <p className="text-sm">Todo está funcionando correctamente o ajustá tus filtros</p>
             </div>
           ) : (
             <div className="flex flex-col">
-              {(data?.logs ?? []).map((log: any, i: number) => {
+              {filteredLogs.map((log: any, i: number) => {
                 const tipo = log.tipo;
                 let title = 'Acción del Sistema';
                 let icon = <AlertCircle size={20}/>;
