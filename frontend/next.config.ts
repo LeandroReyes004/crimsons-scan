@@ -7,12 +7,12 @@ const AD_SCRIPTS = "https://static.cloudflareinsights.com https://*.effectivecpm
 
 const CSP = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline' ${AD_SCRIPTS}`,
+  "script-src 'self' 'unsafe-inline' 'unsafe-eval' https:",
   "style-src 'self' 'unsafe-inline'",
-  `img-src 'self' data: blob: https:`,
-  `connect-src 'self' ${WORKER} https://cloudflareinsights.com https://*.effectivecpmnetwork.com https://*.highperformanceformat.com https://*.adsterra.com`,
+  "img-src 'self' data: blob: https:",
+  `connect-src 'self' ${WORKER} https:`,
   "font-src 'self' https://fonts.gstatic.com",
-  `frame-src https://*.effectivecpmnetwork.com https://*.highperformanceformat.com https://*.adsterra.com`,
+  "frame-src 'self' https:",
   "frame-ancestors 'self'",
   "base-uri 'self'",
   "form-action 'self'",
