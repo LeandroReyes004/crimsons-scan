@@ -178,6 +178,13 @@ export default function AdminPage() {
             {loginLoading ? <Loader2 size={18} className="animate-spin"/> : null}
             {loginLoading ? 'Verificando...' : 'Entrar al Panel'}
           </button>
+
+          <p className="text-center text-xs text-gray-500 mt-2">
+            ¿No tenés cuenta?{' '}
+            <Link href="/register" className="text-rose-500 font-bold hover:underline">
+              Registrate
+            </Link>
+          </p>
         </form>
 
         <Link href="/" className="block text-center text-xs text-gray-600 hover:text-gray-400 transition mt-5">
@@ -2157,7 +2164,7 @@ function SectionSeguridad() {
           <h2 className="text-2xl font-extrabold dark:text-white flex items-center gap-2">
             <ShieldCheck size={22} className="text-rose-500"/> Auditoría y Logs
           </h2>
-          <p className="text-gray-500 text-sm mt-1">Registro de errores del sistema e intentos de robo de imágenes</p>
+          <p className="text-gray-500 text-sm mt-1">Historial de registros de usuarios, accesos y seguridad del sistema</p>
         </div>
         <button onClick={refetch} className="flex items-center gap-2 text-sm text-gray-500 hover:text-rose-500 transition-colors">
           <RefreshCw size={15}/> Actualizar
@@ -2177,19 +2184,42 @@ function SectionSeguridad() {
           ) : (
             <div className="flex flex-col">
               {(data?.logs ?? []).map((log: any, i: number) => {
-                const esRobo = log.tipo === 'robo_imagenes';
+                const tipo = log.tipo;
+                let title = 'Acción del Sistema';
+                let icon = <AlertCircle size={20}/>;
+                let badgeClass = 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400';
+
+                if (tipo === 'robo_imagenes') {
+                  title = 'Intento de robo bloqueado';
+                  icon = <AlertCircle size={20}/>;
+                  badgeClass = 'bg-amber-500/10 text-amber-500 border border-amber-500/20';
+                } else if (tipo === 'error_sistema') {
+                  title = 'Error del Sistema (Bug)';
+                  icon = <AlertCircle size={20}/>;
+                  badgeClass = 'bg-red-500/10 text-red-500 border border-red-500/20';
+                } else if (tipo === 'registro_usuario') {
+                  title = 'Nuevo Registro de Usuario';
+                  icon = <UserPlus size={20}/>;
+                  badgeClass = 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
+                } else if (tipo === 'login_exitoso') {
+                  title = 'Inicio de Sesión Exitoso';
+                  icon = <ShieldCheck size={20}/>;
+                  badgeClass = 'bg-blue-500/10 text-blue-500 border border-blue-500/20';
+                } else if (tipo === 'login_fallido') {
+                  title = 'Intento de Conexión Fallido';
+                  icon = <Ban size={20}/>;
+                  badgeClass = 'bg-rose-500/10 text-rose-500 border border-rose-500/20';
+                }
+
                 return (
                   <div key={log.id} className={`p-4 sm:p-5 flex flex-col sm:flex-row gap-4 hover:bg-gray-50 dark:hover:bg-white/2 transition ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                      esRobo ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400' 
-                             : 'bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400'
-                    }`}>
-                      {esRobo ? <AlertCircle size={20}/> : <AlertCircle size={20}/>}
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${badgeClass}`}>
+                      {icon}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
                         <p className="font-bold text-sm dark:text-white">
-                          {esRobo ? 'Intento de robo bloqueado' : 'Error del Sistema (Bug)'}
+                          {title}
                         </p>
                         <span className="text-xs text-gray-400 flex items-center gap-1">
                           <Clock size={12}/> {new Date(log.fecha).toLocaleString()}

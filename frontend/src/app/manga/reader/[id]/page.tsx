@@ -399,6 +399,13 @@ export default function MangaDetailPage() {
                   Cancelar
                 </button>
               </div>
+
+              <p className="text-center text-xs text-gray-500 mt-3">
+                ¿No tenés cuenta?{' '}
+                <Link href="/register" className="text-rose-500 font-bold hover:underline">
+                  Registrate
+                </Link>
+              </p>
             </form>
           </div>
         </div>

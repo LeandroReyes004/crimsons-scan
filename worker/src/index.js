@@ -359,11 +359,27 @@ export default {
         ).bind(username).first();
 
         if (!user || !(await verifyPassword(password, user.password_hash))) {
+          const logId = crypto.randomUUID();
+          const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
+          const ua = request.headers.get('user-agent') || '';
+          try {
+            await env.DB.prepare('INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)')
+              .bind(logId, 'login_fallido', ip, ua, `Intento fallido de inicio de sesión para el usuario: ${username}`).run();
+          } catch(e) {}
+
           return err('Usuario o contraseña incorrectos', 401);
         }
 
         await env.DB.prepare("UPDATE usuarios SET ultimo_acceso = datetime('now') WHERE id = ?")
           .bind(user.id).run();
+
+        const logId = crypto.randomUUID();
+        const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
+        const ua = request.headers.get('user-agent') || '';
+        try {
+          await env.DB.prepare('INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)')
+            .bind(logId, 'login_exitoso', ip, ua, `Inicio de sesión exitoso: ${user.username} (${user.rol})`).run();
+        } catch(e) {}
 
         const token = await signJWT(
           { id: user.id, username: user.username, rol: user.rol, is_superadmin: user.is_superadmin === 1, scan_id: user.scan_id || null },
@@ -392,6 +408,14 @@ export default {
         await env.DB.prepare(
           'INSERT INTO usuarios (id, username, display_name, email, password_hash, rol, activo, fecha_nacimiento) VALUES (?, ?, ?, ?, ?, ?, 1, ?)'
         ).bind(id, username, display_name || null, email, hash, 'lector', fecha_nacimiento).run();
+
+        const logId = crypto.randomUUID();
+        const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
+        const ua = request.headers.get('user-agent') || '';
+        try {
+          await env.DB.prepare('INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)')
+            .bind(logId, 'registro_usuario', ip, ua, `Usuario registrado: ${username} (${email})`).run();
+        } catch(e) {}
 
         // Auto-login
         const token = await signJWT(
