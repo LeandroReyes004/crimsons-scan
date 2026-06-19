@@ -290,6 +290,13 @@ function contentType(key) {
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
+      // ── Limpieza regular de tablas de deduplicación (retener solo 7 días) ──
+      try {
+        await env.DB.prepare("DELETE FROM views_dedup WHERE fecha < date('now', '-7 days')").run();
+        await env.DB.prepare("DELETE FROM manga_views_dedup WHERE fecha < date('now', '-7 days')").run();
+      } catch (e) {
+        console.error("Error al limpiar tablas de deduplicación:", e);
+      }
 
       // ── Reset mensual de vistas (1° de cada mes a medianoche ARG) ──
       if (event.cron === '0 3 1 * *') {
@@ -777,14 +784,15 @@ export default {
       }
 
       // ── POST /api/chapters/:id/view ──────────────────────
-      // Registra una vista con deduplicación doble:
-      //   1. Fingerprint del browser (localStorage UUID) — más preciso para usuarios reales
-      //   2. IP del cliente (fallback para bots / clientes sin fingerprint)
-      // Una vista por capa por capítulo cada 24h — anti-farming para Revenue Share
+      // Registra una vista con deduplicación doble usando tablas de la base de datos D1 (anti-farming):
+      //   - views_dedup (capitulo_id, viewer_key, fecha)
+      //   - manga_views_dedup (manga_id, viewer_key, fecha)
+      // viewer_key = 'fp:' + fingerprint o 'ip:' + clientIp
+      // fecha = YYYY-MM-DD en UTC
       const chapterView = pathname.match(/^\/api\/chapters\/([^/]+)\/view$/);
       if (chapterView && method === 'POST') {
-        const capId      = chapterView[1];
-        const clientIp   = request.headers.get('CF-Connecting-IP') || 'unknown';
+        const capId       = chapterView[1];
+        const clientIp    = request.headers.get('CF-Connecting-IP') || request.headers.get('x-forwarded-for') || 'unknown';
         const fingerprint = request.headers.get('X-Fingerprint') || null;
 
         const cap = await env.DB.prepare(
@@ -792,31 +800,50 @@ export default {
         ).bind(capId).first();
         if (!cap) return json({ counted: false, reason: 'not_found' });
 
-        const TTL = 86400;
         let counted = false;
 
         try {
-          const key1 = fingerprint ? `view:fp:${capId}:${fingerprint}` : `view:ip:${capId}:${clientIp}`;
-          const key2 = fingerprint ? `view:manga:fp:${cap.manga_id}:${fingerprint}` : `view:manga:ip:${cap.manga_id}:${clientIp}`;
-          const [vistoCap, vistoManga] = await Promise.all([env.KV.get(key1), env.KV.get(key2)]);
-          const ops = [];
-          if (!vistoCap) {
-            ops.push(env.DB.prepare('UPDATE capitulos SET views = views + 1 WHERE id = ?').bind(capId).run());
-            ops.push(env.KV.put(key1, '1', { expirationTtl: TTL }));
+          const fecha = new Date().toISOString().split('T')[0];
+          const viewer_key = fingerprint ? `fp:${fingerprint}` : `ip:${clientIp}`;
+
+          // Insertamos en batch para reducir llamadas remotas a la base de datos
+          const insertBatch = await env.DB.batch([
+            env.DB.prepare('INSERT OR IGNORE INTO views_dedup (capitulo_id, viewer_key, fecha) VALUES (?, ?, ?)')
+              .bind(capId, viewer_key, fecha),
+            env.DB.prepare('INSERT OR IGNORE INTO manga_views_dedup (manga_id, viewer_key, fecha) VALUES (?, ?, ?)')
+              .bind(cap.manga_id, viewer_key, fecha)
+          ]);
+
+          const isCapNew = insertBatch[0].meta.changes > 0;
+          const isMangaNew = insertBatch[1].meta.changes > 0;
+
+          const updateStatements = [];
+
+          if (isCapNew) {
+            updateStatements.push(
+              env.DB.prepare('UPDATE capitulos SET views = views + 1 WHERE id = ?').bind(capId)
+            );
             counted = true;
           }
-          if (!vistoManga) {
-            ops.push(env.DB.prepare('UPDATE mangas SET views_total = views_total + 1, views_mes = views_mes + 1 WHERE id = ?').bind(cap.manga_id).run());
-            ops.push(env.KV.put(key2, '1', { expirationTtl: TTL }));
+
+          if (isMangaNew) {
+            updateStatements.push(
+              env.DB.prepare('UPDATE mangas SET views_total = views_total + 1, views_mes = views_mes + 1 WHERE id = ?').bind(cap.manga_id)
+            );
           }
-          if (ops.length) await Promise.all(ops);
-        } catch {
-          // KV sin cuota (límite diario free tier) — contar igual sin dedup
-          await Promise.all([
-            env.DB.prepare('UPDATE capitulos SET views = views + 1 WHERE id = ?').bind(capId).run(),
-            env.DB.prepare('UPDATE mangas SET views_total = views_total + 1, views_mes = views_mes + 1 WHERE id = ?').bind(cap.manga_id).run(),
-          ]).catch(() => {});
-          counted = true;
+
+          if (updateStatements.length > 0) {
+            await env.DB.batch(updateStatements);
+          }
+        } catch (error) {
+          // Fallback seguro: si falla el sistema de deduplicación, incrementamos directamente para no perder la visita legítima
+          try {
+            await env.DB.batch([
+              env.DB.prepare('UPDATE capitulos SET views = views + 1 WHERE id = ?').bind(capId),
+              env.DB.prepare('UPDATE mangas SET views_total = views_total + 1, views_mes = views_mes + 1 WHERE id = ?').bind(cap.manga_id)
+            ]);
+            counted = true;
+          } catch {}
         }
 
         return json({ counted });
