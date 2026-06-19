@@ -1,13 +1,14 @@
-'use client';
-
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
-import { Search, BookOpen, Eye, Filter, X, ChevronLeft } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Search, BookOpen, Eye, Filter, X, ChevronLeft, ShieldAlert } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import AdPopUnder from '@/components/AdPopUnder';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
 const GENRES = ['Acción','Aventura','Comedia','Drama','Fantasía','Horror','Misterio','Psicológico','Romance','Ciencia Ficción','Sobrenatural','Thriller','Deportes','Histórico','Isekai','Mecha','Magia','Artes Marciales','Superpoderes','Reencarnación','Supervivencia','BL','Yuri'];
+const ADULT_GENRES = ['Adulto','Maduro','Ecchi','Harem','Yaoi','Yuri','Acción','Aventura','Comedia','Drama','Fantasía','Horror','Misterio','Psicológico','Romance','Sobrenatural','Thriller','Tragedia'];
 
 interface Manga {
   id: string; titulo: string; tipo: string; estado: string;
@@ -22,6 +23,21 @@ const ESTADO_COLOR: Record<string, string> = {
 };
 
 export default function CatalogoPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0c] flex items-center justify-center">
+        <div className="w-10 h-10 border-4 border-rose-600 border-t-transparent rounded-full animate-spin"/>
+      </div>
+    }>
+      <CatalogoContent />
+    </Suspense>
+  );
+}
+
+function CatalogoContent() {
+  const searchParams = useSearchParams();
+  const isAdultMode = searchParams.get('adulto') === '1';
+
   const [mangas, setMangas]           = useState<Manga[]>([]);
   const [loading, setLoading]         = useState(true);
   const [search, setSearch]           = useState('');
@@ -31,11 +47,15 @@ export default function CatalogoPage() {
   const [showFilters, setShowFilters] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/api/mangas`)
+    setLoading(true);
+    const endpoint = isAdultMode ? `${API}/api/mangas/adulto` : `${API}/api/mangas`;
+    fetch(endpoint)
       .then(r => r.json())
       .then(d => setMangas(d.mangas || []))
       .finally(() => setLoading(false));
-  }, []);
+  }, [isAdultMode]);
+
+  const genresList = isAdultMode ? ADULT_GENRES : GENRES;
 
   const filtered = useMemo(() => {
     return mangas.filter(m => {
@@ -58,14 +78,20 @@ export default function CatalogoPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0a0c] text-gray-900 dark:text-white font-sans">
+      {isAdultMode && <AdPopUnder />}
 
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5 h-14 px-6 flex items-center justify-between shadow-sm">
         <div className="flex items-center gap-3">
-          <Link href="/" className="p-1.5 rounded-lg text-gray-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition">
+          <Link href={isAdultMode ? "/adulto" : "/"} className="p-1.5 rounded-lg text-gray-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition">
             <ChevronLeft size={18}/>
           </Link>
-          <img src="/logo.png" alt="CrimsonScan" className="h-8 w-auto object-contain" />
+          <Link href={isAdultMode ? "/adulto" : "/"} className="flex items-center gap-2">
+            <img src="/logo.png" alt="CrimsonScan" className="h-8 w-auto object-contain" />
+            {isAdultMode && (
+              <span className="bg-rose-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">+18</span>
+            )}
+          </Link>
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
@@ -77,7 +103,15 @@ export default function CatalogoPage() {
         {/* Título y búsqueda */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
-            <h1 className="text-3xl font-extrabold dark:text-white">Catálogo</h1>
+            <h1 className="text-3xl font-extrabold dark:text-white flex items-center gap-2">
+              {isAdultMode ? (
+                <>
+                  <ShieldAlert className="text-rose-500" size={28}/> Catálogo +18
+                </>
+              ) : (
+                "Catálogo"
+              )}
+            </h1>
             <p className="text-gray-500 text-sm mt-1">{filtered.length} obras disponibles</p>
           </div>
 
@@ -156,7 +190,7 @@ export default function CatalogoPage() {
               <div>
                 <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Género</p>
                 <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                  {GENRES.map(g => (
+                  {genresList.map(g => (
                     <button key={g} onClick={() => setGenre(selectedGenre === g ? '' : g)}
                       className={`px-2.5 py-1 rounded-full text-xs font-semibold transition border ${
                         selectedGenre === g

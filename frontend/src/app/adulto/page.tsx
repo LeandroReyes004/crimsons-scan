@@ -138,14 +138,14 @@ export default function AdultoPage() {
       {/* Header — idéntico a home */}
       <header className="sticky top-0 z-50 relative bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/5 py-4 px-6 md:px-12 flex items-center justify-between shadow-sm dark:shadow-2xl transition-colors duration-300">
         <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/adulto" className="flex items-center gap-2">
             <img src="/logo.png" alt="CrimsonScan" className="h-10 w-auto object-contain" />
           </Link>
           <span className="bg-rose-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">+18</span>
         </div>
         <nav className="hidden md:flex items-center gap-6 text-sm font-medium text-gray-600 dark:text-gray-400">
-          <Link href="/" className="hover:text-gray-900 dark:hover:text-white transition-colors">Inicio</Link>
-          <Link href="/catalogo" className="hover:text-gray-900 dark:hover:text-white transition-colors">Catálogo</Link>
+          <Link href="/adulto" className="hover:text-gray-900 dark:hover:text-white transition-colors">Inicio</Link>
+          <Link href="/catalogo?adulto=1" className="hover:text-gray-900 dark:hover:text-white transition-colors">Catálogo</Link>
           <Link href="/comunidad" className="hover:text-gray-900 dark:hover:text-white transition-colors">Comunidad</Link>
           <Link href="/adulto" className="flex items-center gap-1 bg-rose-500/10 text-rose-500 font-semibold px-3 py-1 rounded-full text-xs border border-rose-500/20">+18</Link>
           <Link href="https://discord.gg/E4DwZNMYDq" target="_blank" rel="noopener noreferrer"
@@ -200,8 +200,8 @@ export default function AdultoPage() {
         </div>
         {mobileOpen && (
           <div className="absolute top-full left-0 right-0 z-50 bg-white/97 dark:bg-[#0a0a0c]/97 backdrop-blur-md border-b border-gray-200 dark:border-white/5 px-6 py-2 flex flex-col md:hidden shadow-xl">
-            <Link href="/" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition border-b border-gray-100 dark:border-white/5">Inicio</Link>
-            <Link href="/catalogo" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition border-b border-gray-100 dark:border-white/5">Catálogo</Link>
+            <Link href="/adulto" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition border-b border-gray-100 dark:border-white/5">Inicio</Link>
+            <Link href="/catalogo?adulto=1" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition border-b border-gray-100 dark:border-white/5">Catálogo</Link>
             <Link href="/comunidad" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white transition border-b border-gray-100 dark:border-white/5">Comunidad</Link>
             <Link href="/adulto" onClick={() => setMobileOpen(false)} className="py-3 font-semibold text-rose-500 hover:text-rose-400 transition border-b border-gray-100 dark:border-white/5">+18</Link>
             {user ? (
