@@ -724,7 +724,7 @@ export default {
       // ── GET /api/scans/:id ────────────────────────────────
       const scanById = pathname.match(/^\/api\/scans\/([^/]+)$/);
       if (scanById && method === 'GET') {
-        const scan = await env.DB.prepare('SELECT id, nombre, descripcion, imagen_url, slug FROM scans WHERE (id = ? OR slug = ?) AND activo = 1').bind(scanById[1], scanById[1]).first();
+        const scan = await env.DB.prepare('SELECT id, nombre, descripcion, imagen_url, slug, redes FROM scans WHERE (id = ? OR slug = ?) AND activo = 1').bind(scanById[1], scanById[1]).first();
         if (!scan) return err('Scan no encontrado', 404);
         const { results: mangas } = await env.DB.prepare(
           `SELECT m.id, m.titulo, m.tipo, m.estado, m.cover_r2_key, m.views_total, m.generos, m.es_adulto,
@@ -1569,6 +1569,21 @@ export default {
         await env.DB.prepare('UPDATE scans SET webhook_discord = ?, discord_template = ? WHERE id = ?')
           .bind(webhook_discord || null, discord_template || null, editWebhook[1]).run();
         return json({ message: 'Webhook actualizado' });
+      }
+
+      // ── PUT /api/admin/scans/:id/redes ───────────────────
+      const editRedes = pathname.match(/^\/api\/admin\/scans\/([^/]+)\/redes$/);
+      if (editRedes && method === 'PUT') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('No autorizado', 401);
+        // Admin de scan solo puede editar su propio scan
+        if (isScanAdmin(admin) && admin.scan_id !== editRedes[1]) {
+          return err('Solo podés configurar tu propio scan', 403);
+        }
+        const { redes } = await request.json();
+        await env.DB.prepare('UPDATE scans SET redes = ? WHERE id = ?')
+          .bind(redes ? JSON.stringify(redes) : null, editRedes[1]).run();
+        return json({ message: 'Redes sociales actualizadas' });
       }
 
       // ── GET /api/admin/uploaders ─────────────────────────

@@ -1874,6 +1874,19 @@ function SectionConfig({ scanId }: { scanId: string }) {
   const imgRef = useRef<HTMLInputElement>(null);
   const { data: scanData, loading, refetch } = useAPI<any>(`/api/scans/${scanId}/details`);
 
+  // Redes Sociales
+  const [redes, setRedes] = useState({
+    discord: '',
+    facebook: '',
+    twitter: '',
+    instagram: '',
+    patreon: '',
+    donations: '',
+    website: '',
+  });
+  const [savingRedes, setSavingRedes] = useState(false);
+  const [savedRedes, setSavedRedes] = useState<string | null>(null);
+
   // Nuevo miembro
   const [showForm, setShowForm]   = useState(false);
   const [newUser, setNewUser]     = useState('');
@@ -1886,6 +1899,15 @@ function SectionConfig({ scanId }: { scanId: string }) {
   useEffect(() => {
     if (scanData?.scan?.webhook_discord) setWebhook(scanData.scan.webhook_discord);
     if (scanData?.scan?.discord_template) setDiscordTemplate(scanData.scan.discord_template);
+    if (scanData?.scan?.redes) {
+      try {
+        const parsed = JSON.parse(scanData.scan.redes);
+        setRedes(prev => ({
+          ...prev,
+          ...parsed
+        }));
+      } catch {}
+    }
   }, [scanData]);
 
   const handleSave = async () => {
@@ -1901,6 +1923,21 @@ function SectionConfig({ scanId }: { scanId: string }) {
       setSaved('✅ Webhook guardado');
     } catch (e: any) { setSaved(`❌ ${e.message}`); }
     finally { setSaving(false); }
+  };
+
+  const handleSaveRedes = async () => {
+    setSavingRedes(true); setSavedRedes(null);
+    try {
+      const res = await fetch(`${API}/api/admin/scans/${scanId}/redes`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ redes }),
+      });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setSavedRedes('✅ Redes sociales guardadas');
+    } catch (e: any) { setSavedRedes(`❌ ${e.message}`); }
+    finally { setSavingRedes(false); }
   };
 
   const handleTest = async () => {
@@ -2143,6 +2180,55 @@ function SectionConfig({ scanId }: { scanId: string }) {
                   {testing ? 'Enviando...' : '🧪 Probar'}
                 </button>
               )}
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 flex flex-col gap-4">
+            <div>
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Redes Sociales del Scan</p>
+              <p className="text-xs text-gray-500">
+                Ingresá las URLs de las redes sociales de tu grupo. Se mostrarán y enlazarán en tu página pública.
+              </p>
+            </div>
+            
+            {savedRedes && (
+              <div className={`p-3 rounded-xl text-sm font-medium ${savedRedes.startsWith('✅') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
+                {savedRedes}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 gap-3.5">
+              {[
+                { name: 'discord', label: 'Discord', placeholder: 'https://discord.gg/codigo-invitacion' },
+                { name: 'facebook', label: 'Facebook', placeholder: 'https://facebook.com/pagina-o-grupo' },
+                { name: 'twitter', label: 'Twitter / X', placeholder: 'https://x.com/usuario' },
+                { name: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/usuario' },
+                { name: 'patreon', label: 'Patreon', placeholder: 'https://patreon.com/usuario' },
+                { name: 'donations', label: 'Donaciones (PayPal / Kofi / etc)', placeholder: 'https://paypal.me/usuario' },
+                { name: 'website', label: 'Sitio Web', placeholder: 'https://tu-sitio.com' }
+              ].map(field => (
+                <div key={field.name} className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{field.label}</label>
+                  <input
+                    type="url"
+                    value={(redes as any)[field.name] || ''}
+                    onChange={e => {
+                      setRedes(prev => ({ ...prev, [field.name]: e.target.value }));
+                      setSavedRedes(null);
+                    }}
+                    placeholder={field.placeholder}
+                    className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-2">
+              <button onClick={handleSaveRedes} disabled={savingRedes}
+                className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition w-fit">
+                {savingRedes ? <Loader2 size={16} className="animate-spin"/> : <Check size={16}/>}
+                {savingRedes ? 'Guardando Redes...' : 'Guardar Redes'}
+              </button>
             </div>
           </div>
         </>
