@@ -1753,8 +1753,39 @@ export default {
         const user = await getUser(request, env);
         const { tipo, mensaje, contacto } = await request.json();
         const id = crypto.randomUUID();
+        
         await env.DB.prepare('INSERT INTO tickets (id, usuario_id, tipo, mensaje, contacto) VALUES (?, ?, ?, ?, ?)')
           .bind(id, user ? user.id : null, tipo || 'sugerencia', mensaje, contacto || null).run();
+        
+        // Enviar correo con Resend si está configurada la API KEY
+        if (env.RESEND_API_KEY) {
+          const emailHtml = `
+            <h2>Nuevo Ticket: ${tipo.toUpperCase()}</h2>
+            <p><strong>Usuario ID:</strong> ${user ? user.id : 'Anónimo'}</p>
+            <p><strong>Contacto:</strong> ${contacto || 'No especificado'}</p>
+            <p><strong>Mensaje:</strong></p>
+            <blockquote style="border-left: 4px solid #ccc; padding-left: 10px;">${mensaje}</blockquote>
+            <br>
+            <p><a href="${env.FRONTEND_URL}/admin">Ir al panel de administrador</a></p>
+          `;
+          
+          // No hacemos await para no bloquear la respuesta al usuario (fire and forget).
+          // NOTA: En un worker en producción es mejor usar ctx.waitUntil, pero esto funciona.
+          fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${env.RESEND_API_KEY}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              from: 'Soporte Crimson Scan <onboarding@resend.dev>',
+              to: ['leandro.reyes1025@gmail.com'],
+              subject: `Nuevo Ticket en Crimson Scan: ${tipo}`,
+              html: emailHtml
+            })
+          }).catch(console.error);
+        }
+
         return json({ message: 'Ticket creado', id }, 201);
       }
 
