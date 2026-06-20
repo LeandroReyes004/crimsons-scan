@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import LateralAds from '@/components/LateralAds';
 import AdBlockDetector from '@/components/AdBlockDetector';
+import Footer from '@/components/Footer';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -49,6 +50,7 @@ export default function RootLayout({
         >
           <AdBlockDetector />
           {children}
+          <Footer />
           <LateralAds />
         </ThemeProvider>
       </body>

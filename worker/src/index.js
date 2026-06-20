@@ -1730,6 +1730,34 @@ export default {
         return json({ id, username: user.username, contenido: contenido.trim(), fecha: new Date().toISOString() }, 201);
       }
 
+      // ── GET /api/admin/tickets ───────────────────────────
+      if (pathname === '/api/admin/tickets' && method === 'GET') {
+        const user = await getUser(request, env);
+        if (!user || (!user.is_superadmin && user.rol !== 'soporte')) return err('No autorizado', 403);
+        const { results } = await env.DB.prepare('SELECT tickets.*, usuarios.username FROM tickets LEFT JOIN usuarios ON tickets.usuario_id = usuarios.id ORDER BY tickets.fecha_creacion DESC').all();
+        return json({ tickets: results || [] });
+      }
+
+      // ── PUT /api/admin/tickets/:id ───────────────────────
+      const updateTicket = pathname.match(/^\/api\/admin\/tickets\/([^/]+)$/);
+      if (updateTicket && method === 'PUT') {
+        const user = await getUser(request, env);
+        if (!user || (!user.is_superadmin && user.rol !== 'soporte')) return err('No autorizado', 403);
+        const { estado } = await request.json();
+        await env.DB.prepare('UPDATE tickets SET estado = ? WHERE id = ?').bind(estado, updateTicket[1]).run();
+        return json({ message: 'Ticket actualizado' });
+      }
+
+      // ── POST /api/tickets ────────────────────────────────
+      if (pathname === '/api/tickets' && method === 'POST') {
+        const user = await getUser(request, env);
+        const { tipo, mensaje, contacto } = await request.json();
+        const id = crypto.randomUUID();
+        await env.DB.prepare('INSERT INTO tickets (id, usuario_id, tipo, mensaje, contacto) VALUES (?, ?, ?, ?, ?)')
+          .bind(id, user ? user.id : null, tipo || 'sugerencia', mensaje, contacto || null).run();
+        return json({ message: 'Ticket creado', id }, 201);
+      }
+
       // ── POST /api/admin/migrate-slugs ────────────────────
       // Endpoint de uso único: genera slugs para registros sin slug
       if (pathname === '/api/admin/migrate-slugs' && method === 'POST') {

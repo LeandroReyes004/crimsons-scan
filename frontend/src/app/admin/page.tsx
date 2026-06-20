@@ -7,14 +7,14 @@ import {
   LayoutDashboard, BookOpen, Clock, Users, LogOut, Plus, Check, X,
   ChevronRight, ChevronDown, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
-  Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign, Search,
+  Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign, Search, MessageSquare,
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
 import { toWebP } from '@/lib/webp';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
-type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'config' | 'revenue' | 'seguridad';
+type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'config' | 'revenue' | 'seguridad' | 'soporte';
 
 // ── Tipos ──────────────────────────────────────────────────
 interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; }
@@ -231,6 +231,7 @@ export default function AdminPage() {
             { id: 'usuarios',  icon: <Users size={16}/>,           label: 'Usuarios',  show: !!user.is_superadmin || user.rol === 'soporte' },
             { id: 'seguridad', icon: <ShieldCheck size={16}/>,     label: 'Auditoría / Logs', show: !!user.is_superadmin || user.rol === 'soporte' },
             { id: 'config',    icon: <Settings size={16}/>,        label: 'Mi Scan',   show: !user.is_superadmin && (user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id },
+            { id: 'soporte',   icon: <MessageSquare size={16}/>,   label: 'Soporte',   show: !!user.is_superadmin || user.rol === 'soporte' },
           ] as const).filter(item => item.show).map(item => (
             <button
               key={item.id}
@@ -286,6 +287,7 @@ export default function AdminPage() {
           {section === 'usuarios'  && <SectionUsuarios />}
           {section === 'seguridad' && <SectionSeguridad />}
           {section === 'config'    && <SectionConfig scanId={user.scan_id!} />}
+          {section === 'soporte'   && <SectionSoporte />}
         </main>
       </div>
     </div>
@@ -1882,6 +1884,8 @@ function SectionConfig({ scanId }: { scanId: string }) {
     instagram: '',
     patreon: '',
     donations: '',
+    telegram: '',
+    whatsapp: '',
   });
   const [savingRedes, setSavingRedes] = useState(false);
   const [savedRedes, setSavedRedes] = useState<string | null>(null);
@@ -2203,7 +2207,9 @@ function SectionConfig({ scanId }: { scanId: string }) {
                 { name: 'twitter', label: 'Twitter / X', placeholder: 'https://x.com/usuario' },
                 { name: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/usuario' },
                 { name: 'patreon', label: 'Patreon', placeholder: 'https://patreon.com/usuario' },
-                { name: 'donations', label: 'Donaciones (PayPal / Kofi / etc)', placeholder: 'https://paypal.me/usuario' }
+                { name: 'donations', label: 'Donaciones (PayPal / Kofi / etc)', placeholder: 'https://paypal.me/usuario' },
+                { name: 'telegram', label: 'Telegram', placeholder: 'https://t.me/usuario' },
+                { name: 'whatsapp', label: 'WhatsApp', placeholder: 'https://wa.me/numero' }
               ].map(field => (
                 <div key={field.name} className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{field.label}</label>
@@ -2377,6 +2383,106 @@ function SectionSeguridad() {
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// ── SECCIÓN: SOPORTE ──────────────────────────────────────────
+function SectionSoporte() {
+  const { data, loading, refetch } = useAPI<any>('/api/admin/tickets');
+  const [updating, setUpdating] = useState<string | null>(null);
+
+  const updateStatus = async (id: string, estado: string) => {
+    setUpdating(id);
+    try {
+      const res = await fetch(`${API}/api/admin/tickets/${id}`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado })
+      });
+      if (res.ok) refetch();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setUpdating(null);
+    }
+  };
+
+  if (loading) return <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>;
+
+  const tickets = data?.tickets || [];
+
+  return (
+    <div className="flex flex-col gap-6 max-w-5xl mx-auto">
+      <div>
+        <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
+          <MessageSquare className="text-rose-500" size={24}/> Buzón de Sugerencias & Soporte
+        </h2>
+        <p className="text-gray-500 text-sm mt-1">Gestiona los mensajes, sugerencias y reportes de los usuarios.</p>
+      </div>
+
+      <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
+        {tickets.length === 0 ? (
+          <div className="flex flex-col items-center py-16 text-gray-400">
+            <MessageSquare size={40} className="mb-3 opacity-30"/>
+            <p className="font-medium">El buzón está vacío</p>
+            <p className="text-sm">No hay mensajes pendientes.</p>
+          </div>
+        ) : (
+          <div className="flex flex-col">
+            {tickets.map((t: any, i: number) => (
+              <div key={t.id} className={`p-4 sm:p-5 flex flex-col sm:flex-row gap-4 hover:bg-gray-50 dark:hover:bg-white/2 transition ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-2">
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                      t.tipo === 'reporte' ? 'bg-red-500/10 text-red-500' : 
+                      t.tipo === 'soporte' ? 'bg-blue-500/10 text-blue-500' : 'bg-emerald-500/10 text-emerald-500'
+                    }`}>
+                      {t.tipo}
+                    </span>
+                    <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                      t.estado === 'resuelto' ? 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20' : 
+                      t.estado === 'en_proceso' ? 'bg-amber-500/10 text-amber-500 border border-amber-500/20' : 'bg-gray-100 text-gray-600 dark:bg-white/10 dark:text-gray-300'
+                    }`}>
+                      {t.estado.replace('_', ' ')}
+                    </span>
+                    <span className="text-xs text-gray-400 flex items-center gap-1 ml-auto">
+                      <Clock size={12}/> {new Date(t.fecha_creacion).toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-sm text-gray-800 dark:text-gray-200 mb-2 whitespace-pre-wrap">{t.mensaje}</p>
+                  
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-gray-500">
+                    {t.username && <span><strong>Usuario:</strong> {t.username}</span>}
+                    {t.contacto && <span><strong>Contacto:</strong> {t.contacto}</span>}
+                  </div>
+                </div>
+
+                <div className="flex sm:flex-col gap-2 shrink-0 sm:w-36">
+                  {t.estado !== 'resuelto' && (
+                    <button 
+                      onClick={() => updateStatus(t.id, 'resuelto')}
+                      disabled={updating === t.id}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 dark:bg-emerald-500/10 dark:text-emerald-400 dark:hover:bg-emerald-500/20 rounded-lg text-xs font-bold transition"
+                    >
+                      <Check size={14}/> Resuelto
+                    </button>
+                  )}
+                  {t.estado === 'pendiente' && (
+                    <button 
+                      onClick={() => updateStatus(t.id, 'en_proceso')}
+                      disabled={updating === t.id}
+                      className="flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-600 hover:bg-amber-100 dark:bg-amber-500/10 dark:text-amber-400 dark:hover:bg-amber-500/20 rounded-lg text-xs font-bold transition"
+                    >
+                      <Clock size={14}/> En Proceso
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
