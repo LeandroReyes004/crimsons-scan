@@ -133,18 +133,6 @@ export default function ScanPage() {
                               <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2a5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
                             </svg>
                           )
-                        },
-                        {
-                          name: 'website',
-                          label: 'Sitio Web',
-                          color: 'hover:bg-rose-500/20 hover:text-rose-400 hover:border-rose-500/30',
-                          icon: (
-                            <svg className="w-4 h-4 fill-none stroke-current" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" viewBox="0 0 24 24">
-                              <circle cx="12" cy="12" r="10" />
-                              <path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" />
-                              <path d="M2 12h20" />
-                            </svg>
-                          )
                         }
                       ];
                       config.forEach(c => {

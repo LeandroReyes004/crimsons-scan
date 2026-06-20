@@ -1882,7 +1882,6 @@ function SectionConfig({ scanId }: { scanId: string }) {
     instagram: '',
     patreon: '',
     donations: '',
-    website: '',
   });
   const [savingRedes, setSavingRedes] = useState(false);
   const [savedRedes, setSavedRedes] = useState<string | null>(null);
@@ -2204,8 +2203,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
                 { name: 'twitter', label: 'Twitter / X', placeholder: 'https://x.com/usuario' },
                 { name: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/usuario' },
                 { name: 'patreon', label: 'Patreon', placeholder: 'https://patreon.com/usuario' },
-                { name: 'donations', label: 'Donaciones (PayPal / Kofi / etc)', placeholder: 'https://paypal.me/usuario' },
-                { name: 'website', label: 'Sitio Web', placeholder: 'https://tu-sitio.com' }
+                { name: 'donations', label: 'Donaciones (PayPal / Kofi / etc)', placeholder: 'https://paypal.me/usuario' }
               ].map(field => (
                 <div key={field.name} className="flex flex-col gap-1.5">
                   <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">{field.label}</label>
