@@ -678,7 +678,7 @@ export default {
         ).bind(
           id, titulo, titulo_alt || null, descripcion || null,
           JSON.stringify(generos || []), tipo || 'manga',
-          estado || 'en_curso', admin.id, finalScanId, es_adulto ? 1 : 0, slug
+          estado || 'en_curso', caller.id, finalScanId, es_adulto ? 1 : 0, slug
         ).run();
 
         return json({ mangaId: id, slug, message: 'Manga creado' }, 201);
