@@ -650,17 +650,20 @@ export default {
 
       // ── POST /api/mangas ─────────────────────────────────
       if (pathname === '/api/mangas' && method === 'POST') {
-        const admin = await requireAdmin(request, env);
-        if (!admin) return err('No autorizado', 401);
+        const tokenUser = await getUser(request, env);
+        const caller = await checkActive(tokenUser, env);
+        if (!caller || (!caller.is_superadmin && caller.rol !== 'admin' && caller.rol !== 'admin_scan' && caller.rol !== 'uploader')) {
+          return err('No autorizado', 401);
+        }
 
         const body = await request.json();
         const { titulo, titulo_alt, descripcion, generos, tipo, estado, scan_id, es_adulto } = body;
         if (!titulo) return err('El título es obligatorio');
 
-        // admin_scan siempre crea bajo su propio scan — leer scan_id de DB, no del JWT
+        // admin_scan y uploader siempre crean bajo su propio scan — leer scan_id de DB, no del JWT
         let finalScanId;
-        if (isScanAdmin(admin)) {
-          const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id = ?').bind(admin.id).first();
+        if (!caller.is_superadmin && caller.rol !== 'admin') {
+          const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id = ?').bind(caller.id).first();
           finalScanId = dbU?.scan_id || null;
           if (!finalScanId) return err('Tu cuenta no tiene un scan asignado. Contactá al superadmin.', 403);
         } else {
