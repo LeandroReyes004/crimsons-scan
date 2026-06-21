@@ -17,7 +17,9 @@ CREATE TABLE mangas_new (
   fecha_creacion       TEXT DEFAULT (datetime('now')),
   fecha_actualizacion  TEXT DEFAULT (datetime('now')),
   scan_id              TEXT,
-  es_adulto            INTEGER NOT NULL DEFAULT 0
+  es_adulto            INTEGER NOT NULL DEFAULT 0,
+  views_mes            INTEGER DEFAULT 0,
+  slug                 TEXT
 );
 
 INSERT INTO mangas_new SELECT * FROM mangas;
@@ -29,7 +31,7 @@ CREATE TABLE capitulos_new (
   titulo           TEXT,
   uploader_id      TEXT,
   estado           TEXT NOT NULL DEFAULT 'borrador'
-                   CHECK (estado IN ('borrador', 'publicado', 'rechazado')),
+                   CHECK (estado IN ('borrador', 'publicado', 'rechazado', 'programado')),
   notas_admin      TEXT,
   views            INTEGER DEFAULT 0,
   fecha_subida     TEXT DEFAULT (datetime('now')),

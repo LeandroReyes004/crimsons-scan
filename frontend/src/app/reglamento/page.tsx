@@ -164,7 +164,7 @@ export default function ReglamentoPage() {
                   <div className="flex flex-col gap-1">
                     <h3 className="text-base font-bold text-gray-900 dark:text-white">1.1. Edad Mínima para Entrar</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                      Para navegar y tener una cuenta aquí, debes tener al menos **13 años**. Si aún no alcanzas esa edad, por favor, cierra la página. Esta plataforma y sus dinámicas no están diseñadas para un público infantil.
+                      Para navegar y tener una cuenta aquí, debes tener al menos <strong>13 años</strong>. Si aún no alcanzas esa edad, por favor, cierra la página. Esta plataforma y sus dinámicas no están diseñadas para un público infantil.
                     </p>
                   </div>
                 </div>
@@ -198,10 +198,10 @@ export default function ReglamentoPage() {
                         El Filtro +18 (Zona NSFW)
                       </span>
                       <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                        Sabemos que existe contenido dirigido a un público maduro. Por eso, cualquier material explícito, pornográfico o hentai tiene su propia zona aislada bajo la etiqueta **"+18"**. 
+                        Sabemos que existe contenido dirigido a un público maduro. Por eso, cualquier material explícito, pornográfico o hentai tiene su propia zona aislada bajo la etiqueta <strong>"+18"</strong>. 
                       </p>
                       <div className="mt-2 p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600 dark:text-rose-400 font-medium leading-relaxed">
-                        **Advertencia:** Entrar a esta zona requiere que seas mayor de edad legal bajo tu propia y estricta responsabilidad. Si un usuario o un grupo aliado sube contenido para adultos en las secciones generales o "SFW" (Safe for Work), el material será eliminado y la cuenta sancionada.
+                        <strong>Advertencia:</strong> Entrar a esta zona requiere que seas mayor de edad legal bajo tu propia y estricta responsabilidad. Si un usuario o un grupo aliado sube contenido para adultos en las secciones generales o "SFW" (Safe for Work), el material será eliminado y la cuenta sancionada.
                       </div>
                     </div>
 
@@ -222,7 +222,7 @@ export default function ReglamentoPage() {
                   <div className="flex flex-col gap-1">
                     <h3 className="text-base font-bold text-gray-900 dark:text-white">1.3. La Independencia de Nuestros Aliados (Los Scans)</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                      Scan Crimson es un ecosistema tecnológico. Le damos alojamiento y herramientas a varios grupos de traducción (scans) para que publiquen sus obras. Sin embargo, **cada scan es dueño, administrador y responsable único de lo que sube a su perfil**. Nosotros ponemos la infraestructura y el lector de imágenes, pero no controlamos ni editamos previamente el material o las opiniones que estos grupos publican.
+                      Scan Crimson es un ecosistema tecnológico. Le damos alojamiento y herramientas a varios grupos de traducción (scans) para que publiquen sus obras. Sin embargo, <strong>cada scan es dueño, administrador y responsable único de lo que sube a su perfil</strong>. Nosotros ponemos la infraestructura y el lector de imágenes, pero no controlamos ni editamos previamente el material o las opiniones que estos grupos publican.
                     </p>
                   </div>
                 </div>
@@ -294,7 +294,7 @@ export default function ReglamentoPage() {
 
                 <div className="p-5 rounded-2xl bg-rose-500/5 border border-rose-500/20 flex flex-col gap-4">
                   <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                    Respetamos el trabajo de los creadores. Dado que el contenido de nuestra plataforma es subido de manera descentralizada por la comunidad de traductores, funcionamos bajo la normativa de **"Notificación y Retirada" (DMCA)**. Si eres el dueño legal de una obra y consideras que se están vulnerando tus derechos, escríbenos directamente a:
+                    Respetamos el trabajo de los creadores. Dado que el contenido de nuestra plataforma es subido de manera descentralizada por la comunidad de traductores, funcionamos bajo la normativa de <strong>"Notificación y Retirada" (DMCA)</strong>. Si eres el dueño legal de una obra y consideras que se están vulnerando tus derechos, escríbenos directamente a:
                   </p>
                   
                   <div className="flex items-center justify-center p-4 bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl text-center self-center max-w-md w-full shadow-md">
@@ -364,7 +364,7 @@ export default function ReglamentoPage() {
                         <Lock size={15} /> Tu Perfil
                       </div>
                       <p className="text-xs text-gray-500 dark:text-gray-400 leading-relaxed">
-                        Si decides registrarte, guardamos tu correo y tu nombre de usuario. Tu contraseña se guarda **completamente encriptada** (ni siquiera nosotros podemos verla).
+                        Si decides registrarte, guardamos tu correo y tu nombre de usuario. Tu contraseña se guarda <strong>completamente encriptada</strong> (ni siquiera nosotros podemos verla).
                       </p>
                     </div>
 
@@ -400,7 +400,7 @@ export default function ReglamentoPage() {
                   <div className="flex flex-col gap-1">
                     <h3 className="text-base font-bold text-gray-900 dark:text-white">3.3. Tu Seguridad es Prioridad</h3>
                     <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
-                      Tenemos medidas estrictas, incluyendo escudos perimetrales en la red, para evitar que extraños extraigan datos masivos de la plataforma. **Jamás le venderemos tu base de datos, tu correo o tu perfil a empresas externas**. La única información que compartimos son los números totales de vistas, y lo hacemos únicamente de forma interna con los administradores de los scans para gestionar el reparto de ingresos de la plataforma.
+                      Tenemos medidas estrictas, incluyendo escudos perimetrales en la red, para evitar que extraños extraigan datos masivos de la plataforma. <strong>Jamás le venderemos tu base de datos, tu correo o tu perfil a empresas externas</strong>. La única información que compartimos son los números totales de vistas, y lo hacemos únicamente de forma interna con los administradores de los scans para gestionar el reparto de ingresos de la plataforma.
                     </p>
                   </div>
                 </div>
