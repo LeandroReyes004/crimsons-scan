@@ -976,6 +976,36 @@ export default {
         });
       }
 
+      // ── PUT /api/admin/chapters/:id/pages/reorder ─────────
+      const reorderPages = pathname.match(/^\/api\/admin\/chapters\/([^/]+)\/pages\/reorder$/);
+      if (reorderPages && method === 'PUT') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autorizado', 401);
+
+        const capId = reorderPages[1];
+        const cap = await env.DB.prepare(
+          'SELECT c.uploader_id, m.scan_id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?'
+        ).bind(capId).first();
+        if (!cap) return err('Capítulo no encontrado', 404);
+
+        const isOwner = cap.uploader_id === user.id;
+        const isAdmin = user.is_superadmin || user.rol === 'admin' ||
+          (user.rol === 'admin_scan' && cap.scan_id === user.scan_id);
+        if (!isOwner && !isAdmin) return err('Sin permisos para editar este capítulo', 403);
+
+        const { pages } = await request.json();
+        if (!Array.isArray(pages)) return err('Formato inválido', 400);
+
+        for (let i = 0; i < pages.length; i++) {
+          const { id, orden } = pages[i];
+          if (id && orden !== undefined) {
+            await env.DB.prepare('UPDATE paginas SET orden = ?, numero = ? WHERE id = ?')
+              .bind(orden, orden, id).run();
+          }
+        }
+        return json({ message: 'Orden actualizado' });
+      }
+
       // ── DELETE /api/pages/:id ─────────────────────────────
       // Elimina una página de D1 y R2, y reordena las restantes
       const deletePage = pathname.match(/^\/api\/pages\/([^/]+)$/);

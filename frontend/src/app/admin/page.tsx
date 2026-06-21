@@ -8,6 +8,7 @@ import {
   ChevronRight, ChevronDown, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
   Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign, Search, MessageSquare,
+  ArrowUp, ArrowDown, Save, Download
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
 import { toWebP } from '@/lib/webp';
@@ -530,6 +531,11 @@ function SectionMangas() {
   const [capsByManga, setCapsByManga] = useState<Record<string, MangaChapter[]>>({});
   const [loadingCaps, setLoadingCaps] = useState<string | null>(null);
   const [deletingCap, setDeletingCap] = useState<string | null>(null);
+  const [downloadingCap, setDownloadingCap] = useState<string | null>(null);
+  const [reorderingCap, setReorderingCap] = useState<string | null>(null);
+  const [editPages, setEditPages] = useState<{id:string; orden:number; filename:string; image_url:string}[]>([]);
+  const [loadingPages, setLoadingPages] = useState<boolean>(false);
+  const [savingOrder, setSavingOrder] = useState<boolean>(false);
   const currentUser = getUser();
   const isReadOnly   = currentUser?.rol === 'soporte';
   const isSuperAdmin = !!currentUser?.is_superadmin;
@@ -551,6 +557,93 @@ function SectionMangas() {
     await fetch(`${API}/api/chapters/${capId}`, { method: 'DELETE', headers: authHeaders() });
     setCapsByManga(prev => ({ ...prev, [mangaId]: prev[mangaId].filter(c => c.id !== capId) }));
     setDeletingCap(null);
+  };
+
+  const handleDownloadChapter = async (manga: Manga, cap: MangaChapter) => {
+    setDownloadingCap(cap.id);
+    try {
+      const res = await fetch(`${API}/api/admin/chapters/${cap.id}/pages/list`, { headers: authHeaders() });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Error');
+      const pages = d.pages || [];
+      if (pages.length === 0) { alert('El capítulo no tiene páginas.'); setDownloadingCap(null); return; }
+      
+      const JSZip = (await import('jszip')).default;
+      const zip = new JSZip();
+      
+      const folderName = `${manga.titulo} - Cap ${cap.numero}`;
+      const folder = zip.folder(folderName);
+      
+      for (const p of pages) {
+        const imgRes = await fetch(p.image_url);
+        const blob = await imgRes.blob();
+        folder?.file(p.filename || `page_${p.orden}.webp`, blob);
+      }
+      
+      const content = await zip.generateAsync({ type: 'blob' });
+      const url = URL.createObjectURL(content);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${folderName}.zip`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e: any) {
+      alert(`Error al descargar: ${e.message}`);
+    } finally {
+      setDownloadingCap(null);
+    }
+  };
+
+  const openReorder = async (capId: string) => {
+    if (reorderingCap === capId) {
+      setReorderingCap(null);
+      return;
+    }
+    setReorderingCap(capId);
+    setLoadingPages(true);
+    setEditPages([]);
+    try {
+      const res = await fetch(`${API}/api/admin/chapters/${capId}/pages/list`, { headers: authHeaders() });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error);
+      setEditPages(d.pages || []);
+    } catch (e: any) {
+      alert(`Error al cargar páginas: ${e.message}`);
+      setReorderingCap(null);
+    } finally {
+      setLoadingPages(false);
+    }
+  };
+
+  const moveUp = (i: number) => {
+    if (i === 0) return;
+    const a = [...editPages];
+    [a[i - 1], a[i]] = [a[i], a[i - 1]];
+    setEditPages(a.map((p, j) => ({ ...p, orden: j + 1 })));
+  };
+
+  const moveDown = (i: number) => {
+    if (i === editPages.length - 1) return;
+    const a = [...editPages];
+    [a[i], a[i + 1]] = [a[i + 1], a[i]];
+    setEditPages(a.map((p, j) => ({ ...p, orden: j + 1 })));
+  };
+
+  const saveReorder = async (capId: string) => {
+    setSavingOrder(true);
+    try {
+      const res = await fetch(`${API}/api/admin/chapters/${capId}/pages/reorder`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pages: editPages }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Error al guardar');
+      setReorderingCap(null);
+    } catch (e: any) {
+      alert(`Error: ${e.message}`);
+    } finally {
+      setSavingOrder(false);
+    }
   };
 
   const handleCreate = async (formData: any, coverFile: File | null) => {
@@ -680,20 +773,79 @@ function SectionMangas() {
                   ) : (
                     <div className="flex flex-col gap-1">
                       {(capsByManga[m.id] || []).map(cap => (
-                        <div key={cap.id} className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg hover:bg-white dark:hover:bg-white/5 transition">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <Badge estado={cap.estado}/>
-                            <span className="text-sm dark:text-white font-medium">Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}</span>
-                          </div>
-                          <div className="flex items-center gap-2 shrink-0">
-                            <span className="text-xs text-gray-400 flex items-center gap-1"><Eye size={10}/>{cap.views}</span>
-                            {!isReadOnly && (
-                              <button onClick={() => deleteChapterFromManga(m.id, cap.id)} disabled={deletingCap === cap.id}
-                                className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition disabled:opacity-50">
-                                {deletingCap === cap.id ? <Loader2 size={12} className="animate-spin"/> : <Trash2 size={12}/>}
+                        <div key={cap.id} className="flex flex-col">
+                          <div className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg hover:bg-white dark:hover:bg-white/5 transition">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Badge estado={cap.estado}/>
+                              <span className="text-sm dark:text-white font-medium">Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs text-gray-400 flex items-center gap-1"><Eye size={10}/>{cap.views}</span>
+                              <button onClick={() => handleDownloadChapter(m, cap)} disabled={downloadingCap === cap.id}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition disabled:opacity-50" title="Descargar Capítulo">
+                                {downloadingCap === cap.id ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>}
                               </button>
-                            )}
+                              {!isReadOnly && (
+                                <button onClick={() => openReorder(cap.id)}
+                                  className={`p-1.5 rounded-lg transition ${reorderingCap === cap.id ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10' : 'text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'}`} title="Editar páginas">
+                                  <ImageIcon size={12}/>
+                                </button>
+                              )}
+                              {!isReadOnly && (
+                                <button onClick={() => deleteChapterFromManga(m.id, cap.id)} disabled={deletingCap === cap.id}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition disabled:opacity-50" title="Eliminar">
+                                  {deletingCap === cap.id ? <Loader2 size={12} className="animate-spin"/> : <Trash2 size={12}/>}
+                                </button>
+                              )}
+                            </div>
                           </div>
+                          
+                          {reorderingCap === cap.id && (
+                            <div className="bg-gray-100 dark:bg-black/40 rounded-xl p-4 mt-2 mb-3 mx-2 border border-gray-200 dark:border-white/10 shadow-inner">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-sm font-bold dark:text-white flex items-center gap-2">
+                                  <ImageIcon size={14} className="text-indigo-500"/> Páginas (Cap. {cap.numero})
+                                </h4>
+                                <div className="flex gap-2">
+                                  <button onClick={() => saveReorder(cap.id)} disabled={savingOrder || editPages.length === 0}
+                                    className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 shadow shadow-indigo-600/20 active:scale-95">
+                                    {savingOrder ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} Guardar
+                                  </button>
+                                  <button onClick={() => setReorderingCap(null)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition">
+                                    <X size={14}/>
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              {loadingPages ? (
+                                <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-indigo-500"/></div>
+                              ) : editPages.length === 0 ? (
+                                <p className="text-xs text-gray-400 text-center py-4">No hay páginas en este capítulo.</p>
+                              ) : (
+                                <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-2">
+                                  {editPages.map((page, idx) => (
+                                    <div key={page.id} className="flex items-center gap-3 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-lg p-2 shadow-sm">
+                                      <img src={page.image_url} alt="" className="w-8 h-12 object-cover rounded bg-gray-200 dark:bg-white/5 shrink-0"/>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold dark:text-white">Pág. {String(page.orden).padStart(3, '0')}</p>
+                                        <p className="text-[10px] text-gray-400 truncate">{page.filename}</p>
+                                      </div>
+                                      <div className="flex gap-1 shrink-0">
+                                        <button onClick={() => moveUp(idx)} disabled={idx === 0}
+                                          className="p-1.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-200 dark:hover:bg-white/10 transition disabled:opacity-30">
+                                          <ArrowUp size={14}/>
+                                        </button>
+                                        <button onClick={() => moveDown(idx)} disabled={idx === editPages.length - 1}
+                                          className="p-1.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-200 dark:hover:bg-white/10 transition disabled:opacity-30">
+                                          <ArrowDown size={14}/>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       ))}
                     </div>
