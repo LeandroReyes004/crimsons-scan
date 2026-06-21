@@ -1769,9 +1769,9 @@ export default {
             <p><a href="${env.FRONTEND_URL}/admin">Ir al panel de administrador</a></p>
           `;
           
-          // No hacemos await para no bloquear la respuesta al usuario (fire and forget).
-          // NOTA: En un worker en producción es mejor usar ctx.waitUntil, pero esto funciona.
-          fetch('https://api.resend.com/emails', {
+          // Await es obligatorio en Cloudflare Workers si no usamos ctx.waitUntil, 
+          // de lo contrario la petición se cancela instantáneamente al devolver la respuesta.
+          await fetch('https://api.resend.com/emails', {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${env.RESEND_API_KEY}`,
