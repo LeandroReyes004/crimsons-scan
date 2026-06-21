@@ -17,11 +17,18 @@ export default function RegisterPage() {
   const [fechaNacimiento, setFechaNacimiento] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [aceptaTerminos, setAceptaTerminos] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+
+    if (!aceptaTerminos) {
+      setError('Debes aceptar el Reglamento y las Políticas de Privacidad.');
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const res = await fetch(`${API}/api/auth/signup`, {
@@ -134,6 +141,20 @@ export default function RegisterPage() {
               className="bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-white text-sm focus:border-rose-500 outline-none transition [color-scheme:dark]"
             />
             <p className="text-[10px] text-gray-500">Requerido para acceder a contenido +18.</p>
+          </div>
+
+          <div className="flex items-start gap-2.5 my-1">
+            <input
+              type="checkbox"
+              id="acepta-terminos"
+              checked={aceptaTerminos}
+              onChange={e => setAceptaTerminos(e.target.checked)}
+              required
+              className="mt-1 h-4 w-4 rounded border-gray-300 dark:border-white/10 text-rose-600 focus:ring-rose-500 cursor-pointer accent-rose-500"
+            />
+            <label htmlFor="acepta-terminos" className="text-xs text-gray-400 leading-relaxed cursor-pointer select-none">
+              Acepto el <Link href="/reglamento" target="_blank" className="text-rose-500 font-bold hover:underline">Reglamento y Políticas de Privacidad</Link> de Scan Crimson.
+            </label>
           </div>
 
           <button type="submit" disabled={loading}
