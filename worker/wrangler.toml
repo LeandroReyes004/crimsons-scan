@@ -9,14 +9,17 @@ crons = ["*/5 * * * *", "0 3 1 * *"]
 binding = "DB"
 database_name = "crimson-db"
 database_id = "1e4ce922-0d75-477e-bfc7-97468a4fdf6c"
+preview_database_id = "1e4ce922-0d75-477e-bfc7-97468a4fdf6c"
 
 [[r2_buckets]]
 binding = "R2"
 bucket_name = "crimson-mangas"
+preview_bucket_name = "crimson-mangas"
 
 [[kv_namespaces]]
 binding = "KV"
 id = "b0da4cd5c5894e4cbaa6d6e3137ca1b8"
+preview_id = "b0da4cd5c5894e4cbaa6d6e3137ca1b8"
 
 [vars]
 FRONTEND_URL = "https://scancrimson.com"

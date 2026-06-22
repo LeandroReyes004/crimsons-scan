@@ -3,7 +3,7 @@
 //  DB: D1  |  Storage: R2  |  Imágenes: HMAC stateless (sin KV)
 // ============================================================
 
-const ALLOWED_ORIGINS = ['https://scancrimson.com', 'https://www.scancrimson.com'];
+const ALLOWED_ORIGINS = ['https://scancrimson.com', 'https://www.scancrimson.com', 'http://localhost:8081'];
 
 const BASE_CORS = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -599,6 +599,51 @@ export default {
         return new Response(object.body, { headers: { 'Content-Type': contentType(u.avatar_url), 'Cache-Control': 'no-cache', 'ETag': object.httpEtag, ...CORS } });
       }
 
+      // ── GET /api/marcadores ───────────────────────────────
+      if (pathname === '/api/marcadores' && method === 'GET') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autenticado', 401);
+        const { results } = await env.DB.prepare(
+          `SELECT m.*, mar.creado_en as guardado_el
+           FROM marcadores mar JOIN mangas m ON mar.manga_id = m.id
+           WHERE mar.usuario_id = ?
+           ORDER BY mar.creado_en DESC`
+        ).bind(user.id).all();
+        return json({ marcadores: results });
+      }
+
+      // ── POST /api/marcadores ──────────────────────────────
+      if (pathname === '/api/marcadores' && method === 'POST') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autenticado', 401);
+        const { mangaId } = await request.json();
+        if (!mangaId) return err('Falta mangaId');
+        
+        const existe = await env.DB.prepare('SELECT 1 FROM marcadores WHERE usuario_id = ? AND manga_id = ?').bind(user.id, mangaId).first();
+        if (existe) {
+          await env.DB.prepare('DELETE FROM marcadores WHERE usuario_id = ? AND manga_id = ?').bind(user.id, mangaId).run();
+          return json({ message: 'Marcador eliminado', is_bookmarked: false });
+        } else {
+          await env.DB.prepare('INSERT INTO marcadores (usuario_id, manga_id) VALUES (?, ?)').bind(user.id, mangaId).run();
+          return json({ message: 'Marcador añadido', is_bookmarked: true });
+        }
+      }
+
+      // ── GET /api/historial ────────────────────────────────
+      if (pathname === '/api/historial' && method === 'GET') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autenticado', 401);
+        const { results } = await env.DB.prepare(
+          `SELECT m.*, c.numero as capitulo_numero, c.titulo as capitulo_titulo, h.leido_en
+           FROM historial_lectura h
+           JOIN mangas m ON h.manga_id = m.id
+           JOIN capitulos c ON h.capitulo_id = c.id
+           WHERE h.usuario_id = ?
+           ORDER BY h.leido_en DESC`
+        ).bind(user.id).all();
+        return json({ historial: results });
+      }
+
       // ── GET /api/mangas ──────────────────────────────────
       if (pathname === '/api/mangas' && method === 'GET') {
         const caller    = await getUser(request, env);
@@ -826,6 +871,19 @@ export default {
             "SELECT id FROM capitulos WHERE manga_id = ? AND estado = 'publicado' AND numero > ? ORDER BY numero ASC LIMIT 1"
           ).bind(cap.manga_id, cap.numero).first(),
         ]);
+
+        // Registrar en el historial si el usuario está autenticado
+        const user = await getUser(request, env);
+        if (user) {
+          const existeHistorial = await env.DB.prepare('SELECT 1 FROM historial_lectura WHERE usuario_id = ? AND manga_id = ?').bind(user.id, cap.manga_id).first();
+          if (existeHistorial) {
+            await env.DB.prepare('UPDATE historial_lectura SET capitulo_id = ?, leido_en = CURRENT_TIMESTAMP WHERE usuario_id = ? AND manga_id = ?')
+              .bind(cap.id, user.id, cap.manga_id).run();
+          } else {
+            await env.DB.prepare('INSERT INTO historial_lectura (usuario_id, manga_id, capitulo_id) VALUES (?, ?, ?)')
+              .bind(user.id, cap.manga_id, cap.id).run();
+          }
+        }
 
         return json({
           pages,
