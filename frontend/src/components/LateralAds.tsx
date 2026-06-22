@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import { usePathname } from 'next/navigation';
 import AdsterraSkyscraper from './AdsterraSkyscraper';
+import { getUser } from '@/lib/auth';
 
 // Páginas donde no mostramos la barra de anuncios
 const EXCLUDED = ['/admin', '/uploader', '/manga/reader'];
@@ -11,10 +12,18 @@ const EXCLUDED = ['/admin', '/uploader', '/manga/reader'];
 export default function LateralAds() {
   const [closed, setClosed]   = useState(false);
   const [visible, setVisible] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pathname = usePathname();
 
   useEffect(() => {
+    const u = getUser();
+    if (u && (u.is_superadmin || ['admin', 'admin_scan', 'uploader'].includes(u.rol))) {
+      setIsAdmin(true);
+    }
+    setMounted(true);
+
     const show = () => {
       setVisible(true);
       clearTimeout(timerRef.current);
@@ -34,8 +43,8 @@ export default function LateralAds() {
     };
   }, []);
 
-  if (closed) return null;
-  if (EXCLUDED.some(p => pathname?.startsWith(p))) return null;
+  if (!mounted || closed) return null;
+  if (isAdmin || EXCLUDED.some(p => pathname?.startsWith(p))) return null;
 
   return (
     <div

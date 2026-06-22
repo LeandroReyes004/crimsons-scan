@@ -1,8 +1,9 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname } from 'next/navigation';
 import Script from 'next/script';
+import { getUser } from '@/lib/auth';
 
 const EXCLUDED = ['/admin', '/uploader', '/manga/reader'];
 
@@ -10,19 +11,27 @@ export default function GlobalPopunders() {
   const pathname = usePathname();
   const isExcluded = EXCLUDED.some(p => pathname?.startsWith(p));
   
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const wasExcluded = useRef(isExcluded);
 
   useEffect(() => {
-    // Si cruzamos la frontera entre una página sin anuncios (lector) y una con anuncios (home) o viceversa:
-    // Forzamos una única recarga para limpiar o reactivar los listeners globales de los popunders en el navegador.
-    // ESTO EVITA que se recargue la página entre capítulos (SPA rápido) pero mantiene el lector 100% limpio.
+    const u = getUser();
+    if (u && (u.is_superadmin || ['admin', 'admin_scan', 'uploader'].includes(u.rol))) {
+      setIsAdmin(true);
+    }
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
     if (wasExcluded.current !== isExcluded) {
       window.location.reload();
     }
     wasExcluded.current = isExcluded;
   }, [isExcluded]);
 
-  if (isExcluded) return null;
+  if (!mounted) return null;
+  if (isExcluded || isAdmin) return null;
 
   return (
     <>
