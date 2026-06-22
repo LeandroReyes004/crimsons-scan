@@ -970,7 +970,7 @@ function SectionRevision() {
         <div className="flex flex-col gap-3">
           {data?.capitulos?.map(cap => {
             const esProgramado = cap.estado === 'programado' && cap.fecha_publicacion;
-            const fechaLocal = cap.fecha_publicacion ? new Date(cap.fecha_publicacion) : null;
+            const fechaLocal = cap.fecha_publicacion ? new Date(cap.fecha_publicacion + 'Z') : null;
             const yaVencio = fechaLocal && fechaLocal < new Date();
             return (
               <div key={cap.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 shadow-sm">
@@ -2561,7 +2561,7 @@ function SectionSeguridad() {
                           {title}
                         </p>
                         <span className="text-xs text-gray-400 flex items-center gap-1">
-                          <Clock size={12}/> {new Date(log.fecha).toLocaleString()}
+                          <Clock size={12}/> {new Date(log.fecha + 'Z').toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' })}
                         </span>
                       </div>
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-gray-500 mb-2">
@@ -2643,7 +2643,7 @@ function SectionSoporte() {
                       {t.estado.replace('_', ' ')}
                     </span>
                     <span className="text-xs text-gray-400 flex items-center gap-1 ml-auto">
-                      <Clock size={12}/> {new Date(t.fecha_creacion).toLocaleString()}
+                      <Clock size={12}/> {new Date(t.fecha_creacion + 'Z').toLocaleString('es-AR', { dateStyle: 'medium', timeStyle: 'short' })}
                     </span>
                   </div>
                   <p className="text-sm text-gray-800 dark:text-gray-200 mb-2 whitespace-pre-wrap">{t.mensaje}</p>
