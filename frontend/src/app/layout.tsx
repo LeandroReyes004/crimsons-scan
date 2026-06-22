@@ -5,7 +5,7 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 import LateralAds from '@/components/LateralAds';
 import AdBlockDetector from '@/components/AdBlockDetector';
 import Footer from '@/components/Footer';
-import Script from 'next/script';
+import GlobalPopunders from '@/components/GlobalPopunders';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -53,22 +53,8 @@ export default function RootLayout({
           {children}
           <Footer />
           <LateralAds />
+          <GlobalPopunders />
         </ThemeProvider>
-
-        {/* Adsterra Global Popunder Script */}
-        <Script
-          id="adsterra-popunder"
-          src="https://pl29641064.effectivecpmnetwork.com/22/96/aa/2296aae2f6e7d670692ad60295e285d2.js"
-          strategy="afterInteractive"
-        />
-
-        {/* Monetag Global Popunder Script */}
-        <Script
-          id="monetag-popunder"
-          src="https://al5sm.com/tag.min.js"
-          data-zone="11184403"
-          strategy="afterInteractive"
-        />
       </body>
     </html>
   );
