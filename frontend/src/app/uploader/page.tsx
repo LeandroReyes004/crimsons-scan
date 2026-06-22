@@ -44,6 +44,7 @@ export default function UploaderPage() {
   const [mangas, setMangas]          = useState<Manga[]>([]);
   const [selectedManga, setSelected] = useState<Manga | null>(null);
   const [capitulos, setCapitulos]    = useState<Capitulo[]>([]);
+  const [scansList, setScansList]    = useState<{id:string, nombre:string}[]>([]);
   const [view, setView]              = useState<'mangas' | 'chapters' | 'upload' | 'batch' | 'edit'>('mangas');
 
   // Edición de capítulo
@@ -51,6 +52,7 @@ export default function UploaderPage() {
   const [editNumero, setEditNumero]   = useState('');
   const [editTitulo, setEditTitulo]   = useState('');
   const [editFecha, setEditFecha]     = useState('');
+  const [editJointScanId, setEditJointScanId] = useState('');
   const [editSaving, setEditSaving]   = useState(false);
   const [editMsg, setEditMsg]         = useState<string | null>(null);
 
@@ -67,6 +69,7 @@ export default function UploaderPage() {
   const [capNumero, setCapNumero]   = useState('');
   const [capTitulo, setCapTitulo]   = useState('');
   const [fechaPub, setFechaPub]     = useState('');
+  const [jointScanId, setJointScanId] = useState('');
   const [convertWebP, setConvertWebP] = useState(true);
   const [notifyDiscord, setNotifyDiscord] = useState(true);
   const [pages, setPages]           = useState<PageFile[]>([]);
@@ -89,6 +92,10 @@ export default function UploaderPage() {
     fetch(`${API}/api/mangas?admin=1`, { headers: authHeaders() })
       .then(r => r.json())
       .then(d => setMangas(d.mangas || []));
+      
+    fetch(`${API}/api/scans`)
+      .then(r => r.json())
+      .then(d => setScansList(d.scans || []));
   }, []);
 
   const loadChapters = useCallback(async (manga: Manga) => {
@@ -131,7 +138,7 @@ export default function UploaderPage() {
         const res = await fetch(`${API}/api/chapters`, {
           method: 'POST',
           headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ manga_id: selectedManga.id, numero: num, titulo: capTitulo || null, fecha_publicacion: fechaPub || null, notify_discord: notifyDiscord }),
+          body: JSON.stringify({ manga_id: selectedManga.id, numero: num, titulo: capTitulo || null, fecha_publicacion: fechaPub || null, notify_discord: notifyDiscord, joint_scan_id: jointScanId || undefined }),
         });
         const d = await res.json();
         if (!res.ok) { setCreateError(d.error || 'Error al crear'); setUploading(false); return; }
@@ -161,7 +168,7 @@ export default function UploaderPage() {
   };
 
   const resetUpload = () => {
-    setPages([]); setCapNumero(''); setCapTitulo(''); setFechaPub('');
+    setPages([]); setCapNumero(''); setCapTitulo(''); setFechaPub(''); setJointScanId('');
     setCapId(null); setCapEstado(null); setDone(false); setDupError(''); setCreateError('');
     if (fileInputRef.current) fileInputRef.current.value = '';
   };
@@ -301,6 +308,7 @@ export default function UploaderPage() {
     setEditNumero(String(cap.numero));
     setEditTitulo(cap.titulo || '');
     setEditFecha('');
+    setEditJointScanId((cap as any).joint_scan_id || '');
     setEditMsg(null);
     setEditPages([]);
     setView('edit');
@@ -365,6 +373,7 @@ export default function UploaderPage() {
           numero: parseFloat(editNumero),
           titulo: editTitulo || null,
           fecha_publicacion: editFecha || undefined,
+          joint_scan_id: editJointScanId || undefined,
         }),
       });
       const d = await res.json();
@@ -547,6 +556,16 @@ export default function UploaderPage() {
                       <label className="text-xs font-bold text-gray-500">📅 Publicar en (vacío = ahora)</label>
                       <input type="datetime-local" value={fechaPub} onChange={e => setFechaPub(e.target.value)} min={new Date().toISOString().slice(0,16)}
                         className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none"/>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                      <label className="text-xs font-bold text-gray-500">🤝 Scan Colaborador (Joint) - Opcional</label>
+                      <select value={jointScanId} onChange={e => setJointScanId(e.target.value)}
+                        className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
+                        <option value="">Ninguno (Solo mi Scan)</option>
+                        {scansList.filter(s => s.id !== user?.scan_id).map(s => (
+                          <option key={s.id} value={s.id}>{s.nombre}</option>
+                        ))}
+                      </select>
                     </div>
                     {createError && <div className="bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400 text-sm px-3 py-2 rounded-xl">{createError}</div>}
                   </div>
@@ -884,6 +903,16 @@ export default function UploaderPage() {
                     />
                   </div>
                 )}
+                <div className="flex flex-col gap-1.5">
+                  <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">🤝 Scan Colaborador (Joint) - Opcional</label>
+                  <select value={editJointScanId} onChange={e => setEditJointScanId(e.target.value)}
+                    className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
+                    <option value="">Ninguno (Solo mi Scan)</option>
+                    {scansList.filter(s => s.id !== user?.scan_id).map(s => (
+                      <option key={s.id} value={s.id}>{s.nombre}</option>
+                    ))}
+                  </select>
+                </div>
 
                 {/* Info actual */}
                 <div className="bg-gray-50 dark:bg-white/5 rounded-xl px-4 py-3 flex flex-wrap gap-3 text-xs text-gray-500">

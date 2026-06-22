@@ -699,15 +699,19 @@ export default {
           const adminUser = await requireAdmin(request, env);
           if (!adminUser) return err('No autorizado', 403);
           capitulosResult = await env.DB.prepare(
-            `SELECT id, numero, titulo, views, fecha_subida, estado
-             FROM capitulos WHERE manga_id = ?
-             ORDER BY numero DESC`
+            `SELECT c.id, c.numero, c.titulo, c.views, c.fecha_subida, c.estado, c.joint_scan_id, s.nombre as joint_scan_nombre, s.slug as joint_scan_slug
+             FROM capitulos c
+             LEFT JOIN scans s ON c.joint_scan_id = s.id
+             WHERE c.manga_id = ?
+             ORDER BY c.numero DESC`
           ).bind(manga.id).all();
         } else {
           capitulosResult = await env.DB.prepare(
-            `SELECT id, numero, titulo, views, fecha_subida
-             FROM capitulos WHERE manga_id = ? AND estado = 'publicado'
-             ORDER BY numero DESC`
+            `SELECT c.id, c.numero, c.titulo, c.views, c.fecha_subida, c.joint_scan_id, s.nombre as joint_scan_nombre, s.slug as joint_scan_slug
+             FROM capitulos c
+             LEFT JOIN scans s ON c.joint_scan_id = s.id
+             WHERE c.manga_id = ? AND c.estado = 'publicado'
+             ORDER BY c.numero DESC`
           ).bind(manga.id).all();
         }
 
@@ -984,13 +988,13 @@ export default {
 
         const capId = reorderPages[1];
         const cap = await env.DB.prepare(
-          'SELECT c.uploader_id, m.scan_id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?'
+          'SELECT c.uploader_id, c.joint_scan_id, m.scan_id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?'
         ).bind(capId).first();
         if (!cap) return err('Capítulo no encontrado', 404);
 
         const isOwner = cap.uploader_id === user.id;
         const isAdmin = user.is_superadmin || user.rol === 'admin' ||
-          (user.rol === 'admin_scan' && cap.scan_id === user.scan_id);
+          (user.rol === 'admin_scan' && (cap.scan_id === user.scan_id || cap.joint_scan_id === user.scan_id));
         if (!isOwner && !isAdmin) return err('Sin permisos para editar este capítulo', 403);
 
         const { pages } = await request.json();
@@ -1051,7 +1055,7 @@ export default {
         const user = await getUser(request, env);
         if (!user) return err('Necesitás iniciar sesión para continuar', 401);
 
-        const { manga_id, numero, titulo, fecha_publicacion, notify_discord } = await request.json();
+        const { manga_id, numero, titulo, fecha_publicacion, notify_discord, joint_scan_id } = await request.json();
         if (!manga_id || numero === undefined) return err('Faltó indicar el manga y el número de capítulo');
 
         // Validar que el usuario pertenece al scan del manga
@@ -1077,8 +1081,8 @@ export default {
 
         const id = crypto.randomUUID();
         await env.DB.prepare(
-          'INSERT INTO capitulos (id, manga_id, numero, titulo, uploader_id, estado, fecha_publicacion) VALUES (?, ?, ?, ?, ?, ?, ?)'
-        ).bind(id, manga_id, numero, titulo || null, user.id, estado, fechaPub).run();
+          'INSERT INTO capitulos (id, manga_id, numero, titulo, uploader_id, estado, fecha_publicacion, joint_scan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
+        ).bind(id, manga_id, numero, titulo || null, user.id, estado, fechaPub, joint_scan_id || null).run();
 
         // Notificar Discord si se pidió y el capítulo quedó publicado
         if (notify_discord && estado === 'publicado') {
@@ -1116,8 +1120,8 @@ export default {
 
         if (isScanAdmin(admin) && admin.scan_id) {
           const cap = await env.DB.prepare(
-            `SELECT c.id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ? AND m.scan_id = ?`
-          ).bind(publishCap[1], admin.scan_id).first();
+            `SELECT c.id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ? AND (m.scan_id = ? OR c.joint_scan_id = ?)`
+          ).bind(publishCap[1], admin.scan_id, admin.scan_id).first();
           if (!cap) return err('No tenés permiso para publicar este capítulo', 403);
         }
 
@@ -1389,7 +1393,7 @@ export default {
          WHERE c.estado IN ('programado', 'borrador')`;
 
         const { results } = isScanAdmin(admin) && admin.scan_id
-          ? await env.DB.prepare(`${base} AND m.scan_id = ? ORDER BY c.fecha_publicacion ASC`).bind(admin.scan_id).all()
+          ? await env.DB.prepare(`${base} AND (m.scan_id = ? OR c.joint_scan_id = ?) ORDER BY c.fecha_publicacion ASC`).bind(admin.scan_id, admin.scan_id).all()
           : await env.DB.prepare(`${base} ORDER BY c.fecha_publicacion ASC`).all();
 
         return json({ capitulos: results });
@@ -1430,10 +1434,10 @@ export default {
         // Solo el uploader del cap, su admin_scan o superadmin pueden editar
         const isOwner    = cap.uploader_id === user.id;
         const isAdminOf  = user.is_superadmin || user.rol === 'admin' ||
-                           (user.rol === 'admin_scan' && user.scan_id === cap.scan_id);
+                           (user.rol === 'admin_scan' && (user.scan_id === cap.scan_id || user.scan_id === cap.joint_scan_id));
         if (!isOwner && !isAdminOf) return err('Sin permisos', 403);
 
-        const { numero, titulo, fecha_publicacion } = await request.json();
+        const { numero, titulo, fecha_publicacion, joint_scan_id } = await request.json();
 
         // Si cambia el número, verificar que no duplique
         if (numero !== undefined && numero !== cap.numero) {
@@ -1444,11 +1448,12 @@ export default {
         }
 
         await env.DB.prepare(
-          `UPDATE capitulos SET numero = ?, titulo = ?, fecha_publicacion = ? WHERE id = ?`
+          `UPDATE capitulos SET numero = ?, titulo = ?, fecha_publicacion = ?, joint_scan_id = ? WHERE id = ?`
         ).bind(
           numero ?? cap.numero,
           titulo !== undefined ? (titulo || null) : cap.titulo,
           fecha_publicacion !== undefined ? (fecha_publicacion || null) : cap.fecha_publicacion,
+          joint_scan_id !== undefined ? (joint_scan_id || null) : cap.joint_scan_id,
           editCap[1]
         ).run();
 
@@ -1483,8 +1488,8 @@ export default {
         // admin_scan solo puede borrar caps de su propio scan
         if (isScanAdmin(admin) && admin.scan_id) {
           const cap = await env.DB.prepare(
-            `SELECT c.id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ? AND m.scan_id = ?`
-          ).bind(deleteCap[1], admin.scan_id).first();
+            `SELECT c.id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ? AND (m.scan_id = ? OR c.joint_scan_id = ?)`
+          ).bind(deleteCap[1], admin.scan_id, admin.scan_id).first();
           if (!cap) return err('No tenés permiso para eliminar este capítulo', 403);
         }
 
@@ -1507,8 +1512,8 @@ export default {
 
         if (isScanAdmin(admin) && admin.scan_id) {
           const cap = await env.DB.prepare(
-            `SELECT c.id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ? AND m.scan_id = ?`
-          ).bind(rejectCap[1], admin.scan_id).first();
+            `SELECT c.id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ? AND (m.scan_id = ? OR c.joint_scan_id = ?)`
+          ).bind(rejectCap[1], admin.scan_id, admin.scan_id).first();
           if (!cap) return err('No tenés permiso para rechazar este capítulo', 403);
         }
 

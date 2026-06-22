@@ -17,6 +17,7 @@ interface Manga {
 }
 interface Capitulo {
   id: string; numero: number; titulo: string | null; views: number; fecha_subida: string;
+  joint_scan_nombre?: string | null; joint_scan_slug?: string | null;
 }
 
 export default function MangaDetailPage() {
@@ -284,8 +285,13 @@ export default function MangaDetailPage() {
                       {cap.numero}
                     </span>
                     <div>
-                      <p className="font-semibold text-sm text-white/90 group-hover:text-white">
-                        Capítulo {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}
+                      <p className="font-semibold text-sm text-white/90 group-hover:text-white flex flex-wrap items-center gap-2">
+                        <span>Capítulo {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}</span>
+                        {cap.joint_scan_nombre && (
+                          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-blue-500/20 text-blue-400 border border-blue-500/30 whitespace-nowrap">
+                            🤝 Joint con {cap.joint_scan_nombre}
+                          </span>
+                        )}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {(() => { try { return new Date(cap.fecha_subida).toLocaleDateString('es', { day:'2-digit', month:'short', year:'numeric' }); } catch { return cap.fecha_subida?.slice(0, 10) ?? ''; } })()}
