@@ -781,6 +781,21 @@ export default {
       // Genera un token de un solo uso por página (5 min TTL en KV)
       const chapterPages = pathname.match(/^\/api\/chapters\/([^/]+)\/pages$/);
       if (chapterPages && method === 'GET') {
+        // Validación Anti-Robo de API
+        const originHeader = request.headers.get('Origin') || request.headers.get('Referer') || '';
+        const isFromFrontend = originHeader.includes('scancrimson.com') || originHeader.includes('localhost');
+        
+        if (!isFromFrontend) {
+          const logId = crypto.randomUUID();
+          const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
+          const ua = request.headers.get('user-agent') || '';
+          try {
+            await env.DB.prepare('INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)')
+              .bind(logId, 'robo_imagenes', ip, ua, `Intento de acceso a la lista de páginas desde un bot o script.\nOrigen: ${originHeader || 'Ninguno/Bot'}`).run();
+          } catch(e) {}
+          return err('Acceso denegado por políticas de seguridad', 403);
+        }
+
         const cap = await env.DB.prepare(
           "SELECT c.*, m.es_adulto FROM capitulos c JOIN mangas m ON m.id = c.manga_id WHERE c.id = ? AND c.estado = 'publicado'"
         ).bind(chapterPages[1]).first();
