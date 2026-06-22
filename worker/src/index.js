@@ -686,7 +686,7 @@ export default {
           const scanInvited = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(joint_scan_id).first();
           const scanCreator = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(finalScanId).first();
           if (scanInvited?.webhook_discord) {
-            env.waitUntil(fetch(scanInvited.webhook_discord, {
+            ctx.waitUntil(fetch(scanInvited.webhook_discord, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: buildDiscordBody(scanInvited.discord_template, {
@@ -695,7 +695,7 @@ export default {
             }).catch(e => console.error('Discord webhook error:', e)));
           }
           if (scanCreator?.webhook_discord && scanCreator.webhook_discord !== scanInvited?.webhook_discord) {
-            env.waitUntil(fetch(scanCreator.webhook_discord, {
+            ctx.waitUntil(fetch(scanCreator.webhook_discord, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: buildDiscordBody(scanCreator.discord_template, {
@@ -1347,7 +1347,7 @@ export default {
           const scanInvited = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(joint_scan_id).first();
           const scanCreator = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(finalScanId).first();
           if (scanInvited?.webhook_discord) {
-            env.waitUntil(fetch(scanInvited.webhook_discord, {
+            ctx.waitUntil(fetch(scanInvited.webhook_discord, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: buildDiscordBody(scanInvited.discord_template, {
@@ -1356,7 +1356,7 @@ export default {
             }).catch(e => console.error('Discord webhook error:', e)));
           }
           if (scanCreator?.webhook_discord && scanCreator.webhook_discord !== scanInvited?.webhook_discord) {
-            env.waitUntil(fetch(scanCreator.webhook_discord, {
+            ctx.waitUntil(fetch(scanCreator.webhook_discord, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: buildDiscordBody(scanCreator.discord_template, {
@@ -1969,9 +1969,18 @@ export default {
       console.error(e);
       const logId = crypto.randomUUID();
       try {
+        let userText = '';
+        try {
+          const authH = request.headers.get('Authorization');
+          if (authH && authH.startsWith('Bearer ')) {
+            const tk = authH.substring(7);
+            const data = await verifyToken(tk, env.JWT_SECRET);
+            if (data && data.email) userText = `\nUsuario: ${data.email}`;
+          }
+        } catch(err) {}
         await env.DB.prepare('INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)')
-          .bind(logId, 'error_sistema', request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '', request.headers.get('user-agent') || '', String(e.stack || e.message)).run();
-        await sendAlertEmail('leandro.elias1025@gmail.com', 'Error del Sistema (Bug)', `Ocurrió un error en el worker: ${e.message}\nLog ID: ${logId}`, env.RESEND_API_KEY, env.RESEND_FROM);
+          .bind(logId, 'error_sistema', request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '', request.headers.get('user-agent') || '', String(e.stack || e.message) + userText).run();
+        await sendAlertEmail('leandro.elias1025@gmail.com', 'Error del Sistema (Bug)', `Ocurrió un error en el worker: ${e.message}${userText}\nLog ID: ${logId}`, env.RESEND_API_KEY, env.RESEND_FROM);
       } catch (err) {}
       return err('Ocurrió un error inesperado. Intentá de nuevo más tarde.', 500);
     }
