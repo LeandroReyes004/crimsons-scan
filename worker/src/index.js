@@ -362,16 +362,25 @@ export default {
         const user = await env.DB.prepare(
           `SELECT u.*, s.nombre as scan_nombre
            FROM usuarios u LEFT JOIN scans s ON u.scan_id = s.id
-           WHERE u.username = ? AND u.activo = 1`
+           WHERE u.username = ?`
         ).bind(username).first();
 
-        if (!user || !(await verifyPassword(password, user.password_hash))) {
+        let failReason = null;
+        if (!user) {
+          failReason = 'Usuario no existe';
+        } else if (user.activo !== 1) {
+          failReason = 'Cuenta desactivada o baneada';
+        } else if (!(await verifyPassword(password, user.password_hash))) {
+          failReason = 'Contraseña incorrecta';
+        }
+
+        if (failReason) {
           const logId = crypto.randomUUID();
           const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
           const ua = request.headers.get('user-agent') || '';
           try {
             await env.DB.prepare('INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)')
-              .bind(logId, 'login_fallido', ip, ua, `Intento fallido de inicio de sesión para el usuario: ${username}`).run();
+              .bind(logId, 'login_fallido', ip, ua, `Intento fallido de inicio de sesión para el usuario: ${username}\nMotivo: ${failReason}`).run();
           } catch(e) {}
 
           return err('Usuario o contraseña incorrectos', 401);
