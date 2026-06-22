@@ -614,7 +614,7 @@ export default {
         const query_scan = `
           SELECT m.*, s.nombre as scan_nombre, ${subqueries}
           FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id
-          WHERE m.scan_id = ? ${adultFilter}
+          WHERE (m.scan_id = ? OR m.joint_scan_id = ?) ${adultFilter}
           ORDER BY ultimo_cap_fecha DESC NULLS LAST, m.fecha_actualizacion DESC`;
 
         // admin_scan ve solo los mangas de su scan — leer scan_id de DB, no del JWT
@@ -625,7 +625,7 @@ export default {
         }
         const filterByScan = isScanMember || (isAdmin && isScanAdmin(caller) && callerScanId);
         const { results } = filterByScan
-          ? await env.DB.prepare(query_scan).bind(callerScanId).all()
+          ? await env.DB.prepare(query_scan).bind(callerScanId, callerScanId).all()
           : await env.DB.prepare(query_all).all();
 
         return json({ mangas: results });
@@ -684,12 +684,22 @@ export default {
 
         if (joint_scan_id) {
           const scanInvited = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(joint_scan_id).first();
+          const scanCreator = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(finalScanId).first();
           if (scanInvited?.webhook_discord) {
             env.waitUntil(fetch(scanInvited.webhook_discord, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: buildDiscordBody(scanInvited.discord_template, {
                 manga: titulo, capitulo: '', titulo: ' (Invitación a Joint pendiente)', url: `${env.FRONTEND_URL}/admin`
+              })
+            }).catch(e => console.error('Discord webhook error:', e)));
+          }
+          if (scanCreator?.webhook_discord && scanCreator.webhook_discord !== scanInvited?.webhook_discord) {
+            env.waitUntil(fetch(scanCreator.webhook_discord, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: buildDiscordBody(scanCreator.discord_template, {
+                manga: titulo, capitulo: '', titulo: ' (Invitación a Joint enviada)', url: `${env.FRONTEND_URL}/admin`
               })
             }).catch(e => console.error('Discord webhook error:', e)));
           }
@@ -943,7 +953,15 @@ export default {
           try {
             await env.DB.prepare('INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)')
               .bind(logId, 'robo_imagenes', ip, ua, detalles).run();
-            await sendAlertEmail('leandro.elias1025@gmail.com', '🚨 Intento de robo de imagen bloqueado', `Se bloqueó un intento de acceso sin token válido a la imagen del capítulo ${chapterId}, página ${pageOrder}.\nIP: ${ip}\nUser-Agent: ${ua}`, env.RESEND_API_KEY, env.RESEND_FROM);
+            // Buscar nombre del manga y número de capítulo
+            const capInfo = await env.DB.prepare(
+              `SELECT m.titulo, c.numero FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?`
+            ).bind(chapterId).first();
+            
+            const mangaName = capInfo ? capInfo.titulo : 'Desconocido';
+            const capNum = capInfo ? capInfo.numero : chapterId;
+
+            await sendAlertEmail('leandro.elias1025@gmail.com', '🚨 Intento de robo de imagen bloqueado', `Se bloqueó un intento de acceso sin token válido a la imagen del manga "${mangaName}", capítulo ${capNum}, página ${pageOrder}.\nIP: ${ip}\nUser-Agent: ${ua}`, env.RESEND_API_KEY, env.RESEND_FROM);
           } catch(e) {}
           return err('Acceso denegado', 403);
         }
@@ -1327,12 +1345,22 @@ export default {
 
         if (joint_scan_id && joint_scan_id !== current.joint_scan_id) {
           const scanInvited = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(joint_scan_id).first();
+          const scanCreator = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(finalScanId).first();
           if (scanInvited?.webhook_discord) {
             env.waitUntil(fetch(scanInvited.webhook_discord, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: buildDiscordBody(scanInvited.discord_template, {
                 manga: titulo, capitulo: '', titulo: ' (Invitación a Joint pendiente)', url: `${env.FRONTEND_URL}/admin`
+              })
+            }).catch(e => console.error('Discord webhook error:', e)));
+          }
+          if (scanCreator?.webhook_discord && scanCreator.webhook_discord !== scanInvited?.webhook_discord) {
+            env.waitUntil(fetch(scanCreator.webhook_discord, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: buildDiscordBody(scanCreator.discord_template, {
+                manga: titulo, capitulo: '', titulo: ' (Invitación a Joint enviada)', url: `${env.FRONTEND_URL}/admin`
               })
             }).catch(e => console.error('Discord webhook error:', e)));
           }
