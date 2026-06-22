@@ -54,8 +54,8 @@ export default function Footer() {
       <footer className="w-full py-6 mt-auto border-t border-gray-200 dark:border-white/5 flex flex-col items-center justify-center gap-2 bg-slate-50 dark:bg-[#0a0a0c] z-10 relative">
         <p className="text-sm text-gray-500 font-medium">© {new Date().getFullYear()} Crimson's Scan</p>
         <div className="flex items-center gap-4 text-sm flex-wrap justify-center">
-          <Link href="/reglamento" id="footer-reglamento-link" className="text-gray-600 dark:text-gray-400 hover:text-rose-500 transition-colors flex items-center gap-1.5 font-medium bg-gray-100 dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-500/10 px-4 py-2 rounded-full border border-gray-200 dark:border-white/5 hover:border-rose-200 dark:hover:border-rose-500/30">
-            <Shield size={14} /> Reglamento & Políticas
+          <Link href="/terminos" id="footer-reglamento-link" className="text-gray-600 dark:text-gray-400 hover:text-rose-500 transition-colors flex items-center gap-1.5 font-medium bg-gray-100 dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-500/10 px-4 py-2 rounded-full border border-gray-200 dark:border-white/5 hover:border-rose-200 dark:hover:border-rose-500/30">
+            <Shield size={14} /> Términos & Políticas
           </Link>
           <button onClick={() => setOpen(true)} className="text-gray-600 dark:text-gray-400 hover:text-rose-500 transition-colors flex items-center gap-1.5 font-medium bg-gray-100 dark:bg-white/5 hover:bg-rose-50 dark:hover:bg-rose-500/10 px-4 py-2 rounded-full border border-gray-200 dark:border-white/5 hover:border-rose-200 dark:hover:border-rose-500/30">
             <MessageSquare size={14} /> Sugerencias & Soporte

@@ -59,10 +59,10 @@ export default function ReglamentoPage() {
             <Shield size={14} /> Centro Legal & Comunidad
           </div>
           <h1 className="text-3xl sm:text-5xl font-black tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-gray-900 to-gray-700 dark:from-white dark:to-gray-400 leading-tight">
-            Reglamento y Políticas
+            Términos y Políticas
           </h1>
           <p className="text-sm sm:text-base text-gray-500 dark:text-gray-400 max-w-2xl leading-relaxed">
-            Bienvenidos a <span className="text-rose-500 font-bold">Scan Crimson</span>. Hemos redactado estas reglas de forma clara y directa para que sepas cómo funciona nuestra casa, cómo protegemos a la comunidad y cuáles son los límites legales.
+            Bienvenidos a <span className="text-rose-500 font-bold">Scan Crimson</span>. Hemos redactado estos términos de forma clara y directa para que sepas cómo funciona nuestra casa, cómo protegemos a la comunidad y cuáles son los límites legales.
           </p>
         </div>
       </section>
