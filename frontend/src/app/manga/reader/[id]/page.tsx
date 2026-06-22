@@ -14,6 +14,7 @@ interface Manga {
   id: string; slug?: string | null; titulo: string; titulo_alt: string | null; descripcion: string | null;
   generos: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number;
   es_adulto?: number | boolean; scan_id?: string | null; scan_nombre?: string | null; scan_slug?: string | null;
+  joint_scan_id?: string | null; joint_scan_nombre?: string | null; joint_scan_slug?: string | null;
 }
 interface Capitulo {
   id: string; numero: number; titulo: string | null; views: number; fecha_subida: string;
@@ -222,6 +223,12 @@ export default function MangaDetailPage() {
                 <Link href={`/scan/${manga.scan_slug ?? manga.scan_id}`}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 transition text-xs font-semibold">
                   <Layers size={11}/> {manga.scan_nombre}
+                </Link>
+              )}
+              {manga.joint_scan_id && manga.joint_scan_nombre && (
+                <Link href={`/scan/${manga.joint_scan_slug ?? manga.joint_scan_id}`}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 hover:bg-amber-500/20 transition text-xs font-semibold">
+                  <Layers size={11}/> {manga.joint_scan_nombre}
                 </Link>
               )}
             </div>
