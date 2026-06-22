@@ -249,15 +249,22 @@ export default function ChapterReaderPage() {
         )}
 
         <div className={`w-full flex flex-col items-center ${readingMode === 'webtoon' ? 'gap-0' : 'gap-4'}`}>
-          {visiblePages.map((page) => (
-            <div key={page.id} className="relative w-full flex justify-center animate-in fade-in duration-300">
-              <CanvasPageRenderer
-                imageUrl={page.image_url}
-                scrambleMap={page.scramble_map}
-                userId="reader"
-              />
-            </div>
-          ))}
+          {visiblePages.map((page) => {
+            const fp = typeof window !== 'undefined' ? localStorage.getItem('crimson_fp') || 'unknown' : 'unknown';
+            const userStr = typeof window !== 'undefined' ? localStorage.getItem('crimson_user') : null;
+            const user = userStr ? JSON.parse(userStr) : null;
+            const uid = user ? `${user.username}-${fp.slice(0,8)}` : fp.slice(0,12);
+
+            return (
+              <div key={page.id} className="relative w-full flex justify-center animate-in fade-in duration-300">
+                <CanvasPageRenderer
+                  imageUrl={page.image_url}
+                  scrambleMap={page.scramble_map}
+                  userId={uid}
+                />
+              </div>
+            );
+          })}
         </div>
 
         {/* Final del capítulo */}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 interface Props {
   imageUrl:    string;
@@ -8,9 +8,58 @@ interface Props {
   userId:      string;
 }
 
-const CanvasPageRenderer = ({ imageUrl }: Props) => {
-  const [nativeWidth, setNativeWidth] = useState<number | null>(null);
-  const [loaded, setLoaded]           = useState(false);
+const CanvasPageRenderer = ({ imageUrl, scrambleMap, userId }: Props) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [loaded, setLoaded] = useState(false);
+  const [error, setError]   = useState(false);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const img = new Image();
+    img.crossOrigin = 'anonymous'; // Necesario para leer la imagen en el canvas (CORS)
+    img.onload = () => {
+      // Ajustar resolución interna del canvas al tamaño real de la imagen
+      canvas.width = img.width;
+      canvas.height = img.height;
+      
+      // Dibujar imagen original
+      ctx.drawImage(img, 0, 0);
+
+      // --- MARCA DE AGUA INVISIBLE (FORENSE) ---
+      // Con opacidad casi en cero (1.5%), el ojo humano no lo nota,
+      // pero si se altera el contraste en Photoshop, revela al infractor.
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.015)'; 
+      ctx.font = 'bold 36px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      
+      // Rotar el canvas para un patrón diagonal
+      ctx.rotate(-Math.PI / 6); 
+      
+      // Dibujar repetidamente por toda la imagen
+      const stepX = 400;
+      const stepY = 300;
+      for (let x = -img.width; x < img.width * 2; x += stepX) {
+        for (let y = -img.height; y < img.height * 2; y += stepY) {
+          ctx.fillText(`CrimsonScan | UID: ${userId}`, x, y);
+        }
+      }
+      
+      // Restaurar estado del canvas
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      
+      setLoaded(true);
+    };
+    img.onerror = () => {
+      setError(true);
+      setLoaded(true);
+    };
+    img.src = imageUrl;
+  }, [imageUrl, userId]);
 
   return (
     <div
@@ -18,28 +67,29 @@ const CanvasPageRenderer = ({ imageUrl }: Props) => {
       onContextMenu={e => e.preventDefault()}
       onDragStart={e => e.preventDefault()}
     >
-      <div
-        className="relative w-full"
-        style={{ maxWidth: nativeWidth ? `${nativeWidth}px` : '100%', minHeight: loaded ? undefined : '60vh' }}
-      >
-        {!loaded && (
+      <div className="relative w-full" style={{ minHeight: loaded ? undefined : '60vh' }}>
+        {!loaded && !error && (
           <div className="absolute inset-0 bg-white/5 animate-pulse rounded-sm" />
         )}
-        <img
-          src={imageUrl}
-          alt=""
-          decoding="async"
+        {error && (
+          <div className="w-full h-64 flex items-center justify-center text-gray-500 bg-white/5 border border-red-900/30 rounded-lg">
+            Error al cargar página protegida.
+          </div>
+        )}
+        
+        <canvas
+          ref={canvasRef}
           className="w-full h-auto block transition-opacity duration-300"
           style={{
-            opacity:          loaded ? 1 : 0,
+            opacity:          loaded && !error ? 1 : 0,
             userSelect:       'none',
             WebkitUserSelect: 'none',
-            pointerEvents:    'none',
+            pointerEvents:    'none', // El usuario interactúa con la capa invisible superior
             touchAction:      'pan-y',
-          } as React.CSSProperties}
-          onLoad={e => { setNativeWidth(e.currentTarget.naturalWidth); setLoaded(true); }}
-          draggable={false}
+          }}
         />
+
+        {/* Capa transparente arriba para bloquear el guardado de imagen/canvas */}
         <div
           className="absolute inset-0 z-10 select-none"
           onContextMenu={e => e.preventDefault()}
