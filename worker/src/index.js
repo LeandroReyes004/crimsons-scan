@@ -828,9 +828,11 @@ export default {
       if (chapterPages && method === 'GET') {
         // Validación Anti-Robo de API
         const originHeader = request.headers.get('Origin') || request.headers.get('Referer') || '';
+        const clientHeader = request.headers.get('x-crimson-client');
         const isFromFrontend = originHeader.includes('scancrimson.com') || originHeader.includes('localhost');
+        const isFromMobile = clientHeader === 'mobile-app';
         
-        if (!isFromFrontend) {
+        if (!isFromFrontend && !isFromMobile) {
           const logId = crypto.randomUUID();
           const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
           const ua = request.headers.get('user-agent') || '';
