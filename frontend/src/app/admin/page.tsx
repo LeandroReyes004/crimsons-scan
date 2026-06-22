@@ -19,7 +19,7 @@ type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'con
 
 // ── Tipos ──────────────────────────────────────────────────
 interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; }
-interface Manga { id: string; titulo: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number; fecha_actualizacion: string; scan_nombre?: string; descripcion?: string | null; es_adulto?: number; scan_id?: string | null; generos?: string; }
+interface Manga { id: string; titulo: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number; fecha_actualizacion: string; scan_nombre?: string; descripcion?: string | null; es_adulto?: number; scan_id?: string | null; generos?: string; joint_scan_id?: string | null; joint_status?: string | null; joint_scan_nombre?: string | null; }
 interface Capitulo { id: string; numero: number; titulo: string; estado: string; manga_titulo: string; manga_id: string; uploader_username: string; notas_admin: string | null; fecha_subida: string; num_paginas?: number; }
 interface Usuario { id: string; username: string; email: string; rol: string; activo: number; fecha_registro: string; ultimo_acceso: string | null; scan_id?: string; scan_nombre?: string; cuenta_pendiente?: number | boolean; }
 interface Scan { id: string; nombre: string; descripcion: string | null; activo: number; miembros: number; }
@@ -381,6 +381,7 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
   const [tipo, setTipo]           = useState(initial?.tipo || 'manga');
   const [estado, setEstado]       = useState(initial?.estado || 'en_curso');
   const [descripcion, setDesc]    = useState(initial?.descripcion || '');
+  const [jointScanId, setJointScanId] = useState(initial?.joint_scan_id || '');
   // Si no es superadmin, el scan_id se fija al del usuario actual (o al del manga si ya tenía uno)
   const [scanId, setScanId]       = useState(
     isSuperAdmin
@@ -397,11 +398,10 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
   const [feedback, setFeedback]   = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isSuperAdmin) return;
     fetch(`${API}/api/scans`, { headers: authHeaders() })
       .then(r => r.json())
       .then(d => setScans(d.scans || []));
-  }, [isSuperAdmin]);
+  }, []);
 
   const toggleGenre = (g: string) => setGeneros(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
 
@@ -410,7 +410,7 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
     setSaving(true);
     setFeedback(null);
     try {
-      await onSave({ titulo, tipo, estado, descripcion, generos, scan_id: scanId || null, es_adulto: esAdulto }, coverFile);
+      await onSave({ titulo, tipo, estado, descripcion, generos, scan_id: scanId || null, joint_scan_id: jointScanId || null, es_adulto: esAdulto }, coverFile);
       setFeedback('✅ Guardado');
       setTimeout(onCancel, 1200);
     } catch (err: any) {
@@ -465,7 +465,17 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
               <option value="pausado">Pausado</option>
             </select>
           </div>
-          <div className="flex items-center gap-3 mt-1">
+          <div className="flex flex-col gap-1.5 md:col-span-1">
+             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">🤝 Joint (Opcional)</label>
+             <select value={jointScanId} onChange={e => setJointScanId(e.target.value)}
+                className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
+                <option value="">— Ninguno —</option>
+                {scans.filter(s => s.id !== scanId && s.id !== currentUser?.scan_id).map(s => (
+                  <option key={s.id} value={s.id}>{s.nombre}</option>
+                ))}
+             </select>
+          </div>
+          <div className="flex items-center gap-3 mt-1 md:col-span-2">
             <button type="button" onClick={() => setEsAdulto(v => !v)}
               className={`w-10 h-6 rounded-full transition-colors shrink-0 ${esAdulto ? 'bg-rose-500' : 'bg-gray-300 dark:bg-white/20'}`}>
               <span className={`block w-4 h-4 bg-white rounded-full shadow transition-transform mx-1 ${esAdulto ? 'translate-x-4' : 'translate-x-0'}`}/>
@@ -525,6 +535,7 @@ interface MangaChapter { id: string; numero: number; titulo: string | null; view
 
 function SectionMangas() {
   const { data, loading, refetch } = useAPI<{ mangas: Manga[] }>('/api/mangas?admin=1');
+  const { data: pendingJointsData, refetch: refetchJoints } = useAPI<any[]>('/api/admin/joints/pending');
   const [showCreate, setShowCreate] = useState(false);
   const [editingManga, setEditing]  = useState<Manga | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -688,8 +699,41 @@ function SectionMangas() {
     refetch();
   };
 
+  const handleJointAction = async (mangaId: string, action: 'aprobado' | 'rechazado') => {
+    try {
+      const res = await fetch(`${API}/api/admin/joints/${mangaId}/action`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action })
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      refetchJoints();
+      refetch();
+    } catch (e: any) { alert(`Error: ${e.message}`); }
+  };
+
   return (
     <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+      {pendingJointsData && pendingJointsData.length > 0 && (
+        <div className="bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 rounded-2xl p-5 shadow-sm">
+          <h3 className="text-amber-800 dark:text-amber-400 font-extrabold mb-3 flex items-center gap-2"><AlertCircle size={18}/> Invitaciones a Joints ({pendingJointsData.length})</h3>
+          <div className="flex flex-col gap-3">
+            {pendingJointsData.map((j: any) => (
+               <div key={j.id} className="flex items-center justify-between bg-white dark:bg-black/30 p-3.5 rounded-xl border border-amber-100 dark:border-amber-500/10">
+                 <div>
+                   <p className="font-bold text-sm dark:text-white flex items-center gap-2">{j.titulo} <span className="bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase">Pendiente</span></p>
+                   <p className="text-xs text-amber-700 dark:text-amber-200/70 mt-0.5 font-medium">Invitado por: <span className="text-rose-500 font-bold">{j.scan_nombre}</span></p>
+                 </div>
+                 <div className="flex gap-2">
+                   <button onClick={() => handleJointAction(j.id, 'aprobado')} className="bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-lg shadow-emerald-500/20">Aceptar</button>
+                   <button onClick={() => handleJointAction(j.id, 'rechazado')} className="bg-red-500 hover:bg-red-400 text-white text-xs font-bold px-4 py-2 rounded-xl transition shadow-lg shadow-red-500/20">Rechazar</button>
+                 </div>
+               </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-extrabold dark:text-white">Gestión de Mangas</h2>

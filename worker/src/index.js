@@ -657,7 +657,7 @@ export default {
         }
 
         const body = await request.json();
-        const { titulo, titulo_alt, descripcion, generos, tipo, estado, scan_id, es_adulto } = body;
+        const { titulo, titulo_alt, descripcion, generos, tipo, estado, scan_id, es_adulto, joint_scan_id } = body;
         if (!titulo) return err('El título es obligatorio');
 
         // admin_scan y uploader siempre crean bajo su propio scan — leer scan_id de DB, no del JWT
@@ -673,13 +673,27 @@ export default {
         const id   = crypto.randomUUID();
         const slug = await uniqueSlug(titulo, 'mangas', env);
         await env.DB.prepare(
-          `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto, slug)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto, slug, joint_scan_id, joint_status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           id, titulo, titulo_alt || null, descripcion || null,
           JSON.stringify(generos || []), tipo || 'manga',
-          estado || 'en_curso', caller.id, finalScanId, es_adulto ? 1 : 0, slug
+          estado || 'en_curso', caller.id, finalScanId, es_adulto ? 1 : 0, slug,
+          joint_scan_id || null, joint_scan_id ? 'pendiente' : 'aprobado'
         ).run();
+
+        if (joint_scan_id) {
+          const scanInvited = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(joint_scan_id).first();
+          if (scanInvited?.webhook_discord) {
+            env.waitUntil(fetch(scanInvited.webhook_discord, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: buildDiscordBody(scanInvited.discord_template, {
+                manga: titulo, capitulo: '', titulo: ' (Invitación a Joint pendiente)', url: `${env.FRONTEND_URL}/admin`
+              })
+            }).catch(e => console.error('Discord webhook error:', e)));
+          }
+        }
 
         return json({ mangaId: id, slug, message: 'Manga creado' }, 201);
       }
@@ -688,7 +702,7 @@ export default {
       const mangaById = pathname.match(/^\/api\/mangas\/([^/]+)$/);
       if (mangaById && method === 'GET') {
         const manga = await env.DB.prepare(
-          `SELECT m.*, s.nombre as scan_nombre, s.slug as scan_slug FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ? OR m.slug = ?`
+          `SELECT m.*, s.nombre as scan_nombre, s.slug as scan_slug, j.nombre as joint_scan_nombre, j.slug as joint_scan_slug FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id LEFT JOIN scans j ON m.joint_scan_id = j.id AND m.joint_status = 'aprobado' WHERE m.id = ? OR m.slug = ?`
         ).bind(mangaById[1], mangaById[1]).first();
         if (!manga) return err('Manga no encontrado', 404);
 
@@ -738,9 +752,9 @@ export default {
             (SELECT numero FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_capitulo,
             (SELECT id FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_capitulo_id,
             (SELECT fecha_publicacion FROM capitulos WHERE manga_id = m.id AND estado = 'publicado' ORDER BY numero DESC LIMIT 1) as ultimo_cap_fecha
-           FROM mangas m WHERE m.scan_id = ?
+           FROM mangas m WHERE m.scan_id = ? OR (m.joint_scan_id = ? AND m.joint_status = 'aprobado')
            ORDER BY m.fecha_actualizacion DESC`
-        ).bind(scan.id).all();
+        ).bind(scan.id, scan.id).all();
         return json({ scan, mangas: mangas || [] });
       }
 
@@ -1055,14 +1069,14 @@ export default {
         const user = await getUser(request, env);
         if (!user) return err('Necesitás iniciar sesión para continuar', 401);
 
-        const { manga_id, numero, titulo, fecha_publicacion, notify_discord, joint_scan_id } = await request.json();
+        const { manga_id, numero, titulo, fecha_publicacion, notify_discord } = await request.json();
         if (!manga_id || numero === undefined) return err('Faltó indicar el manga y el número de capítulo');
 
-        // Validar que el usuario pertenece al scan del manga
+        // Validar que el usuario pertenece al scan del manga o es el joint scan
         if (!user.is_superadmin && user.rol !== 'admin') {
-          const manga = await env.DB.prepare('SELECT scan_id FROM mangas WHERE id = ?').bind(manga_id).first();
+          const manga = await env.DB.prepare('SELECT scan_id, joint_scan_id, joint_status FROM mangas WHERE id = ?').bind(manga_id).first();
           if (!manga) return err('La obra no fue encontrada', 404);
-          if (manga.scan_id && manga.scan_id !== user.scan_id) {
+          if (manga.scan_id !== user.scan_id && !(manga.joint_scan_id === user.scan_id && manga.joint_status === 'aprobado')) {
             return err('No tenés permiso para subir a esta obra', 403);
           }
         }
@@ -1081,8 +1095,8 @@ export default {
 
         const id = crypto.randomUUID();
         await env.DB.prepare(
-          'INSERT INTO capitulos (id, manga_id, numero, titulo, uploader_id, estado, fecha_publicacion, joint_scan_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
-        ).bind(id, manga_id, numero, titulo || null, user.id, estado, fechaPub, joint_scan_id || null).run();
+          'INSERT INTO capitulos (id, manga_id, numero, titulo, uploader_id, estado, fecha_publicacion) VALUES (?, ?, ?, ?, ?, ?, ?)'
+        ).bind(id, manga_id, numero, titulo || null, user.id, estado, fechaPub).run();
 
         // Notificar Discord si se pidió y el capítulo quedó publicado
         if (notify_discord && estado === 'publicado') {
@@ -1281,29 +1295,89 @@ export default {
         if (!admin) return err('No autorizado', 401);
 
         // admin_scan solo puede editar mangas de su propio scan — usar DB, no JWT
-        const current = await env.DB.prepare('SELECT scan_id FROM mangas WHERE id=?').bind(editManga[1]).first();
+        const current = await env.DB.prepare('SELECT scan_id, joint_scan_id, joint_status, slug FROM mangas WHERE id=?').bind(editManga[1]).first();
         if (!current) return err('Manga no encontrado', 404);
         if (isScanAdmin(admin)) {
           const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id=?').bind(admin.id).first();
-          if (current.scan_id !== dbU?.scan_id) return err('No tenés permiso para editar este manga', 403);
+          if (current.scan_id !== dbU?.scan_id && !(current.joint_scan_id === dbU?.scan_id && current.joint_status === 'aprobado')) {
+            return err('No tenés permiso para editar este manga', 403);
+          }
         }
 
-        const { titulo, titulo_alt, descripcion, generos, tipo, estado, es_adulto, scan_id } = await request.json();
+        const { titulo, titulo_alt, descripcion, generos, tipo, estado, es_adulto, scan_id, joint_scan_id } = await request.json();
         // Solo superadmin puede cambiar el scan_id
         const finalScanId = admin.is_superadmin ? (scan_id || null) : (current.scan_id ?? null);
+        
+        let newJointStatus = current.joint_status;
+        if (joint_scan_id !== current.joint_scan_id) {
+            newJointStatus = joint_scan_id ? 'pendiente' : 'aprobado';
+        }
 
         // Generar slug solo si todavía no tiene uno
         if (!current.slug) {
           const newSlug = await uniqueSlug(titulo, 'mangas', env, editManga[1]);
           await env.DB.prepare(
-            `UPDATE mangas SET titulo=?, titulo_alt=?, descripcion=?, generos=?, tipo=?, estado=?, es_adulto=?, scan_id=?, slug=?, fecha_actualizacion=datetime('now') WHERE id=?`
-          ).bind(titulo, titulo_alt||null, descripcion||null, JSON.stringify(generos||[]), tipo||'manga', estado||'en_curso', es_adulto ? 1 : 0, finalScanId, newSlug, editManga[1]).run();
+            `UPDATE mangas SET titulo=?, titulo_alt=?, descripcion=?, generos=?, tipo=?, estado=?, es_adulto=?, scan_id=?, joint_scan_id=?, joint_status=?, slug=?, fecha_actualizacion=datetime('now') WHERE id=?`
+          ).bind(titulo, titulo_alt||null, descripcion||null, JSON.stringify(generos||[]), tipo||'manga', estado||'en_curso', es_adulto ? 1 : 0, finalScanId, joint_scan_id || null, newJointStatus, newSlug, editManga[1]).run();
         } else {
           await env.DB.prepare(
-            `UPDATE mangas SET titulo=?, titulo_alt=?, descripcion=?, generos=?, tipo=?, estado=?, es_adulto=?, scan_id=?, fecha_actualizacion=datetime('now') WHERE id=?`
-          ).bind(titulo, titulo_alt||null, descripcion||null, JSON.stringify(generos||[]), tipo||'manga', estado||'en_curso', es_adulto ? 1 : 0, finalScanId, editManga[1]).run();
+            `UPDATE mangas SET titulo=?, titulo_alt=?, descripcion=?, generos=?, tipo=?, estado=?, es_adulto=?, scan_id=?, joint_scan_id=?, joint_status=?, fecha_actualizacion=datetime('now') WHERE id=?`
+          ).bind(titulo, titulo_alt||null, descripcion||null, JSON.stringify(generos||[]), tipo||'manga', estado||'en_curso', es_adulto ? 1 : 0, finalScanId, joint_scan_id || null, newJointStatus, editManga[1]).run();
         }
+
+        if (joint_scan_id && joint_scan_id !== current.joint_scan_id) {
+          const scanInvited = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(joint_scan_id).first();
+          if (scanInvited?.webhook_discord) {
+            env.waitUntil(fetch(scanInvited.webhook_discord, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: buildDiscordBody(scanInvited.discord_template, {
+                manga: titulo, capitulo: '', titulo: ' (Invitación a Joint pendiente)', url: `${env.FRONTEND_URL}/admin`
+              })
+            }).catch(e => console.error('Discord webhook error:', e)));
+          }
+        }
+
         return json({ message: 'Manga actualizado' });
+      }
+
+      // ── GET /api/admin/joints/pending ──────────────────────
+      if (pathname === '/api/admin/joints/pending' && method === 'GET') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('No autorizado', 401);
+        const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id=?').bind(admin.id).first();
+        if (!dbU?.scan_id) return err('No tienes un scan asignado', 403);
+
+        const requests = await env.DB.prepare(
+          `SELECT m.id, m.titulo, m.joint_status, m.scan_id, s.nombre as scan_nombre
+           FROM mangas m
+           LEFT JOIN scans s ON m.scan_id = s.id
+           WHERE m.joint_scan_id = ? AND m.joint_status = 'pendiente'`
+        ).bind(dbU.scan_id).all();
+        return json(requests.results);
+      }
+
+      // ── PUT /api/admin/joints/:manga_id/action ────────────
+      const actionJoint = pathname.match(/^\/api\/admin\/joints\/([^/]+)\/action$/);
+      if (actionJoint && method === 'PUT') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('No autorizado', 401);
+        const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id=?').bind(admin.id).first();
+        if (!dbU?.scan_id) return err('No tienes un scan asignado', 403);
+
+        const { action } = await request.json(); // 'aprobado' or 'rechazado'
+        if (action !== 'aprobado' && action !== 'rechazado') return err('Acción inválida', 400);
+
+        const current = await env.DB.prepare('SELECT joint_scan_id FROM mangas WHERE id=?').bind(actionJoint[1]).first();
+        if (!current) return err('Manga no encontrado', 404);
+        if (current.joint_scan_id !== dbU.scan_id) return err('No tienes permiso para aprobar este joint', 403);
+
+        if (action === 'rechazado') {
+           await env.DB.prepare(`UPDATE mangas SET joint_scan_id = NULL, joint_status = 'aprobado' WHERE id = ?`).bind(actionJoint[1]).run();
+        } else {
+           await env.DB.prepare(`UPDATE mangas SET joint_status = 'aprobado' WHERE id = ?`).bind(actionJoint[1]).run();
+        }
+        return json({ message: `Joint ${action}` });
       }
 
       // ── PUT /api/admin/users/:id/reset-password ──────────
@@ -1427,17 +1501,17 @@ export default {
         if (!user) return err('No autorizado', 401);
 
         const cap = await env.DB.prepare(
-          'SELECT c.*, m.scan_id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?'
+          'SELECT c.*, m.scan_id, m.joint_scan_id, m.joint_status FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?'
         ).bind(editCap[1]).first();
         if (!cap) return err('Capítulo no encontrado', 404);
 
         // Solo el uploader del cap, su admin_scan o superadmin pueden editar
         const isOwner    = cap.uploader_id === user.id;
         const isAdminOf  = user.is_superadmin || user.rol === 'admin' ||
-                           (user.rol === 'admin_scan' && (user.scan_id === cap.scan_id || user.scan_id === cap.joint_scan_id));
+                           (user.rol === 'admin_scan' && (user.scan_id === cap.scan_id || (user.scan_id === cap.joint_scan_id && cap.joint_status === 'aprobado')));
         if (!isOwner && !isAdminOf) return err('Sin permisos', 403);
 
-        const { numero, titulo, fecha_publicacion, joint_scan_id } = await request.json();
+        const { numero, titulo, fecha_publicacion } = await request.json();
 
         // Si cambia el número, verificar que no duplique
         if (numero !== undefined && numero !== cap.numero) {
@@ -1448,12 +1522,11 @@ export default {
         }
 
         await env.DB.prepare(
-          `UPDATE capitulos SET numero = ?, titulo = ?, fecha_publicacion = ?, joint_scan_id = ? WHERE id = ?`
+          `UPDATE capitulos SET numero = ?, titulo = ?, fecha_publicacion = ? WHERE id = ?`
         ).bind(
           numero ?? cap.numero,
           titulo !== undefined ? (titulo || null) : cap.titulo,
           fecha_publicacion !== undefined ? (fecha_publicacion || null) : cap.fecha_publicacion,
-          joint_scan_id !== undefined ? (joint_scan_id || null) : cap.joint_scan_id,
           editCap[1]
         ).run();
 
@@ -1468,9 +1541,11 @@ export default {
 
         // admin_scan solo puede eliminar mangas de su propio scan
         if (isScanAdmin(admin)) {
-          const manga = await env.DB.prepare('SELECT scan_id FROM mangas WHERE id=?').bind(deleteManga[1]).first();
+          const manga = await env.DB.prepare('SELECT scan_id, joint_scan_id, joint_status FROM mangas WHERE id=?').bind(deleteManga[1]).first();
           if (!manga) return err('Manga no encontrado', 404);
-          if (manga.scan_id !== admin.scan_id) return err('No tenés permiso para eliminar este manga', 403);
+          if (manga.scan_id !== admin.scan_id && !(manga.joint_scan_id === admin.scan_id && manga.joint_status === 'aprobado')) {
+            return err('No tenés permiso para eliminar este manga', 403);
+          }
         }
 
         await env.DB.prepare('DELETE FROM paginas WHERE capitulo_id IN (SELECT id FROM capitulos WHERE manga_id = ?)').bind(deleteManga[1]).run();
@@ -1485,10 +1560,10 @@ export default {
         const admin = await requireAdmin(request, env);
         if (!admin) return err('Sin permisos', 403);
 
-        // admin_scan solo puede borrar caps de su propio scan
+        // admin_scan solo puede borrar caps de su propio scan o joint
         if (isScanAdmin(admin) && admin.scan_id) {
           const cap = await env.DB.prepare(
-            `SELECT c.id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ? AND (m.scan_id = ? OR c.joint_scan_id = ?)`
+            `SELECT c.id FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ? AND (m.scan_id = ? OR (m.joint_scan_id = ? AND m.joint_status = 'aprobado'))`
           ).bind(deleteCap[1], admin.scan_id, admin.scan_id).first();
           if (!cap) return err('No tenés permiso para eliminar este capítulo', 403);
         }
