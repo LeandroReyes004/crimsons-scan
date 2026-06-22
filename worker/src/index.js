@@ -1168,7 +1168,7 @@ export default {
 
         // Primero obtener info básica (sin webhook_discord, para no fallar si la columna no existe)
         const capForWh = await env.DB.prepare(
-          `SELECT c.numero, c.titulo, c.manga_id, m.titulo as manga_titulo, m.scan_id
+          `SELECT c.id, c.numero, c.titulo, c.manga_id, m.titulo as manga_titulo, m.scan_id
            FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?`
         ).bind(publishCap[1]).first();
 
