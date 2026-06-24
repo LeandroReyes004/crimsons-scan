@@ -287,6 +287,26 @@ function contentType(key) {
 // ============================================================
 //  ROUTER PRINCIPAL
 // ============================================================
+// ── Fail2Ban / IP Banning ──────────────────────────────────
+async function checkIpBan(ip, env) {
+  if (!ip || !env.KV) return false;
+  const banned = await env.KV.get(`banned_ip:${ip}`);
+  return banned !== null;
+}
+
+async function recordViolation(ip, env) {
+  if (!ip || !env.KV) return;
+  const key = `violation:${ip}`;
+  let count = parseInt(await env.KV.get(key) || '0');
+  count++;
+  if (count >= 5) {
+    await env.KV.put(`banned_ip:${ip}`, 'true', { expirationTtl: 86400 }); // Ban 24h
+    await env.KV.delete(key);
+  } else {
+    await env.KV.put(key, count.toString(), { expirationTtl: 300 }); // Ventana de 5 min
+  }
+}
+
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
@@ -342,6 +362,14 @@ export default {
   },
 
   async fetch(request, env, ctx) {
+    const clientIp = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
+    if (await checkIpBan(clientIp, env)) {
+      return new Response(JSON.stringify({ error: 'Acceso denegado por seguridad (IP Bloqueada)' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json', ...makeCORS(request.headers.get('Origin') || '') }
+      });
+    }
+
     const { pathname } = new URL(request.url);
     const method = request.method;
 
@@ -837,6 +865,7 @@ export default {
           const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
           const ua = request.headers.get('user-agent') || '';
           try {
+            await recordViolation(ip, env);
             await env.DB.prepare('INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)')
               .bind(logId, 'robo_imagenes', ip, ua, `Intento de acceso a la lista de páginas desde un bot o script.\nOrigen: ${originHeader || 'Ninguno/Bot'}`).run();
           } catch(e) {}
@@ -1047,6 +1076,7 @@ export default {
 
             await sendAlertEmail('leandro.elias1025@gmail.com', '🚨 Intento de robo de imagen bloqueado', `Se bloqueó un intento de acceso sin token válido a la imagen del manga "${mangaName}", capítulo ${capNum}, página ${pageOrder}.\nIP: ${ip}\nUser-Agent: ${ua}`, env.RESEND_API_KEY, env.RESEND_FROM);
           } catch(e) {}
+          await recordViolation(ip, env);
           return err('Acceso denegado', 403);
         }
 
