@@ -3,7 +3,7 @@
 import { useEffect, useState, useMemo, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Search, BookOpen, Eye, Filter, X, ChevronLeft, ShieldAlert } from 'lucide-react';
+import { Search, BookOpen, FileText, Eye, Filter, X, ChevronLeft, ShieldAlert } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 import AdPopUnder from '@/components/AdPopUnder';
 
@@ -114,7 +114,7 @@ function CatalogoContent() {
                 "Catálogo"
               )}
             </h1>
-            <p className="text-gray-500 text-sm mt-1">{filtered.length} obras disponibles</p>
+            <p className="text-gray-500 text-sm mt-1">{filtered.length} proyectos disponibles</p>
           </div>
 
           <div className="flex items-center gap-3 w-full md:max-w-md">
@@ -192,7 +192,7 @@ function CatalogoContent() {
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center py-20 text-gray-400">
             <BookOpen size={48} className="mb-4 opacity-20"/>
-            <p className="font-medium text-lg">No se encontraron obras</p>
+            <p className="font-medium text-lg">No se encontraron proyectos</p>
             <p className="text-sm mt-1">Probá con otros filtros o términos de búsqueda</p>
             {hasFilters && (
               <button onClick={clearFilters} className="mt-4 text-rose-500 hover:underline text-sm">
@@ -215,7 +215,7 @@ function CatalogoContent() {
                       <img src={`${API}/api/cover/${m.id}`} alt={m.titulo} loading="lazy" decoding="async" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"/>
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-600">
-                        <BookOpen size={32}/>
+                        {m.tipo === 'novela' ? <FileText size={32}/> : <BookOpen size={32}/>}
                       </div>
                     )}
                     <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"/>

@@ -22,7 +22,7 @@ function MangaRow({ title, icon, mangas, buildCard, viewAllHref }: {
         <div className="flex items-center gap-2 flex-1">
           {icon}
           <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
-          <span className="text-xs text-gray-400 font-medium">{mangas.length} obras</span>
+          <span className="text-xs text-gray-400 font-medium">{mangas.length} proyectos</span>
         </div>
         <div className="flex items-center gap-2">
           {viewAllHref && (
@@ -349,7 +349,7 @@ export default function Home() {
             <div className="flex items-center gap-3 border-b border-gray-200 dark:border-white/5 pb-4">
               <Heart size={24} className="text-rose-500" fill="currentColor"/>
               <h3 className="text-2xl font-bold">Mis Favoritos</h3>
-              <span className="text-sm text-gray-400 ml-auto">{favMangas.length} obras</span>
+              <span className="text-sm text-gray-400 ml-auto">{favMangas.length} proyectos</span>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
               {favMangas.map((m, i) => buildCard(m, i))}
@@ -385,7 +385,7 @@ export default function Home() {
             {/* DEL SCAN */}
             {delScan.length > 0 && (
               <MangaRow
-                title="Obras de Crimson Scan"
+                title="Proyectos de Crimson Scan"
                 icon={<Sword size={20} className="text-orange-400"/>}
                 mangas={delScan}
                 buildCard={buildCard}
