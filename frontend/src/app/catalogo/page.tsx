@@ -46,7 +46,7 @@ function CatalogoContent() {
   const [selectedGenre, setGenre]     = useState('');
   const [selectedTipo, setTipo]       = useState('');
   const [selectedEstado, setEstado]   = useState('');
-  const [selectedEstado, setEstado]   = useState('');
+
 
   useEffect(() => {
     setLoading(true);
