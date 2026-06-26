@@ -543,6 +543,7 @@ function SectionMangas() {
   const { data, loading, refetch } = useAPI<{ mangas: Manga[] }>('/api/mangas?admin=1');
   const { data: pendingJointsData, refetch: refetchJoints } = useAPI<any[]>('/api/admin/joints/pending');
   const [showCreate, setShowCreate] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [editingManga, setEditing]  = useState<Manga | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filterType, setFilterType] = useState<string>('Todos');
@@ -754,13 +755,23 @@ function SectionMangas() {
         )}
       </div>
 
-      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
-        {['Todos', 'Manga', 'Manhwa', 'Manhua', 'Novela'].map(t => (
-          <button key={t} onClick={() => setFilterType(t)}
-            className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all ${filterType === t ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20' : 'bg-white dark:bg-white/5 text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/10'}`}>
-            {t}
+      <div className="flex items-center justify-between gap-4 mb-2 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-2">
+          {['Todos', 'Manga', 'Manhwa', 'Manhua', 'Novela'].map(t => (
+            <button key={t} onClick={() => setFilterType(t)}
+              className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all ${filterType === t ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20' : 'bg-white dark:bg-white/5 text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/10'}`}>
+              {t}
+            </button>
+          ))}
+        </div>
+        <div className="flex bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-lg overflow-hidden shrink-0">
+          <button onClick={() => setViewMode('list')} className={`px-3 py-2 transition-colors ${viewMode === 'list' ? 'bg-rose-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}>
+            <LayoutDashboard size={16} />
           </button>
-        ))}
+          <button onClick={() => setViewMode('grid')} className={`px-3 py-2 transition-colors ${viewMode === 'grid' ? 'bg-rose-600 text-white' : 'text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5'}`}>
+            <Layers size={16} />
+          </button>
+        </div>
       </div>
 
       {showCreate && !editingManga && (
@@ -774,7 +785,7 @@ function SectionMangas() {
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
       ) : (
-        <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
+        <div className={`${viewMode === 'list' ? 'bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden' : 'grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'}`}>
           {(!data?.mangas || data.mangas.length === 0) && (
             <div className="flex flex-col items-center py-16 text-gray-400">
               <BookOpen size={40} className="mb-3 opacity-30"/>
