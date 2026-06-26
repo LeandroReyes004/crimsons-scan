@@ -188,6 +188,7 @@ export default function UploaderPage() {
     try {
       const JSZip = (await import('jszip')).default;
       const zip   = await JSZip.loadAsync(file);
+      const folderMap: Record<string, File[]> = {};
 
       const isNovela = selectedManga?.tipo === 'novela';
       const fileExts = isNovela ? /\.(txt)$/i : /\.(jpe?g|png|webp)$/i;
@@ -356,7 +357,8 @@ export default function UploaderPage() {
   const handleAddPages = async (files: FileList | null) => {
     if (!files || !editingCap) return;
     setAddingPages(true);
-    const arr = Array.from(files).filter(f => ALLOWED_TYPES.includes(f.type));
+    const allowed = selectedManga?.tipo === 'novela' ? ALLOWED_TYPES_TXT : ALLOWED_TYPES_IMG;
+    const arr = Array.from(files).filter(f => allowed.includes(f.type));
     const startOrden = editPages.length + 1;
     for (let i = 0; i < arr.length; i++) {
       const file = convertWebP ? await toWebP(arr[i]) : arr[i];
