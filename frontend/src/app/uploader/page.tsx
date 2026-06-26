@@ -224,7 +224,9 @@ export default function UploaderPage() {
       await Promise.all(promises);
 
       if (Object.keys(folderMap).length === 0) {
-        setBatchError('No se encontraron imágenes. Verificá que el ZIP tenga carpetas por capítulo (ej: cap-01/001.jpg, cap-02/001.jpg).');
+        setBatchError(isNovela
+          ? 'No se encontraron archivos de texto (.txt). Verificá que el ZIP contenga los archivos.'
+          : 'No se encontraron imágenes. Verificá que el ZIP tenga carpetas por capítulo (ej: cap-01/001.jpg, cap-02/001.jpg).');
         return;
       }
 
@@ -576,26 +578,28 @@ export default function UploaderPage() {
                   </div>
                 </div>
 
-                {/* Aviso conversión WebP */}
-                <div className={`rounded-2xl border px-4 py-3 flex items-start gap-3 ${convertWebP ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20' : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'}`}>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-xs font-bold mb-0.5 ${convertWebP ? 'text-blue-700 dark:text-blue-400' : 'text-gray-500'}`}>
-                      {convertWebP ? '🔄 Conversión a WebP activada' : '📁 Sin conversión'}
-                    </p>
-                    <p className={`text-xs leading-relaxed ${convertWebP ? 'text-blue-600 dark:text-blue-300' : 'text-gray-400'}`}>
-                      {convertWebP
-                        ? 'Los JPG/PNG se convertirán a WebP antes de subirse. Pesan hasta un 50% menos sin perder calidad visible.'
-                        : 'Las imágenes se subirán en su formato original sin modificar.'}
-                    </p>
+                {/* Aviso conversión WebP (oculto si es novela) */}
+                {selectedManga.tipo !== 'novela' && (
+                  <div className={`rounded-2xl border px-4 py-3 flex items-start gap-3 ${convertWebP ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20' : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'}`}>
+                    <div className="flex-1 min-w-0">
+                      <p className={`text-xs font-bold mb-0.5 ${convertWebP ? 'text-blue-700 dark:text-blue-400' : 'text-gray-500'}`}>
+                        {convertWebP ? '🔄 Conversión a WebP activada' : '📁 Sin conversión'}
+                      </p>
+                      <p className={`text-xs leading-relaxed ${convertWebP ? 'text-blue-600 dark:text-blue-300' : 'text-gray-400'}`}>
+                        {convertWebP
+                          ? 'Los JPG/PNG se convertirán a WebP antes de subirse. Pesan hasta un 50% menos sin perder calidad visible.'
+                          : 'Las imágenes se subirán en su formato original sin modificar.'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setConvertWebP(v => !v)}
+                      className={`shrink-0 w-11 h-6 rounded-full transition-colors duration-200 relative ${convertWebP ? 'bg-blue-500' : 'bg-gray-300 dark:bg-white/20'}`}
+                    >
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${convertWebP ? 'translate-x-5' : 'translate-x-0'}`}/>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setConvertWebP(v => !v)}
-                    className={`shrink-0 w-11 h-6 rounded-full transition-colors duration-200 relative ${convertWebP ? 'bg-blue-500' : 'bg-gray-300 dark:bg-white/20'}`}
-                  >
-                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${convertWebP ? 'translate-x-5' : 'translate-x-0'}`}/>
-                  </button>
-                </div>
+                )}
 
                 <div className={`rounded-2xl border px-4 py-3 flex items-start gap-3 ${notifyDiscord ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20' : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'}`}>
                   <div className="flex-1 min-w-0">
@@ -718,31 +722,46 @@ export default function UploaderPage() {
                 <div className="bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-2xl p-4">
                   <p className="text-sm font-bold text-blue-700 dark:text-blue-400 mb-1 flex items-center gap-2"><FileArchive size={16}/> Formato del ZIP</p>
                   <p className="text-xs text-blue-600 dark:text-blue-300">
-                    Cada carpeta dentro del ZIP = un capítulo. El número se detecta del nombre de la carpeta.
+                    {selectedManga.tipo === 'novela'
+                      ? 'Para novelas, los archivos .txt pueden estar en la raíz. El número de capítulo se detecta del nombre (ej: 01.txt, 1.5.txt).'
+                      : 'Cada carpeta dentro del ZIP = un capítulo. El número se detecta del nombre de la carpeta.'}
                   </p>
                   <div className="mt-2 text-xs text-blue-500 dark:text-blue-400 font-mono bg-blue-100 dark:bg-blue-500/10 rounded-lg px-3 py-2">
-                    archivo.zip/<br/>
-                    &nbsp;&nbsp;cap-01/ → 001.webp, 002.webp...<br/>
-                    &nbsp;&nbsp;cap-02/ → 001.webp, 002.webp...<br/>
-                    &nbsp;&nbsp;cap-03/ → 001.webp, 002.webp...
+                    {selectedManga.tipo === 'novela' ? (
+                      <>
+                        archivo.zip/<br/>
+                        &nbsp;&nbsp;cap-01.txt<br/>
+                        &nbsp;&nbsp;cap-02.txt<br/>
+                        &nbsp;&nbsp;cap-03.txt
+                      </>
+                    ) : (
+                      <>
+                        archivo.zip/<br/>
+                        &nbsp;&nbsp;cap-01/ → 001.webp, 002.webp...<br/>
+                        &nbsp;&nbsp;cap-02/ → 001.webp, 002.webp...<br/>
+                        &nbsp;&nbsp;cap-03/ → 001.webp, 002.webp...
+                      </>
+                    )}
                   </div>
                 </div>
 
-                {/* Toggle WebP batch */}
-                <div className={`rounded-2xl border px-4 py-3 flex items-center justify-between gap-3 ${convertWebP ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20' : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'}`}>
-                  <div>
-                    <p className={`text-xs font-bold mb-0.5 ${convertWebP ? 'text-blue-700 dark:text-blue-400' : 'text-gray-500'}`}>
-                      {convertWebP ? '🔄 Convertir imágenes a WebP' : '📁 Sin conversión'}
-                    </p>
-                    <p className={`text-xs ${convertWebP ? 'text-blue-600 dark:text-blue-300' : 'text-gray-400'}`}>
-                      {convertWebP ? 'Cada imagen del ZIP se convierte antes de subirse.' : 'Se suben los archivos originales del ZIP.'}
-                    </p>
+                {/* Toggle WebP batch (oculto si es novela) */}
+                {selectedManga.tipo !== 'novela' && (
+                  <div className={`rounded-2xl border px-4 py-3 flex items-center justify-between gap-3 ${convertWebP ? 'bg-blue-50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/20' : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'}`}>
+                    <div>
+                      <p className={`text-xs font-bold mb-0.5 ${convertWebP ? 'text-blue-700 dark:text-blue-400' : 'text-gray-500'}`}>
+                        {convertWebP ? '🔄 Convertir imágenes a WebP' : '📁 Sin conversión'}
+                      </p>
+                      <p className={`text-xs ${convertWebP ? 'text-blue-600 dark:text-blue-300' : 'text-gray-400'}`}>
+                        {convertWebP ? 'Cada imagen del ZIP se convierte antes de subirse.' : 'Se suben los archivos originales del ZIP.'}
+                      </p>
+                    </div>
+                    <button type="button" onClick={() => setConvertWebP(v => !v)}
+                      className={`shrink-0 w-11 h-6 rounded-full transition-colors duration-200 relative ${convertWebP ? 'bg-blue-500' : 'bg-gray-300 dark:bg-white/20'}`}>
+                      <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${convertWebP ? 'translate-x-5' : 'translate-x-0'}`}/>
+                    </button>
                   </div>
-                  <button type="button" onClick={() => setConvertWebP(v => !v)}
-                    className={`shrink-0 w-11 h-6 rounded-full transition-colors duration-200 relative ${convertWebP ? 'bg-blue-500' : 'bg-gray-300 dark:bg-white/20'}`}>
-                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${convertWebP ? 'translate-x-5' : 'translate-x-0'}`}/>
-                  </button>
-                </div>
+                )}
 
                 {/* Toggle Discord batch */}
                 <div className={`rounded-2xl border px-4 py-3 flex items-center justify-between gap-3 ${notifyDiscord ? 'bg-indigo-50 dark:bg-indigo-500/10 border-indigo-200 dark:border-indigo-500/20' : 'bg-gray-50 dark:bg-white/5 border-gray-200 dark:border-white/10'}`}>
@@ -813,7 +832,7 @@ export default function UploaderPage() {
 
                           {/* Info */}
                           <div className="flex-1 min-w-0">
-                            <p className="text-xs text-gray-400 truncate">{cap.folderName} · {cap.files.length} imágenes</p>
+                            <p className="text-xs text-gray-400 truncate">{cap.folderName} · {cap.files.length} {selectedManga.tipo === 'novela' ? 'archivos' : 'imágenes'}</p>
                             {cap.status === 'uploading' && (
                               <div className="mt-1.5">
                                 <div className="bg-gray-100 dark:bg-white/10 rounded-full h-1.5">
