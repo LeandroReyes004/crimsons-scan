@@ -873,7 +873,7 @@ export default {
         }
 
         const cap = await env.DB.prepare(
-          "SELECT c.*, m.es_adulto FROM capitulos c JOIN mangas m ON m.id = c.manga_id WHERE c.id = ? AND c.estado = 'publicado'"
+          "SELECT c.*, m.es_adulto, m.tipo as manga_tipo FROM capitulos c JOIN mangas m ON m.id = c.manga_id WHERE c.id = ? AND c.estado = 'publicado'"
         ).bind(chapterPages[1]).first();
         if (!cap) return err('Capítulo no encontrado o no publicado', 404);
 
@@ -920,6 +920,7 @@ export default {
           pages,
           capitulo: {
             id: cap.id, numero: cap.numero, titulo: cap.titulo, manga_id: cap.manga_id,
+            manga_tipo: cap.manga_tipo,
             es_adulto: !!cap.es_adulto,
             prev_chapter_id: prevCap?.id || null,
             next_chapter_id: nextCap?.id || null,
@@ -1096,6 +1097,44 @@ export default {
             'Content-Disposition':    'inline',
             'Cache-Control':          'public, max-age=3600',
             'X-Content-Type-Options': 'nosniff',
+            ...CORS,
+          },
+        });
+      }
+
+      // ── GET /api/chapters/:id/text ──────────────────────
+      const chapterText = pathname.match(/^\/api\/chapters\/([^/]+)\/text$/);
+      if (chapterText && method === 'GET') {
+        // Encontrar la "página" que guarda el .txt
+        const pag = await env.DB.prepare(
+          `SELECT p.r2_key FROM paginas p WHERE p.capitulo_id = ? ORDER BY p.orden ASC LIMIT 1`
+        ).bind(chapterText[1]).first();
+
+        if (!pag) return err('Texto del capítulo no encontrado', 404);
+
+        const object = await env.R2.get(pag.r2_key);
+        if (!object) return err('Archivo no encontrado en storage', 404);
+
+        // Registrar en el historial si el usuario está autenticado
+        const user = await getUser(request, env);
+        if (user) {
+          const cap = await env.DB.prepare("SELECT manga_id, id FROM capitulos WHERE id = ?").bind(chapterText[1]).first();
+          if (cap) {
+            const existeHistorial = await env.DB.prepare('SELECT 1 FROM historial_lectura WHERE usuario_id = ? AND manga_id = ?').bind(user.id, cap.manga_id).first();
+            if (existeHistorial) {
+              await env.DB.prepare('UPDATE historial_lectura SET capitulo_id = ?, leido_en = CURRENT_TIMESTAMP WHERE usuario_id = ? AND manga_id = ?')
+                .bind(cap.id, user.id, cap.manga_id).run();
+            } else {
+              await env.DB.prepare('INSERT INTO historial_lectura (usuario_id, manga_id, capitulo_id) VALUES (?, ?, ?)')
+                .bind(user.id, cap.manga_id, cap.id).run();
+            }
+          }
+        }
+
+        return new Response(object.body, {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Cache-Control': 'public, max-age=3600',
             ...CORS,
           },
         });
@@ -1369,6 +1408,52 @@ export default {
         await env.DB.prepare(
           'INSERT OR REPLACE INTO paginas (id, capitulo_id, numero, r2_key, scramble_map, orden) VALUES (?, ?, ?, ?, ?, ?)'
         ).bind(id, capitulo_id, numero, r2_key, JSON.stringify(scramble_map), numero).run();
+
+        return json({ pageId: id, r2_key }, 201);
+      }
+
+      // ── POST /api/upload/text ────────────────────────────
+      // Recibe un archivo .txt de novela, lo sube a R2, lo registra como página única
+      if (pathname === '/api/upload/text' && method === 'POST') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autorizado', 401);
+
+        const formData    = await request.formData();
+        const capitulo_id = formData.get('capitulo_id');
+        const numero      = parseInt(formData.get('numero'));
+        const file        = formData.get('text');
+
+        if (!capitulo_id || !numero || !file) return err('Faltan campos: capitulo_id, numero, text');
+
+        const cap = await env.DB.prepare(
+          'SELECT c.*, m.id as mid FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?'
+        ).bind(capitulo_id).first();
+
+        if (!cap) return err('El capítulo no existe o no tenés acceso', 404);
+        const isAdminUser = user.rol === 'admin' || user.is_superadmin;
+        if (cap.uploader_id !== user.id && !isAdminUser) {
+          return err('No tenés permiso para subir texto a este capítulo', 403);
+        }
+
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (ext !== 'txt') {
+          return err('Solo se permiten archivos TXT para novelas', 400);
+        }
+
+        const capNum = String(cap.numero).replace('.', '-').padStart(3, '0');
+        const r2_key = `scancrimson.com/chapters/${cap.manga_id}/cap-${capNum}/content.txt`;
+
+        await env.R2.put(r2_key, await file.arrayBuffer(), {
+          httpMetadata: { contentType: 'text/plain; charset=utf-8' },
+        });
+
+        const id = crypto.randomUUID();
+        // Borramos si ya había otro texto previo
+        await env.DB.prepare('DELETE FROM paginas WHERE capitulo_id = ?').bind(capitulo_id).run();
+
+        await env.DB.prepare(
+          'INSERT INTO paginas (id, capitulo_id, numero, r2_key, scramble_map, orden) VALUES (?, ?, ?, ?, ?, ?)'
+        ).bind(id, capitulo_id, 1, r2_key, '[]', 1).run();
 
         return json({ pageId: id, r2_key }, 201);
       }

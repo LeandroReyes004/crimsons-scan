@@ -104,17 +104,21 @@ export default function UploaderPage() {
     setView('chapters');
   }, []);
 
-  const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const ALLOWED_TYPES_IMG = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+  const ALLOWED_TYPES_TXT = ['text/plain'];
 
   const handleFiles = async (files: FileList | null) => {
-    if (!files) return;
+    if (!files || !selectedManga) return;
+    const isNovela = selectedManga.tipo === 'novela';
     const valid: PageFile[] = [];
     const rejected: string[] = [];
     for (const file of Array.from(files)) {
-      if (!ALLOWED_TYPES.includes(file.type)) { rejected.push(file.name); continue; }
+      if (!isNovela && !ALLOWED_TYPES_IMG.includes(file.type)) { rejected.push(file.name); continue; }
+      if (isNovela && !file.name.toLowerCase().endsWith('.txt') && file.type !== 'text/plain') { rejected.push(file.name); continue; }
       if (file.size > 10 * 1024 * 1024) { rejected.push(`${file.name} (supera 10MB)`); continue; }
-      const final = convertWebP ? await toWebP(file) : file;
-      valid.push({ file: final, preview: URL.createObjectURL(final), order: pages.length + valid.length + 1, status: 'pending' });
+      
+      const final = (!isNovela && convertWebP) ? await toWebP(file) : file;
+      valid.push({ file: final, preview: isNovela ? '' : URL.createObjectURL(final as File), order: pages.length + valid.length + 1, status: 'pending' });
     }
     if (rejected.length > 0) alert(`Archivos rechazados:\n${rejected.join('\n')}`);
     setPages(prev => [...prev, ...valid.map((p, i) => ({ ...p, order: prev.length + i + 1 }))]);
@@ -147,12 +151,17 @@ export default function UploaderPage() {
         const page = pages[i];
         if (page.status === 'done') continue;
         setPages(prev => prev.map((p, j) => j === i ? { ...p, status: 'uploading' } : p));
+        const isNovela = selectedManga.tipo === 'novela';
+        const endpoint = isNovela ? '/api/upload/text' : '/api/upload/page';
+        
         const fd = new FormData();
         fd.append('capitulo_id', currentCapId!);
         fd.append('numero', String(page.order));
-        fd.append('image', page.file);
+        if (isNovela) fd.append('text', page.file);
+        else fd.append('image', page.file);
+
         try {
-          const res = await fetch(`${API}/api/upload/page`, { method: 'POST', headers: authHeaders(), body: fd });
+          const res = await fetch(`${API}${endpoint}`, { method: 'POST', headers: authHeaders(), body: fd });
           const d   = await res.json();
           if (!res.ok) throw new Error(d.error || 'Error');
           setPages(prev => prev.map((p, j) => j === i ? { ...p, status: 'done' } : p));
@@ -180,9 +189,8 @@ export default function UploaderPage() {
       const JSZip = (await import('jszip')).default;
       const zip   = await JSZip.loadAsync(file);
 
-      // Agrupar archivos por carpeta
-      const folderMap: Record<string, File[]> = {};
-      const imageExts = /\.(jpe?g|png|webp)$/i;
+      const isNovela = selectedManga?.tipo === 'novela';
+      const fileExts = isNovela ? /\.(txt)$/i : /\.(jpe?g|png|webp)$/i;
 
       // Detectar si el ZIP tiene una carpeta raíz común (ej: manga-name/cap-01/...)
       const allPaths = Object.keys(zip.files).filter(p => !zip.files[p].dir);
@@ -192,18 +200,22 @@ export default function UploaderPage() {
       const rootOffset = allFolders.length > 0 && allFolders.every(p => p[0] === allFolders[0][0]) && allFolders[0].length > 2 ? 1 : 0;
 
       const promises = Object.entries(zip.files).map(async ([path, entry]) => {
-        if (entry.dir || !imageExts.test(path)) return;
+        if (entry.dir || !fileExts.test(path)) return;
         const parts   = path.split('/');
         const fname   = parts[parts.length - 1];
         // Ignorar archivos ocultos (macOS __MACOSX, .DS_Store)
         if (parts.some(p => p.startsWith('__MACOSX')) || fname.startsWith('.')) return;
 
-        const folderIndex = rootOffset;
-        const folder = parts.length > folderIndex + 1 ? parts[folderIndex] : '__root__';
+        let folder = parts.length > rootOffset + 1 ? parts[rootOffset] : '__root__';
+        
+        // Si es novela y el archivo está en la raíz, el nombre del archivo dicta el capítulo
+        if (isNovela && folder === '__root__') {
+            folder = fname.split('.')[0]; 
+        }
 
         const blob = await entry.async('blob');
         const ext  = fname.split('.').pop()!.toLowerCase();
-        const mime = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+        const mime = isNovela ? 'text/plain' : (ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg');
         const f    = new File([blob], fname, { type: mime });
         if (!folderMap[folder]) folderMap[folder] = [];
         folderMap[folder].push(f);
@@ -266,17 +278,23 @@ export default function UploaderPage() {
         const capId = d.capituloId;
         existingNums.add(num);
 
-        // Subir páginas
+        // Subir páginas / texto
+        const isNovela = selectedManga.tipo === 'novela';
+        const endpoint = isNovela ? '/api/upload/text' : '/api/upload/page';
+
         for (let pi = 0; pi < cap.files.length; pi++) {
-          const image = convertWebP ? await toWebP(cap.files[pi]) : cap.files[pi];
+          const fileToUpload = (!isNovela && convertWebP) ? await toWebP(cap.files[pi]) : cap.files[pi];
           const fd = new FormData();
           fd.append('capitulo_id', capId);
           fd.append('numero', String(pi + 1));
-          fd.append('image', image);
-          const pr = await fetch(`${API}/api/upload/page`, { method: 'POST', headers: authHeaders(), body: fd });
+          
+          if (isNovela) fd.append('text', fileToUpload);
+          else fd.append('image', fileToUpload);
+
+          const pr = await fetch(`${API}${endpoint}`, { method: 'POST', headers: authHeaders(), body: fd });
           if (!pr.ok) {
             const pe = await pr.json();
-            throw new Error(pe.error || 'Error al subir página');
+            throw new Error(pe.error || `Error al subir ${isNovela ? 'texto' : 'página'}`);
           }
           const progress = Math.round(((pi + 1) / cap.files.length) * 100);
           setBatchChapters(prev => prev.map((c, i) => i === ci ? { ...c, progress } : c));
@@ -599,7 +617,7 @@ export default function UploaderPage() {
 
                 <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4">
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">Páginas ({pages.length})</p>
+                    <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{selectedManga.tipo === 'novela' ? 'Archivo (.txt)' : 'Páginas'} ({pages.length})</p>
                     {pages.length > 0 && <button onClick={() => fileInputRef.current?.click()} className="text-xs text-rose-500 font-bold flex items-center gap-1"><Plus size={12}/> Agregar más</button>}
                   </div>
                   {pages.length === 0 && (
@@ -607,17 +625,21 @@ export default function UploaderPage() {
                       className="w-full border-2 border-dashed border-gray-200 dark:border-white/10 rounded-xl py-10 flex flex-col items-center gap-3 hover:border-rose-400 dark:hover:border-rose-500/50 active:scale-[0.98] transition-all">
                       <div className="w-14 h-14 bg-rose-50 dark:bg-rose-500/10 rounded-full flex items-center justify-center text-rose-500"><ImageIcon size={26}/></div>
                       <div className="text-center px-4">
-                        <p className="font-bold text-sm dark:text-white">Tocá para seleccionar imágenes</p>
-                        <p className="text-xs text-gray-400 mt-1">JPG, PNG o WebP · máx. 10MB</p>
+                        <p className="font-bold text-sm dark:text-white">Tocá para seleccionar {selectedManga.tipo === 'novela' ? 'archivo .txt' : 'imágenes'}</p>
+                        <p className="text-xs text-gray-400 mt-1">{selectedManga.tipo === 'novela' ? 'Solo formato .TXT' : 'JPG, PNG o WebP'} · máx. 10MB</p>
                       </div>
                     </button>
                   )}
-                  <input ref={fileInputRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden" onChange={e => handleFiles(e.target.files)}/>
+                  <input ref={fileInputRef} type="file" multiple accept={selectedManga.tipo === 'novela' ? '.txt' : 'image/jpeg,image/png,image/webp'} className="hidden" onChange={e => handleFiles(e.target.files)}/>
                   {pages.length > 0 && (
                     <div className="flex flex-col gap-2">
                       {pages.map((page, i) => (
                         <div key={i} className="flex items-center gap-2 bg-gray-50 dark:bg-black/20 rounded-xl px-3 py-2">
-                          <img src={page.preview} alt="" className="w-9 h-12 object-cover rounded-lg shrink-0"/>
+                          {selectedManga.tipo === 'novela' ? (
+                            <div className="w-9 h-12 bg-gray-200 dark:bg-white/10 rounded-lg flex items-center justify-center shrink-0 text-gray-500 font-bold text-[10px]">TXT</div>
+                          ) : (
+                            <img src={page.preview} alt="" className="w-9 h-12 object-cover rounded-lg shrink-0"/>
+                          )}
                           <div className="flex-1 min-w-0">
                             <p className="text-xs font-semibold dark:text-white">Pág. {String(page.order).padStart(3,'0')}</p>
                             <p className="text-[10px] text-gray-400 truncate">{page.file.name}</p>
@@ -650,7 +672,7 @@ export default function UploaderPage() {
                     <div className="bg-blue-100 dark:bg-blue-500/20 rounded-full h-2">
                       <div className="bg-blue-500 h-2 rounded-full transition-all duration-300" style={{ width: `${progress}%` }}/>
                     </div>
-                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1.5">{donePages} de {pages.length} páginas</p>
+                    <p className="text-xs text-blue-600 dark:text-blue-400 mt-1.5">{donePages} de {pages.length} {selectedManga.tipo === 'novela' ? 'archivos' : 'páginas'}</p>
                   </div>
                 )}
 

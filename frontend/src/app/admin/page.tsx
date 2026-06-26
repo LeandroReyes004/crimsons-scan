@@ -454,6 +454,7 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
               <option value="manga">Manga</option>
               <option value="manhwa">Manhwa</option>
               <option value="manhua">Manhua</option>
+              <option value="novela">Novela</option>
             </select>
           </div>
           <div className="flex flex-col gap-1.5">

@@ -46,7 +46,7 @@ function CatalogoContent() {
   const [selectedGenre, setGenre]     = useState('');
   const [selectedTipo, setTipo]       = useState('');
   const [selectedEstado, setEstado]   = useState('');
-  const [showFilters, setShowFilters] = useState(false);
+  const [selectedEstado, setEstado]   = useState('');
 
   useEffect(() => {
     setLoading(true);
@@ -117,14 +117,13 @@ function CatalogoContent() {
             <p className="text-gray-500 text-sm mt-1">{filtered.length} obras disponibles</p>
           </div>
 
-          <div className="flex items-center gap-2 w-full md:flex-1 md:max-w-md">
-            <div className="relative flex-1">
+            <div className="relative flex-1 max-w-md w-full">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
               <input
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Buscar por título..."
-                className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-white/5 border border-gray-200 dark:border-white/10 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"
+                className="w-full pl-9 pr-4 py-2.5 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-full text-sm dark:text-white focus:border-rose-500 outline-none transition shadow-sm"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
@@ -132,79 +131,57 @@ function CatalogoContent() {
                 </button>
               )}
             </div>
-            <button
-              onClick={() => setShowFilters(!showFilters)}
-              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold border transition ${
-                hasFilters
-                  ? 'bg-rose-600 text-white border-rose-600'
-                  : 'bg-white dark:bg-white/5 border-gray-200 dark:border-white/10 text-gray-600 dark:text-gray-400 hover:border-rose-400 hover:text-rose-500'
-              }`}
-            >
-              <Filter size={15}/> Filtros {hasFilters && `(${[selectedGenre, selectedTipo, selectedEstado].filter(Boolean).length})`}
-            </button>
+            {hasFilters && (
+              <button onClick={clearFilters} className="text-xs text-rose-500 font-semibold flex items-center gap-1 hover:underline">
+                <X size={14}/> Limpiar
+              </button>
+            )}
           </div>
         </div>
 
-        {/* Panel de filtros */}
-        {showFilters && (
-          <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl p-5 mb-6 animate-in slide-in-from-top-2 duration-200">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold dark:text-white text-sm">Filtros</h3>
-              {hasFilters && (
-                <button onClick={clearFilters} className="text-xs text-rose-500 hover:underline flex items-center gap-1">
-                  <X size={12}/> Limpiar filtros
-                </button>
-              )}
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-              {/* Tipo */}
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Tipo</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {['manga', 'manhwa', 'manhua'].map(t => (
-                    <button key={t} onClick={() => setTipo(selectedTipo === t ? '' : t)}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition border capitalize ${
-                        selectedTipo === t
-                          ? 'bg-rose-500 text-white border-rose-500'
-                          : 'text-gray-500 border-gray-200 dark:border-white/10 hover:border-rose-400 hover:text-rose-500'
-                      }`}>{t}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Estado */}
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Estado</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {['en_curso', 'completado', 'pausado'].map(e => (
-                    <button key={e} onClick={() => setEstado(selectedEstado === e ? '' : e)}
-                      className={`px-3 py-1 rounded-full text-xs font-semibold transition border ${
-                        selectedEstado === e
-                          ? 'bg-rose-500 text-white border-rose-500'
-                          : 'text-gray-500 border-gray-200 dark:border-white/10 hover:border-rose-400 hover:text-rose-500'
-                      }`}>{ESTADO_LABEL[e]}</button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Género */}
-              <div>
-                <p className="text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">Género</p>
-                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                  {genresList.map(g => (
-                    <button key={g} onClick={() => setGenre(selectedGenre === g ? '' : g)}
-                      className={`px-2.5 py-1 rounded-full text-xs font-semibold transition border ${
-                        selectedGenre === g
-                          ? 'bg-rose-500 text-white border-rose-500'
-                          : 'text-gray-500 border-gray-200 dark:border-white/10 hover:border-rose-400 hover:text-rose-500'
-                      }`}>{g}</button>
-                  ))}
-                </div>
-              </div>
-            </div>
+        {/* Filtros en formato Pill (scrolleables) */}
+        <div className="flex flex-col gap-3 mb-8">
+          {/* Tipo */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wide mr-2 shrink-0">Tipo</span>
+            {['manga', 'manhwa', 'manhua', 'novela'].map(t => (
+              <button key={t} onClick={() => setTipo(selectedTipo === t ? '' : t)}
+                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition border shrink-0 capitalize ${
+                  selectedTipo === t
+                    ? 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/20'
+                    : 'bg-white dark:bg-[#111114] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:border-rose-400 hover:text-rose-500'
+                }`}>{t}</button>
+            ))}
           </div>
-        )}
+
+          {/* Estado */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 hide-scrollbar">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wide mr-2 shrink-0">Estado</span>
+            {['en_curso', 'completado', 'pausado'].map(e => (
+              <button key={e} onClick={() => setEstado(selectedEstado === e ? '' : e)}
+                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition border shrink-0 ${
+                  selectedEstado === e
+                    ? 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/20'
+                    : 'bg-white dark:bg-[#111114] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:border-rose-400 hover:text-rose-500'
+                }`}>{ESTADO_LABEL[e]}</button>
+            ))}
+          </div>
+
+          {/* Géneros */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 hide-scrollbar">
+            <span className="text-xs font-bold text-gray-400 uppercase tracking-wide mr-2 shrink-0">Género</span>
+            {genresList.map(g => (
+              <button key={g} onClick={() => setGenre(selectedGenre === g ? '' : g)}
+                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition border shrink-0 ${
+                  selectedGenre === g
+                    ? 'bg-rose-500 text-white border-rose-500 shadow-md shadow-rose-500/20'
+                    : 'bg-white dark:bg-[#111114] text-gray-600 dark:text-gray-400 border-gray-200 dark:border-white/10 hover:border-rose-400 hover:text-rose-500'
+                }`}>{g}</button>
+            ))}
+          </div>
+        </div>
+
+
 
         {/* Grid de mangas */}
         {loading ? (
