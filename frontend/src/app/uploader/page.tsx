@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Upload, BookOpen, ChevronLeft, LogOut, Plus, Check, X, Loader2,
   AlertCircle, ImageIcon, Clock, CheckCircle, XCircle, Trash2, ArrowUp, ArrowDown,
-  Package, FileArchive, Edit3,
+  Package, FileArchive, Edit3, FileText
 } from 'lucide-react';
 import { getUser, authHeaders, logout } from '@/lib/auth';
 import { toWebP } from '@/lib/webp';
@@ -935,7 +935,7 @@ export default function UploaderPage() {
                 {/* Info actual */}
                 <div className="bg-gray-50 dark:bg-white/5 rounded-xl px-4 py-3 flex flex-wrap gap-3 text-xs text-gray-500">
                   <span>Estado actual: <strong className="dark:text-white">{editingCap.estado}</strong></span>
-                  <span>Páginas: <strong className="dark:text-white">{editingCap.num_paginas ?? 0}</strong></span>
+                  <span>{selectedManga?.tipo === 'novela' ? 'Archivos:' : 'Páginas:'} <strong className="dark:text-white">{editingCap.num_paginas ?? 0}</strong></span>
                   <span>Subido: <strong className="dark:text-white">{new Date(editingCap.fecha_subida).toLocaleDateString('es')}</strong></span>
                 </div>
               </div>
@@ -950,43 +950,56 @@ export default function UploaderPage() {
             <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4">
               <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">
-                  Páginas ({editPages.length})
+                  {selectedManga?.tipo === 'novela' ? 'Archivos' : 'Páginas'} ({editPages.length})
                 </p>
                 <div className="flex items-center gap-3">
-                  <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                    <button type="button" onClick={() => setConvertWebP(v => !v)}
-                      className={`w-8 h-4 rounded-full transition-colors duration-200 relative shrink-0 ${convertWebP ? 'bg-blue-500' : 'bg-gray-300 dark:bg-white/20'}`}>
-                      <span className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${convertWebP ? 'translate-x-4' : 'translate-x-0'}`}/>
-                    </button>
-                    <span className={`text-[10px] font-bold ${convertWebP ? 'text-blue-500' : 'text-gray-400'}`}>WebP</span>
-                  </label>
+                  {selectedManga?.tipo !== 'novela' && (
+                    <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                      <button type="button" onClick={() => setConvertWebP(v => !v)}
+                        className={`w-8 h-4 rounded-full transition-colors duration-200 relative shrink-0 ${convertWebP ? 'bg-blue-500' : 'bg-gray-300 dark:bg-white/20'}`}>
+                        <span className={`absolute top-0.5 left-0.5 w-3 h-3 bg-white rounded-full shadow transition-transform duration-200 ${convertWebP ? 'translate-x-4' : 'translate-x-0'}`}/>
+                      </button>
+                      <span className={`text-[10px] font-bold ${convertWebP ? 'text-blue-500' : 'text-gray-400'}`}>WebP</span>
+                    </label>
+                  )}
                   {addingPages && <span className="text-xs text-blue-500 font-medium">{addProgress}%</span>}
                   <button onClick={() => editFileRef.current?.click()} disabled={addingPages}
                     className="flex items-center gap-1.5 text-xs font-bold text-rose-500 hover:text-rose-400 disabled:opacity-50 transition">
                     {addingPages ? <Loader2 size={13} className="animate-spin"/> : <Plus size={13}/>}
-                    {addingPages ? 'Agregando...' : 'Agregar páginas'}
+                    {addingPages ? 'Subiendo...' : selectedManga?.tipo === 'novela' ? 'Agregar texto' : 'Agregar páginas'}
                   </button>
                 </div>
               </div>
-              <input ref={editFileRef} type="file" multiple accept="image/jpeg,image/png,image/webp" className="hidden"
+              <input ref={editFileRef} type="file" multiple accept={selectedManga?.tipo === 'novela' ? ".txt,text/plain" : "image/jpeg,image/png,image/webp"} className="hidden"
                 onChange={e => handleAddPages(e.target.files)}/>
 
               {loadingPages ? (
                 <div className="flex justify-center py-6"><Loader2 size={24} className="animate-spin text-rose-500"/></div>
               ) : editPages.length === 0 ? (
                 <div className="flex flex-col items-center py-8 text-gray-400">
-                  <ImageIcon size={28} className="mb-2 opacity-30"/>
-                  <p className="text-sm">Sin páginas</p>
+                  {selectedManga?.tipo === 'novela' ? (
+                    <FileText size={28} className="mb-2 opacity-30"/>
+                  ) : (
+                    <ImageIcon size={28} className="mb-2 opacity-30"/>
+                  )}
+                  <p className="text-sm">{selectedManga?.tipo === 'novela' ? 'Sin archivo' : 'Sin páginas'}</p>
                 </div>
               ) : (
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {editPages.map(p => (
-                    <div key={p.id} className="relative rounded-xl overflow-hidden aspect-[3/4] bg-gray-100 dark:bg-white/5">
-                      <img
-                        src={p.image_url}
-                        alt={`Pág. ${p.orden}`}
-                        className="w-full h-full object-cover"
-                      />
+                    <div key={p.id} className="relative rounded-xl overflow-hidden aspect-[3/4] bg-gray-100 dark:bg-white/5 flex items-center justify-center">
+                      {selectedManga?.tipo === 'novela' ? (
+                        <div className="flex flex-col items-center justify-center text-gray-500 gap-2 p-4 text-center">
+                          <FileText size={32} className="opacity-50"/>
+                          <span className="text-[10px] truncate max-w-full">texto_{p.orden}.txt</span>
+                        </div>
+                      ) : (
+                        <img
+                          src={p.image_url}
+                          alt={`Pág. ${p.orden}`}
+                          className="w-full h-full object-cover"
+                        />
+                      )}
                       {/* Número siempre visible */}
                       <div className="absolute bottom-1 left-1 bg-black/70 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-md pointer-events-none">
                         {p.orden}
