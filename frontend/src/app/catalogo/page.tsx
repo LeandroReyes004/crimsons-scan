@@ -117,7 +117,8 @@ function CatalogoContent() {
             <p className="text-gray-500 text-sm mt-1">{filtered.length} obras disponibles</p>
           </div>
 
-            <div className="relative flex-1 max-w-md w-full">
+          <div className="flex items-center gap-3 w-full md:max-w-md">
+            <div className="relative flex-1 w-full">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
               <input
                 value={search}
@@ -132,7 +133,7 @@ function CatalogoContent() {
               )}
             </div>
             {hasFilters && (
-              <button onClick={clearFilters} className="text-xs text-rose-500 font-semibold flex items-center gap-1 hover:underline">
+              <button onClick={clearFilters} className="text-xs text-rose-500 font-semibold flex items-center gap-1 hover:underline shrink-0">
                 <X size={14}/> Limpiar
               </button>
             )}
