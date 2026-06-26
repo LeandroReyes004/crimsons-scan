@@ -1,0 +1,1 @@
+ALTER TABLE mangas ADD COLUMN es_novela INTEGER DEFAULT 0;

@@ -307,6 +307,8 @@ async function recordViolation(ip, env) {
   }
 }
 
+function applyNovelaType(m) { if (m && m.es_novela) m.tipo = 'novela'; return m; }
+
 export default {
   async scheduled(event, env, ctx) {
     ctx.waitUntil((async () => {
@@ -710,7 +712,7 @@ export default {
           ? await env.DB.prepare(query_scan).bind(callerScanId, callerScanId).all()
           : await env.DB.prepare(query_all).all();
 
-        return json({ mangas: results });
+        results.forEach(applyNovelaType); return json({ mangas: results });
       }
 
       // ── GET /api/mangas/adulto ────────────────────────────
@@ -727,7 +729,7 @@ export default {
           ORDER BY ultimo_cap_fecha DESC NULLS LAST, m.fecha_actualizacion DESC
         `).all();
 
-        return json({ mangas: results });
+        results.forEach(applyNovelaType); return json({ mangas: results });
       }
 
       // ── POST /api/mangas ─────────────────────────────────
@@ -755,12 +757,12 @@ export default {
         const id   = crypto.randomUUID();
         const slug = await uniqueSlug(titulo, 'mangas', env);
         await env.DB.prepare(
-          `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto, slug, joint_scan_id, joint_status)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+          `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto, slug, es_novela, joint_scan_id, joint_status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
         ).bind(
           id, titulo, titulo_alt || null, descripcion || null,
-          JSON.stringify(generos || []), tipo || 'manga',
-          estado || 'en_curso', caller.id, finalScanId, es_adulto ? 1 : 0, slug,
+          JSON.stringify(generos || []), tipo === 'novela' ? 'manga' : (tipo || 'manga'),
+          estado || 'en_curso', caller.id, finalScanId, es_adulto ? 1 : 0, slug, tipo === 'novela' ? 1 : 0,
           joint_scan_id || null, joint_scan_id ? 'pendiente' : 'aprobado'
         ).run();
 
@@ -821,7 +823,7 @@ export default {
           ).bind(manga.id).all();
         }
 
-        return json({ manga, capitulos: capitulosResult.results });
+        applyNovelaType(manga); return json({ manga, capitulos: capitulosResult.results });
       }
 
       // ── GET /api/scan-image/:scanId ──────────────────────
@@ -847,7 +849,7 @@ export default {
            FROM mangas m WHERE m.scan_id = ? OR (m.joint_scan_id = ? AND m.joint_status = 'aprobado')
            ORDER BY m.fecha_actualizacion DESC`
         ).bind(scan.id, scan.id).all();
-        return json({ scan, mangas: mangas || [] });
+        if(mangas) mangas.forEach(applyNovelaType); return json({ scan, mangas: mangas || [] });
       }
 
       // ── GET /api/chapters/:id/pages ──────────────────────
@@ -1047,7 +1049,7 @@ export default {
 
         const scanTotal    = mangasConCaps.reduce((s, m) => s + (m.views_total || 0), 0);
         const scanTotalMes = mangasConCaps.reduce((s, m) => s + (m.views_mes || 0), 0);
-        return json({ mangas: mangasConCaps, scan_total: scanTotal, scan_total_mes: scanTotalMes });
+        mangasConCaps.forEach(applyNovelaType); return json({ mangas: mangasConCaps, scan_total: scanTotal, scan_total_mes: scanTotalMes });
       }
 
       // ── GET /api/reader/:chapterId/:pageOrder ────────────
@@ -2011,7 +2013,7 @@ export default {
         ]);
 
         const totalViews = mangas.results.reduce((s, m) => s + (m.views_total || 0), 0);
-        return json({ scan, mangas: mangas.results, miembros: miembros.results, totalViews });
+        mangas.results.forEach(applyNovelaType); return json({ scan, mangas: mangas.results, miembros: miembros.results, totalViews });
       }
 
       // ── GET /api/admin/mangas/:id/chapters ───────────────

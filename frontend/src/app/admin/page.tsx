@@ -781,7 +781,11 @@ function SectionMangas() {
             <div key={m.id} className={i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}>
               <div className="flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-4 hover:bg-gray-50 dark:hover:bg-white/2 transition">
                 <div className="w-10 h-14 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0 flex items-center justify-center text-gray-300">
-                  <BookOpen size={16}/>
+                  {m.cover_r2_key ? (
+                    <img src={`${API}/api/cover/${m.id}`} alt={m.titulo} className="w-full h-full object-cover" />
+                  ) : (
+                    <BookOpen size={16}/>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="font-bold text-sm dark:text-white truncate">{m.titulo}</p>
