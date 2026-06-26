@@ -225,7 +225,7 @@ export default function AdminPage() {
         <nav className="flex-1 p-3 flex flex-col gap-1 mt-2">
           {([
             { id: 'dashboard', icon: <LayoutDashboard size={16}/>, label: 'Dashboard', show: true },
-            { id: 'mangas',    icon: <BookOpen size={16}/>,        label: 'Mangas',    show: true },
+            { id: 'mangas',    icon: <BookOpen size={16}/>,        label: 'Proyectos', show: true },
             { id: 'revision',  icon: <Clock size={16}/>,           label: 'Agenda',    show: true },
             { id: 'scans',     icon: <Layers size={16}/>,          label: 'Scans',     show: !!user.is_superadmin },
             { id: 'revenue',   icon: <BarChart2 size={16}/>,       label: 'Revenue',   show: !!user.is_superadmin || ((user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id) },
@@ -318,7 +318,7 @@ function SectionDashboard() {
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
       ) : (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard icon={<BookMarked size={20}/>}  label="Mangas"             value={data?.mangas ?? 0}     color="bg-blue-50 dark:bg-blue-500/10 text-blue-500"/>
+          <StatCard icon={<BookMarked size={20}/>}  label="Proyectos"          value={data?.mangas ?? 0}     color="bg-blue-50 dark:bg-blue-500/10 text-blue-500"/>
           <StatCard icon={<BookOpen size={20}/>}    label="Caps Publicados"    value={data?.capitulos ?? 0}   color="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500"/>
           <StatCard icon={<Users size={20}/>}       label="Scanners"           value={data?.scanners ?? 0}    color="bg-purple-50 dark:bg-purple-500/10 text-purple-500"/>
           <StatCard icon={<Clock size={20}/>}       label="Pendientes"         value={data?.pendientes ?? 0}  color="bg-amber-50 dark:bg-amber-500/10 text-amber-500"/>
@@ -328,7 +328,7 @@ function SectionDashboard() {
       {/* Últimos mangas */}
       <div>
         <h3 className="font-bold dark:text-white mb-4 flex items-center gap-2">
-          <TrendingUp size={16} className="text-rose-500"/> Mangas Recientes
+          <TrendingUp size={16} className="text-rose-500"/> Proyectos Recientes
         </h3>
         <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
           {manga_data?.mangas?.slice(0, 5).map((m, i) => (
@@ -345,7 +345,7 @@ function SectionDashboard() {
                 <Badge estado={m.estado}/>
               </div>
             </div>
-          )) ?? <p className="text-gray-400 text-sm p-5">No hay mangas aún.</p>}
+          )) ?? <p className="text-gray-400 text-sm p-5">No hay proyectos aún.</p>}
         </div>
       </div>
     </div>
@@ -540,6 +540,7 @@ function SectionMangas() {
   const [showCreate, setShowCreate] = useState(false);
   const [editingManga, setEditing]  = useState<Manga | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [filterType, setFilterType] = useState<string>('Todos');
   const [capsByManga, setCapsByManga] = useState<Record<string, MangaChapter[]>>({});
   const [loadingCaps, setLoadingCaps] = useState<string | null>(null);
   const [deletingCap, setDeletingCap] = useState<string | null>(null);
@@ -735,17 +736,26 @@ function SectionMangas() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold dark:text-white">Gestión de Mangas</h2>
+          <h2 className="text-2xl font-extrabold dark:text-white">Gestión de Proyectos</h2>
           <p className="text-gray-500 text-sm mt-1">{data?.mangas?.length ?? 0} obras en total</p>
         </div>
         {!isReadOnly && (
           <button onClick={() => { setShowCreate(!showCreate); setEditing(null); }}
-            className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-600/20">
+            className="flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-600/20">
             <Plus size={16}/> Nueva Obra
           </button>
         )}
+      </div>
+
+      <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
+        {['Todos', 'Manga', 'Manhwa', 'Manhua', 'Novela'].map(t => (
+          <button key={t} onClick={() => setFilterType(t)}
+            className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-bold transition-all ${filterType === t ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20' : 'bg-white dark:bg-white/5 text-gray-500 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/10'}`}>
+            {t}
+          </button>
+        ))}
       </div>
 
       {showCreate && !editingManga && (
@@ -760,14 +770,14 @@ function SectionMangas() {
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
       ) : (
         <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
-          {data?.mangas?.length === 0 && (
+          {(!data?.mangas || data.mangas.length === 0) && (
             <div className="flex flex-col items-center py-16 text-gray-400">
               <BookOpen size={40} className="mb-3 opacity-30"/>
-              <p className="font-medium">No hay mangas creados aún</p>
+              <p className="font-medium">No hay proyectos creados aún</p>
               <p className="text-sm">Hacé click en "Nueva Obra" para empezar</p>
             </div>
           )}
-          {data?.mangas?.map((m, i) => (
+          {data?.mangas?.filter(m => filterType === 'Todos' || m.tipo.toLowerCase() === filterType.toLowerCase()).map((m, i) => (
             <div key={m.id} className={i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}>
               <div className="flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-4 hover:bg-gray-50 dark:hover:bg-white/2 transition">
                 <div className="w-10 h-14 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0 flex items-center justify-center text-gray-300">
@@ -1908,9 +1918,9 @@ function SectionScans() {
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
       ) : (
-        <div className="flex flex-col gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {data?.scans?.length === 0 && (
-            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center py-16 text-gray-400">
+            <div className="col-span-full bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center py-16 text-gray-400">
               <Layers size={40} className="mb-3 opacity-30"/>
               <p className="font-medium">No hay scans registrados</p>
               {isSuperAdmin && <p className="text-sm">Hacé click en "Nuevo Scan" para empezar</p>}
@@ -1921,45 +1931,49 @@ function SectionScans() {
             const isExpanded = expandedId === scan.id;
             const isLoading = loadingId === scan.id;
             return (
-              <div key={scan.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
-                {/* Fila principal del scan */}
-                <div className="flex items-center gap-4 px-5 py-4">
-                  <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-violet-500/20 to-rose-500/20 flex items-center justify-center text-violet-500 shrink-0 text-lg font-black">
-                    {scan.nombre.charAt(0)}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold dark:text-white">{scan.nombre}</p>
-                    <p className="text-xs text-gray-400">{scan.descripcion || 'Sin descripción'}</p>
-                  </div>
-
-                  {/* Métricas rápidas */}
-                  <div className="hidden md:flex items-center gap-4 text-xs text-gray-500">
-                    <span className="flex items-center gap-1"><Users size={12}/> {scan.miembros} miembros</span>
-                    {det && (
-                      <>
-                        <span className="flex items-center gap-1"><BookOpen size={12}/> {det.mangas.length} obras</span>
-                        <span className="flex items-center gap-1"><Eye size={12}/> {det.totalViews.toLocaleString()} vistas</span>
-                      </>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0">
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${scan.activo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-gray-100 text-gray-500'}`}>
-                      {scan.activo ? 'Activo' : 'Inactivo'}
-                    </span>
-                    <button onClick={() => loadDetails(scan.id)} disabled={isLoading}
-                      className="flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-violet-100 dark:hover:bg-violet-500/10 hover:text-violet-600 transition">
-                      {isLoading ? <Loader2 size={12} className="animate-spin"/> : <ChevronRight size={12} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}/>}
-                      {isExpanded ? 'Cerrar' : 'Ver detalles'}
-                    </button>
+              <div key={scan.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden flex flex-col">
+                {/* Cabecera del scan (card) */}
+                <div className="flex flex-col gap-3 px-5 py-5">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/20 to-rose-500/20 flex items-center justify-center text-violet-500 shrink-0 text-xl font-black">
+                        {scan.nombre.charAt(0)}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-bold dark:text-white truncate">{scan.nombre}</p>
+                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${scan.activo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-gray-100 text-gray-500'}`}>
+                          {scan.activo ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </div>
+                    </div>
                     {isSuperAdmin && (
                       <button onClick={() => toggleActivo(scan)}
-                        className={`p-1.5 rounded-lg transition ${scan.activo ? 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'}`}>
-                        {scan.activo ? <Ban size={14}/> : <Check size={14}/>}
+                        className={`p-2 rounded-lg transition shrink-0 ${scan.activo ? 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'}`}>
+                        {scan.activo ? <Ban size={16}/> : <Check size={16}/>}
                       </button>
                     )}
                   </div>
+
+                  <p className="text-xs text-gray-400 line-clamp-2 min-h-[2rem] mt-1">{scan.descripcion || 'Sin descripción'}</p>
+
+                  <div className="flex items-center justify-between border-t border-gray-100 dark:border-white/5 pt-3 mt-2">
+                    <div className="flex items-center gap-3 text-[11px] text-gray-500 font-medium">
+                      <span className="flex items-center gap-1"><Users size={12}/> {scan.miembros} miem.</span>
+                      {det && (
+                        <>
+                          <span className="flex items-center gap-1"><BookOpen size={12}/> {det.mangas.length} proy.</span>
+                          <span className="flex items-center gap-1"><Eye size={12}/> {det.totalViews >= 1000 ? (det.totalViews/1000).toFixed(1)+'k' : det.totalViews} vis.</span>
+                        </>
+                      )}
+                    </div>
+                    <button onClick={() => loadDetails(scan.id)} disabled={isLoading}
+                      className="flex items-center gap-1 text-[11px] font-bold text-violet-500 hover:text-violet-400 transition">
+                      {isLoading ? <Loader2 size={12} className="animate-spin"/> : isExpanded ? 'Ocultar' : 'Detalles'}
+                      <ChevronRight size={12} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}/>
+                    </button>
+                  </div>
                 </div>
+
 
                 {/* Panel de detalles expandido */}
                 {isExpanded && det && (
