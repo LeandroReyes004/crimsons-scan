@@ -23,6 +23,9 @@ export interface CrimsonUser {
   is_superadmin?: boolean;
   scan_id?: string | null;
   scan_nombre?: string | null;
+  scan_contrato_firmado?: number;
+  scan_contrato_version?: number;
+  global_contrato_version?: number;
 }
 
 export async function login(username: string, password: string): Promise<CrimsonUser> {
@@ -85,6 +88,9 @@ export async function refreshUser(): Promise<CrimsonUser | null> {
       avatar_url: d.avatar_url || undefined,
       is_superadmin: !!d.is_superadmin,
       scan_id: d.scan_id ?? null,
+      scan_contrato_firmado: d.scan_contrato_firmado,
+      scan_contrato_version: d.scan_contrato_version,
+      global_contrato_version: d.global_contrato_version,
     };
     localStorage.setItem(USER_KEY, JSON.stringify(user));
     return user;

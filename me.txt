@@ -1,0 +1,28 @@
+if (pathname === '/api/auth/me' && method === 'GET') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autenticado', 401);
+        const profile = await env.DB.prepare(
+          `SELECT id, username, display_name, email, rol, avatar_url, color_acento, bio, fecha_registro, is_superadmin, scan_id,
+            (SELECT COUNT(*) FROM comentarios WHERE usuario_id = u.id) as total_comentarios
+           FROM usuarios u WHERE u.id = ?`
+        ).bind(user.id).first();
+        return json(profile);
+      }
+
+      // ── PUT /api/auth/me ──────────────────────────────────
+      if (pathname === '/api/auth/me' && method === 'PUT') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autenticado', 401);
+        const body = await request.json();
+
+        if ('display_name' in body) {
+          const displayName = (body.display_name?.trim() || '').slice(0, 50) || null;
+          await env.DB.prepare('UPDATE usuarios SET display_name = ? WHERE id = ?').bind(displayName, user.id).run();
+          return json({ message: 'Nombre público actualizado', display_name: displayName });
+        }
+
+        if ('username' in body) {
+          const newUsername = body.username?.trim();
+          if (!newUsername || newUsername.length < 3) return err('El nombre debe tener al menos 3 caracteres', 400);
+          if (newUsername.length > 30) return err('Máximo 30 caracteres', 400);
+          if (!/^[a-zA-Z0-9_\-\.]+$/.test(newUsername)) 

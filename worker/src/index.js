@@ -561,7 +561,15 @@ export default {
             (SELECT COUNT(*) FROM comentarios WHERE usuario_id = u.id) as total_comentarios
            FROM usuarios u WHERE u.id = ?`
         ).bind(user.id).first();
+        
+        if (profile && profile.scan_id) {
+          const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(profile.scan_id).first();
+          profile.scan_contrato_firmado = scanData ? scanData.contrato_firmado : 0;
+          profile.scan_contrato_version = scanData ? scanData.contrato_version : 0;
+          profile.global_contrato_version = parseInt(await env.KV.get('contrato_version') || '1', 10);
+        }
         return json(profile);
+
       }
 
       // ── PUT /api/auth/me ──────────────────────────────────
@@ -734,6 +742,15 @@ export default {
 
       // ── POST /api/mangas ─────────────────────────────────
       if (pathname === '/api/mangas' && method === 'POST') {
+
+          if (caller.rol !== 'superadmin' && caller.scan_id) {
+            const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
+            const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+              return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
+            }
+          }
+
         const tokenUser = await getUser(request, env);
         const caller = await checkActive(tokenUser, env);
         if (!caller || (!caller.is_superadmin && caller.rol !== 'admin' && caller.rol !== 'admin_scan' && caller.rol !== 'uploader')) {
@@ -859,7 +876,7 @@ export default {
         // Validación Anti-Robo de API
         const originHeader = request.headers.get('Origin') || request.headers.get('Referer') || '';
         const clientHeader = request.headers.get('x-crimson-client');
-        const isFromFrontend = originHeader.includes('scancrimson.com') || originHeader.includes('localhost');
+        const isFromFrontend = originHeader.includes('scancrimson.com') || originHeader.includes('localhost') || originHeader.includes('vercel.app');
         const isFromMobile = clientHeader === 'mobile-app';
         
         if (!isFromFrontend && !isFromMobile) {
@@ -1239,6 +1256,15 @@ export default {
 
       // ── POST /api/chapters ───────────────────────────────
       if (pathname === '/api/chapters' && method === 'POST') {
+
+          if (caller.rol !== 'superadmin' && caller.scan_id) {
+            const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
+            const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+              return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
+            }
+          }
+
         const user = await getUser(request, env);
         if (!user) return err('Necesitás iniciar sesión para continuar', 401);
 
@@ -1370,6 +1396,15 @@ export default {
       // ── POST /api/upload/page ────────────────────────────
       // Recibe UNA imagen, la sube a R2, la registra en D1
       if (pathname === '/api/upload/page' && method === 'POST') {
+
+          if (caller.rol !== 'superadmin' && caller.scan_id) {
+            const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
+            const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+              return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
+            }
+          }
+
         const user = await getUser(request, env);
         if (!user) return err('No autorizado', 401);
 
@@ -1417,6 +1452,15 @@ export default {
       // ── POST /api/upload/text ────────────────────────────
       // Recibe un archivo .txt de novela, lo sube a R2, lo registra como página única
       if (pathname === '/api/upload/text' && method === 'POST') {
+
+          if (caller.rol !== 'superadmin' && caller.scan_id) {
+            const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
+            const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+              return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
+            }
+          }
+
         const user = await getUser(request, env);
         if (!user) return err('No autorizado', 401);
 
@@ -1462,6 +1506,15 @@ export default {
 
       // ── POST /api/upload/cover ───────────────────────────
       if (pathname === '/api/upload/cover' && method === 'POST') {
+
+          if (caller.rol !== 'superadmin' && caller.scan_id) {
+            const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
+            const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+              return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
+            }
+          }
+
         const admin = await requireAdmin(request, env);
         if (!admin) return err('No autorizado', 401);
 

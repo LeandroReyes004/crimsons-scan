@@ -1,0 +1,44 @@
+export default function AdminPage() {
+  const router = useRouter();
+  const [section, setSection] = useState<Section>('dashboard');
+  const [user, setUser]           = useState<ReturnType<typeof getUser>>(null);
+  const [mounted, setMounted]     = useState(false);
+  const [loginUser, setLoginUser] = useState('');
+  const [loginPass, setLoginPass] = useState('');
+  const [loginErr, setLoginErr]   = useState('');
+  const [loginLoading, setLoginLoading] = useState(false);
+  const [sidebarOpen, setSidebarOpen]   = useState(false);
+
+  useEffect(() => {
+    const u = getUser();
+    setUser(u);
+    setMounted(true);
+  }, []);
+
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginLoading(true);
+    setLoginErr('');
+    try {
+      const { login } = await import('@/lib/auth');
+      const u = await login(loginUser, loginPass);
+      if (!u.is_superadmin && u.rol !== 'admin' && u.rol !== 'admin_scan' && u.rol !== 'soporte') {
+        logout(); setLoginErr('No tenés permisos de admin.'); return;
+      }
+      setUser(u);
+    } catch (err: any) {
+      setLoginErr(err.message);
+    } finally {
+      setLoginLoading(false);
+    }
+  };
+
+  const handleLogout = () => { logout(); setUser(null); };
+
+  if (!mounted) return (
+    <div className="min-h-screen bg-[#07070a] flex items-center justify-center">
+      <div className="w-8 h-8 border-4 border-rose-600 border-t-transparent rounded-full animate-spin"/>
+    </div>
+  );
+
+  // ── Pantalla de login si no ha

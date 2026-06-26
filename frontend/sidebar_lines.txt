@@ -1,0 +1,5 @@
+Line 100: const [sidebarOpen, setSidebarOpen]   = useState(false);
+Line 210: onClick={() => setSidebarOpen(false)}
+Line 214: {/* ── Sidebar ─────────────────────────────────────── */}
+Line 244: onClick={() => { setSection(item.id); setSidebarOpen(false); }}
+Line 274: onClick={() => setSidebarOpen(true)}

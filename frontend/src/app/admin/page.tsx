@@ -1,4 +1,5 @@
 'use client';
+import ContractModal from './components/ContractModal';
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
@@ -10,7 +11,7 @@ import {
   Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign, Search, MessageSquare,
   ArrowUp, ArrowDown, Save, Download
 } from 'lucide-react';
-import { getUser, getToken, authHeaders, logout } from '@/lib/auth';
+import { getUser, getToken, authHeaders, logout, refreshUser } from '@/lib/auth';
 import { toWebP } from '@/lib/webp';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
@@ -99,9 +100,10 @@ export default function AdminPage() {
   const [sidebarOpen, setSidebarOpen]   = useState(false);
 
   useEffect(() => {
-    const u = getUser();
-    setUser(u);
-    setMounted(true);
+    refreshUser().then(refreshed => {
+      setUser(refreshed || getUser());
+      setMounted(true);
+    });
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -195,8 +197,11 @@ export default function AdminPage() {
     </div>
   );
 
+    const needsContract = user && user.scan_id && !user.is_superadmin && (user.scan_contrato_version || 0) < (user.global_contrato_version || 1);
+
   return (
     <div className="h-screen overflow-hidden flex bg-gray-50 dark:bg-[#07070a] text-gray-900 dark:text-gray-100 font-sans">
+      {needsContract && <ContractModal scanId={user.scan_id!} onClose={() => {}} />}
 
       {/* ── Overlay mobile ──────────────────────────────── */}
       {sidebarOpen && (
@@ -1714,6 +1719,16 @@ function SectionRevenue() {
                     <p className="font-bold dark:text-white">{scan.nombre}</p>
                     <p className="text-xs text-gray-400">{scan.total_mangas} obras · {scan.total_capitulos} caps publicados</p>
                   </div>
+                    {user?.is_superadmin && scan.contrato_firmado === 1 && (
+                      <p className="text-xs text-emerald-400 mt-1 flex items-center gap-2">
+                        <ShieldCheck className="w-3 h-3" /> Firma: {scan.representante_nombre} | Binance: {scan.binance_pay_id}
+                      </p>
+                    )}
+                    {user?.is_superadmin && scan.contrato_firmado !== 1 && (
+                      <p className="text-xs text-rose-400 mt-1 flex items-center gap-2">
+                        <AlertCircle className="w-3 h-3" /> Contrato No Firmado
+                      </p>
+                    )}
                   <div className="hidden md:flex flex-col items-end gap-0.5 shrink-0">
                     <p className="text-xl font-black dark:text-white">{(scan.views_mes ?? 0).toLocaleString()} <span className="text-xs text-emerald-500 font-bold">mes</span></p>
                     <p className="text-xs text-gray-400 tabular-nums">{scan.total_views.toLocaleString()} histórico</p>
@@ -1823,6 +1838,35 @@ function SectionScans() {
   const { data, loading, refetch } = useAPI<{ scans: Scan[] }>('/api/scans');
 
   const [showForm, setShowForm]       = useState(false);
+  const [showContractForm, setShowContractForm] = useState(false);
+  const [contractText, setContractText] = useState('');
+  const [contractSaving, setContractSaving] = useState(false);
+  const [contractMsg, setContractMsg] = useState<string | null>(null);
+
+  const loadContract = async () => {
+    try {
+      const res = await fetch(`${API}/api/config/contrato`);
+      const d = await res.json();
+      setContractText(d.texto || '');
+    } catch {}
+  };
+
+  const handleSaveContract = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setContractSaving(true);
+    setContractMsg(null);
+    try {
+      const res = await fetch(`${API}/api/admin/config/contrato`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ texto: contractText }),
+      });
+      if (res.ok) setContractMsg('Contrato actualizado y versin incrementada.');
+      else setContractMsg('Error al guardar el contrato.');
+    } catch {
+      setContractMsg('Error de red.');
+    } finally { setContractSaving(false); }
+  };
   const [nombre, setNombre]           = useState('');
   const [descripcion, setDesc]        = useState('');
   const [saving, setSaving]           = useState(false);
@@ -1878,12 +1922,44 @@ function SectionScans() {
           <p className="text-gray-500 text-sm mt-1">{data?.scans?.length ?? 0} scans registrados</p>
         </div>
         {isSuperAdmin && (
-          <button onClick={() => setShowForm(!showForm)}
-            className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-600/20">
-            <Plus size={16}/> Nuevo Scan
-          </button>
+          <div className="flex gap-3">
+            <button onClick={() => { setShowContractForm(!showContractForm); setShowForm(false); if (!showContractForm) loadContract(); }}
+              className="flex items-center gap-2 bg-[#1a1a24] hover:bg-[#252533] border border-white/10 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all">
+              <Edit3 size={16}/> Editar Contrato
+            </button>
+            <button onClick={() => { setShowForm(!showForm); setShowContractForm(false); }}
+              className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all shadow-lg shadow-rose-600/20">
+              <Plus size={16}/> Nuevo Scan
+            </button>
+          </div>
         )}
       </div>
+
+      {showContractForm && isSuperAdmin && (
+        <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl animate-in slide-in-from-top-2 duration-300">
+          <h3 className="font-bold dark:text-white mb-2 flex items-center gap-2"><Edit3 size={16} className="text-rose-500"/> Editar Contrato de Alianza</h3>
+          <p className="text-sm text-gray-500 mb-5">El texto se mostrar a los administradores de scan. Al guardar, se exigir que todos vuelvan a firmar.</p>
+          {contractMsg && (
+            <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${contractMsg.includes('Error') ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+              {contractMsg}
+            </div>
+          )}
+          <form onSubmit={handleSaveContract} className="flex flex-col gap-4">
+            <div>
+              <textarea 
+                value={contractText} onChange={e => setContractText(e.target.value)} required rows={15}
+                className="w-full bg-gray-50 dark:bg-[#07070a] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 dark:text-white focus:outline-none focus:border-rose-500 transition-colors resize-y font-mono text-sm"
+                placeholder="Escribe el contrato aqu..."
+              />
+            </div>
+            <div className="flex justify-end">
+              <button type="submit" disabled={contractSaving} className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-bold transition-all">
+                {contractSaving ? 'Guardando...' : 'Guardar Nueva Versin'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
 
       {showForm && isSuperAdmin && (
         <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl animate-in slide-in-from-top-2 duration-300">

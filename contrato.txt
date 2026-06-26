@@ -1,0 +1,157 @@
+-Win) para la publicación, centralización y monetización de obras gráficas 
+(mangas, manhwas, manhuas) en un entorno web de alto rendimiento, garantizando un 
+reparto justo basado en el esfuerzo de traducción y edición gráfica de cada grupo 
+aliado. 
+CLÁUSULA 2: OBLIGACIONES DE LA PLATAFORMA (SCAN CRIMSON) 
+La Plataforma se compromete a poner a disposición del Scan Aliado una infraestructura 
+tecnológica de nivel empresarial que incluye: 
+• Carga Ultra-Rápida (Edge Caching): Optimización global mediante la red 
+perimetral de Cloudflare y frontend alojado en Vercel. 
+• Protección de Recursos (Anti-Hotlinking): Bloqueo estricto a través de Web 
+Application Firewall (WAF) para impedir que sitios externos roben los enlaces de 
+las imágenes. 
+• Panel de Control (Dashboard): Acceso privado para gestionar obras, 
+automatizar la carga de capítulos y auditar métricas de visitas reales y 
+ganancias. 
+• Optimización Publicitaria: Gestión de redes de anuncios de alto CPM 
+orientadas al nicho de entretenimiento para maximizar los ingresos de ambas 
+partes. 
+CLÁUSULA 3: OBLIGACIONES DEL SCAN ALIADO 
+El Scan Aliado asume la responsabilidad completa sobre el ciclo de preparación del 
+material, comprometiéndose a: 
+• Calidad Editorial: Realizar las labores de traducción, corrección, limpieza y 
+edición gráfica (typesetting) manteniendo estándares óptimos de legibilidad y 
+fidelidad al material original. 
+• Etiquetado Obligatorio +18 (NSFW): Clasificar explícitamente desde el 
+Dashboard cualquier obra o capítulo con contenido para adultos (Smut, Hentai, 
+Gore). Si se sube este tipo de contenido en secciones SFW sin el etiquetado 
+correspondiente, se emitirá una advertencia para su corrección; en caso de ser 
+una falta recurrente, se tomarán medidas disciplinarias. 
+• Comportamiento Ético: Abstenerse de utilizar tráfico de bots, recargas 
+maliciosas o sistemas de intercambio de clics que distorsionen las métricas 
+reales. 
+• Comunicación Activa: Mantener comunicación fluida con la administración de 
+la Plataforma ante cualquier eventualidad que afecte la publicación regular. 
+CLÁUSULA 4: POLÍTICA DE EXCLUSIVIDAD, DUPLICIDAD Y ABANDONO 
+Para salvaguardar el orden del catálogo, evitar la competencia desleal y garantizar 
+actualizaciones constantes: 
+• No Duplicidad de Obras: No se permite que dos o más Scans Aliados 
+publiquen la misma obra simultáneamente. Se harán excepciones únicamente 
+en el caso de proyectos conjuntos (joints), siempre y cuando todos los grupos 
+implicados en la colaboración estén formalmente afiliados a Scan Crimson 
+y el joint haya sido previamente comunicado a la administración. El primer grupo 
+en registrar y publicar activamente una serie dentro de la Plataforma tendrá la 
+exclusividad absoluta sobre ella. 
+• Plazo Máximo de Inactividad: Si un Scan Aliado acumula un período de dos (2) 
+meses consecutivos sin publicar un nuevo capítulo de una obra regular, el 
+proyecto se considerará en estado de "Abandono". 
+• Excepción por Hiatus o Retrasos: Esta medida de abandono y reasignación 
+no aplicará si la obra original se encuentra en pausa oficial (hiatus) o si el autor 
+original tiene un ritmo de publicación irregular comprobable. 
+• Proceso de Reasignación: Tras cumplirse los dos (2) meses de inactividad, y 
+luego de emitir las advertencias previas correspondientes al grupo inactivo, la 
+Plataforma publicará un anuncio en el servidor oficial de Discord indicando que 
+la obra se encuentra libre. Cualquier otro Scan Aliado interesado podrá contactar 
+a la administración para proceder con la asignación oficial del proyecto. (Nota: 
+En caso de que el Scan que abandonó el proyecto acceda a ceder sus capítulos 
+previos, el nuevo grupo podrá continuar la obra desde ese punto; de lo contrario, 
+el nuevo grupo deberá publicar la obra desde el primer capítulo). 
+CLÁUSULA 5: MODELO DE DISTRIBUCIÓN DE INGRESOS 
+Los ingresos se calcularán basándose estrictamente en el tráfico individual generado 
+por cada grupo, garantizando una división exacta y transparente. El modelo de 
+distribución es el siguiente: 
+• Scan Aliado (75%): Por labores de traducción, corrección, limpieza, edición 
+gráfica y carga oportuna de capítulos. 
+• Scan Crimson (25%): Por mantenimiento de infraestructura cloud, 
+almacenamiento, optimización publicitaria y seguridad. 
+CLÁUSULA 6: TÉRMINOS Y CONDICIONES DE PAGO 
+• Frecuencia de Corte: Los cortes financieros cerrarán el último día de cada mes 
+calendario. 
+• Monto Mínimo de Retiro: El umbral mínimo acumulado es de $7.00 USD. Los 
+saldos menores se acumularán para el mes siguiente. 
+• Canal Oficial de Pago: Las transferencias se ejecutarán preferiblemente a 
+través de Binance Pay (USDT), garantizando disponibilidad inmediata y cero 
+comisiones de red para el Scan receptor. En caso de que el Scan requiera el 
+pago mediante otra plataforma (como PayPal o Airtm), se le descontará la 
+comisión correspondiente a dicha plataforma. 
+• Transparencia y Notificación: El Scan Aliado podrá verificar sus métricas de 
+vistas y ganancias en tiempo real desde su Dashboard privado. El día del pago, 
+se mostrará el total generado y se notificará, a través del canal de comunicación 
+correspondiente, el monto exacto que será transferido. 
+CLÁUSULA 7: POLÍTICA DE DERECHOS DE AUTOR (DMCA) Y ROBO DE 
+CONTENIDO 
+Para garantizar la supervivencia del sitio web y mantener un ecosistema ético, la 
+Plataforma aplica una política de Tolerancia Cero y estricto cumplimiento: 
+• Prohibición de Robo de Contenido: Queda terminantemente prohibido 
+publicar capítulos extraídos o robados (rippeados) de otros grupos de 
+traducción, ya sean internos o externos a Scan Crimson. 
+o Medidas Aplicables: Ante la detección de esta práctica, el capítulo o 
+proyecto infractor será dado de baja inmediatamente y se emitirá una (1) 
+sanción formal al Scan Aliado. La acumulación de dos (2) sanciones por 
+este motivo resultará en la expulsión definitiva del grupo de la Plataforma. 
+• Acción ante DMCA: Ante una alerta formal de derechos de autor por parte de 
+una editorial legal, el contenido será ocultado o eliminado de inmediato de los 
+servidores públicos para proteger la infraestructura del sitio. 
+o Protocolo de Acción: Se notificará de inmediato al Scan Aliado y el 
+proyecto pasará a estado de inactividad temporal (oculto). Una vez que el 
+riesgo legal haya disminuido, se evaluará la reactivación pública de la 
+obra. En caso de recibir una segunda notificación o alerta sobre el mismo 
+proyecto, su publicación quedará suspendida indefinidamente hasta 
+nuevo aviso. 
+• Penalización Máxima: Si un Scan Aliado sube material robado reiteradamente 
+o intenta resubir contenido que ya ha sido penalizado (ya sea por DMCA o por 
+robo), se procederá a la desafiliación inmediata y eliminación definitiva de su 
+cuenta, procediendo además a congelar y anular cualquier saldo pendiente 
+generado mediante dichas infracciones. 
+CLÁUSULA 8: POLÍTICA DE RETIRO Y ELIMINACIÓN DE CONTENIDO 
+Por motivos de seguridad y respeto al trabajo de cada equipo, si en algún momento el 
+Scan Aliado decide retirarse de la Plataforma, todo el contenido subido por dicho grupo 
+será eliminado de los servidores. 
+Esta medida busca evitar malentendidos y garantizar que la Plataforma no se lucre ni 
+se beneficie del trabajo de equipos no afiliados. En caso de que, tras la eliminación del 
+contenido, otro Scan desee trabajar alguna de esas obras, podrá hacerlo únicamente 
+subiendo su propia traducción y versión del proyecto desde cero. Queda estrictamente 
+prohibido reutilizar el trabajo previamente eliminado del equipo saliente. 
+CLÁUSULA 9: DURACIÓN Y TERMINACIÓN DEL ACUERDO 
+Este acuerdo posee una vigencia indefinida a partir de la fecha de firma. Cualquiera de 
+las partes puede dar por terminada la alianza notificando formalmente a la otra con un 
+mínimo de quince (15) días naturales de anticipación. Al concluir la relación, se 
+liquidará todo saldo devengado que cumpla con el umbral mínimo de retiro aplicable. 
+CLÁUSULA 10: MODIFICACIONES DEMOCRÁTICAS AL ACUERDO Y MEJORAS 
+DEL SISTEMA Con el objetivo de mantener un ecosistema justo, transparente y 
+colaborativo, ambas partes acuerdan que los cambios sustanciales en la plataforma se 
+tomarán bajo un modelo de consenso democrático: 
+• Alcance de las Decisiones: Cualquier propuesta para modificar, agregar o 
+eliminar cláusulas de este Acuerdo, así como la implementación de cambios 
+estructurales, nuevas políticas, o mejoras significativas en el funcionamiento del 
+sistema web y panel de control, será sometida a consulta. 
+• Proceso de Consulta y Votación: La Plataforma se compromete a comunicar 
+oficialmente cualquier propuesta de cambio a través del canal oficial de 
+comunicación (Discord). Se abrirá un período de debate y posterior votación. 
+• Derecho a Voto y Aprobación: Cada Scan Aliado activo en la plataforma 
+tendrá derecho a un (1) voto. Las modificaciones solo serán aprobadas y 
+aplicadas si cuentan con el respaldo de la mayoría simple (más del 50%) de los 
+votos emitidos por los Scans Aliados, en conjunto con el visto bueno de la 
+administración. 
+• Excepciones de Emergencia: Quedan estrictamente exentos de este proceso 
+de votación democrática los cambios técnicos de emergencia, mantenimientos 
+críticos de infraestructura, resoluciones de fallos (bugs) o ajustes obligatorios por 
+cumplimiento legal (como normativas DMCA o de seguridad del servidor). La 
+administración podrá aplicar estas medidas de forma inmediata e unilateral para 
+garantizar la estabilidad y supervivencia del sitio web, notificando a los Scans 
+Aliados a la mayor brevedad posible. 
+FIRMAS DE CONFORMIDAD 
+POR SCAN CRIMSON 
+• Rol: Administrador & Propietario 
+• Nombre/Nick: [Completar] 
+• Discord: [Completar] 
+• Binance Pay ID: [Completar] 
+• Fecha: [Completar] 
+POR EL SCAN ALIADO 
+• Rol: Representante Autorizado 
+• Nombre/Nick: nvtleo 
+• Discord: [Completar] 
+• Binance Pay ID: 1066598549 
+• Fecha: [Completar] 
+Scan Crimson scancrimson.com | Documento generado digitalmente | Todos los 
+derechos reservados.

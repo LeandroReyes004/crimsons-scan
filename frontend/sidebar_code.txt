@@ -1,0 +1,50 @@
+
+  return (
+    <div className="h-screen overflow-hidden flex bg-gray-50 dark:bg-[#07070a] text-gray-900 dark:text-gray-100 font-sans">
+      {needsContract && <ContractModal scanId={user.scan_id} onClose={() => {}} />}
+
+      {/* ── Overlay mobile ──────────────────────────────── */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* ── Sidebar ─────────────────────────────────────── */}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-60 bg-white dark:bg-[#0d0d10] border-r border-gray-200 dark:border-white/5 flex flex-col transform transition-transform duration-300 lg:static lg:translate-x-0 lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div className="h-16 px-5 flex items-center gap-2.5 border-b border-gray-200 dark:border-white/5">
+          <img src="/logo.png" alt="CrimsonScan" className="h-8 w-auto object-contain" />
+          <div>
+            <p className="font-bold text-sm dark:text-white leading-tight">
+              {user.is_superadmin ? 'CrimsonHQ' : (user.scan_nombre || 'Admin Panel')}
+            </p>
+            <p className="text-[10px] font-bold uppercase tracking-widest" style={{
+              color: user.is_superadmin ? '#f59e0b' : user.rol === 'admin_scan' ? '#f97316' : user.rol === 'soporte' ? '#14b8a6' : '#f43f5e'
+            }}>
+              {user.is_superadmin ? '⚡ SuperAdmin' : user.rol === 'admin_scan' ? '🛡 Admin Scan' : user.rol === 'soporte' ? '🎧 Soporte' : 'Admin'}
+            </p>
+          </div>
+        </div>
+
+        <nav className="flex-1 p-3 flex flex-col gap-1 mt-2">
+          {([
+            { id: 'dashboard', icon: <LayoutDashboard size={16}/>, label: 'Dashboard', show: true },
+            { id: 'mangas',    icon: <BookOpen size={16}/>,        label: 'Proyectos', show: true },
+            { id: 'revision',  icon: <Clock size={16}/>,           label: 'Agenda',    show: true },
+            { id: 'scans',     icon: <Layers size={16}/>,          label: 'Scans',     show: !!user.is_superadmin },
+            { id: 'revenue',   icon: <BarChart2 size={16}/>,       label: 'Revenue',   show: !!user.is_superadmin || ((user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id) },
+            { id: 'usuarios',  icon: <Users size={16}/>,           label: 'Usuarios',  show: !!user.is_superadmin || user.rol === 'soporte' },
+            { id: 'seguridad', icon: <ShieldCheck size={16}/>,     label: 'Auditoría / Logs', show: !!user.is_superadmin || user.rol === 'soporte' },
+            { id: 'config',    icon: <Settings size={16}/>,        label: 'Mi Scan',   show: !user.is_superadmin && (user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id },
+            { id: 'soporte',   icon: <MessageSquare size={16}/>,   label: 'Soporte',   show: !!user.is_superadmin || user.rol === 'soporte' },
+          ] as const).filter(item => item.show).map(item => (
+            <button
+              key={item.id}
+              onClick={() => { setSection(item.id); setSidebarOpen(false); }}
+              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+                section === item.id
+                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
+              }`}
+            >
