@@ -197,7 +197,7 @@ export default function AdminPage() {
     </div>
   );
 
-    const needsContract = user && user.scan_id && !user.is_superadmin && (user.scan_contrato_version || 0) < (user.global_contrato_version || 1);
+    const needsContract = false; // user && user.scan_id && !user.is_superadmin && (user.scan_contrato_version || 0) < (user.global_contrato_version || 1);
 
   return (
     <div className="h-screen overflow-hidden flex bg-gray-50 dark:bg-[#07070a] text-gray-900 dark:text-gray-100 font-sans">

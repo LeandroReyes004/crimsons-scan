@@ -746,7 +746,7 @@ export default {
           if (caller.rol !== 'superadmin' && caller.scan_id) {
             const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
             const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+            if (false /*!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion*/) {
               return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
             }
           }
@@ -1260,7 +1260,7 @@ export default {
           if (caller.rol !== 'superadmin' && caller.scan_id) {
             const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
             const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+            if (false /*!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion*/) {
               return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
             }
           }
@@ -1400,7 +1400,7 @@ export default {
           if (caller.rol !== 'superadmin' && caller.scan_id) {
             const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
             const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+            if (false /*!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion*/) {
               return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
             }
           }
@@ -1456,7 +1456,7 @@ export default {
           if (caller.rol !== 'superadmin' && caller.scan_id) {
             const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
             const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+            if (false /*!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion*/) {
               return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
             }
           }
@@ -1510,7 +1510,7 @@ export default {
           if (caller.rol !== 'superadmin' && caller.scan_id) {
             const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
             const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+            if (false /*!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion*/) {
               return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
             }
           }
