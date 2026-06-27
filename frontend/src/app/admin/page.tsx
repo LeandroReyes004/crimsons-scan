@@ -23,7 +23,7 @@ interface Stats { mangas: number; capitulos: number; scanners: number; pendiente
 interface Manga { id: string; titulo: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number; fecha_actualizacion: string; scan_nombre?: string; descripcion?: string | null; es_adulto?: number; scan_id?: string | null; generos?: string; joint_scan_id?: string | null; joint_status?: string | null; joint_scan_nombre?: string | null; }
 interface Capitulo { id: string; numero: number; titulo: string; estado: string; manga_titulo: string; manga_id: string; uploader_username: string; notas_admin: string | null; fecha_subida: string; num_paginas?: number; }
 interface Usuario { id: string; username: string; email: string; rol: string; activo: number; fecha_registro: string; ultimo_acceso: string | null; scan_id?: string; scan_nombre?: string; cuenta_pendiente?: number | boolean; }
-interface Scan { id: string; nombre: string; descripcion: string | null; activo: number; miembros: number; contrato_firmado?: number; representante_nombre?: string; binance_pay_id?: string; }
+interface Scan { id: string; nombre: string; descripcion: string | null; activo: number; miembros: number; contrato_firmado?: number; representante_nombre?: string; representante_discord?: string; binance_pay_id?: string; }
 
 // ── Hook: fetch con auth ───────────────────────────────────
 function useAPI<T>(url: string, deps: any[] = []) {
