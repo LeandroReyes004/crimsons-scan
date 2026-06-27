@@ -1754,16 +1754,6 @@ function SectionRevenue() {
                     <p className="font-bold dark:text-white">{scan.nombre}</p>
                     <p className="text-xs text-gray-400">{scan.total_mangas} obras · {scan.total_capitulos} caps publicados</p>
                   </div>
-                    {currentUser?.is_superadmin && scan.contrato_firmado === 1 && (
-                      <p className="text-xs text-emerald-400 mt-1 flex items-center gap-2">
-                        <ShieldCheck className="w-3 h-3" /> Firma: {scan.representante_nombre} | Binance: {scan.binance_pay_id}
-                      </p>
-                    )}
-                    {currentUser?.is_superadmin && scan.contrato_firmado !== 1 && (
-                      <p className="text-xs text-rose-400 mt-1 flex items-center gap-2">
-                        <AlertCircle className="w-3 h-3" /> Contrato No Firmado
-                      </p>
-                    )}
                   <div className="hidden md:flex flex-col items-end gap-0.5 shrink-0">
                     <p className="text-xl font-black dark:text-white">{(scan.views_mes ?? 0).toLocaleString()} <span className="text-xs text-emerald-500 font-bold">mes</span></p>
                     <p className="text-xs text-gray-400 tabular-nums">{scan.total_views.toLocaleString()} histórico</p>
