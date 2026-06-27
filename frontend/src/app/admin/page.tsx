@@ -9,7 +9,7 @@ import {
   ChevronRight, ChevronDown, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
   Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign, Search, MessageSquare,
-  ArrowUp, ArrowDown, Save, Download
+  ArrowUp, ArrowDown, Save, Download, FileText, AlertTriangle
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout, refreshUser } from '@/lib/auth';
 import { toWebP } from '@/lib/webp';
