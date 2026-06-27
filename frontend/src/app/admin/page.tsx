@@ -126,6 +126,14 @@ export default function AdminPage() {
 
   const handleLogout = () => { logout(); setUser(null); };
 
+  const [forceContract, setForceContract] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => setForceContract(true);
+    window.addEventListener('open-contract', handleOpen);
+    return () => window.removeEventListener('open-contract', handleOpen);
+  }, []);
+
   if (!mounted) return (
     <div className="min-h-screen bg-[#07070a] flex items-center justify-center">
       <div className="w-8 h-8 border-4 border-rose-600 border-t-transparent rounded-full animate-spin"/>
@@ -196,14 +204,6 @@ export default function AdminPage() {
       </div>
     </div>
   );
-
-  const [forceContract, setForceContract] = useState(false);
-
-  useEffect(() => {
-    const handleOpen = () => setForceContract(true);
-    window.addEventListener('open-contract', handleOpen);
-    return () => window.removeEventListener('open-contract', handleOpen);
-  }, []);
 
   const needsContract = user && user.scan_id && !user.is_superadmin && (user.scan_contrato_version || 0) < (user.global_contrato_version || 1);
 
