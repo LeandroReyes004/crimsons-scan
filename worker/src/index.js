@@ -742,19 +742,18 @@ export default {
 
       // ── POST /api/mangas ─────────────────────────────────
       if (pathname === '/api/mangas' && method === 'POST') {
-
-          if (caller.rol !== 'superadmin' && caller.scan_id) {
-            const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
-            const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
-              return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
-            }
-          }
-
         const tokenUser = await getUser(request, env);
         const caller = await checkActive(tokenUser, env);
         if (!caller || (!caller.is_superadmin && caller.rol !== 'admin' && caller.rol !== 'admin_scan' && caller.rol !== 'uploader')) {
           return err('No autorizado', 401);
+        }
+
+        if (caller.rol !== 'superadmin' && caller.scan_id) {
+          const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
+          const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+          if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+            return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
+          }
         }
 
         const body = await request.json();
@@ -1936,13 +1935,21 @@ export default {
 
       // ── GET /api/scans ───────────────────────────────────
       if (pathname === '/api/scans' && method === 'GET') {
-        const { results } = await env.DB.prepare(
-          `SELECT s.id, s.nombre, s.descripcion, s.imagen_url, COUNT(u.id) as miembros,
-            (SELECT COUNT(*) FROM mangas WHERE scan_id = s.id) as total_mangas
-           FROM scans s LEFT JOIN usuarios u ON u.scan_id = s.id
-           WHERE s.activo = 1
-           GROUP BY s.id ORDER BY s.nombre`
-        ).all();
+        const sa = await requireSuperAdmin(request, env);
+        // Mostrar todos los scans para el superadmin (incluso inactivos si quisiéramos, pero por ahora respetamos s.activo)
+        // Ojo, si isSuperAdmin, tal vez no deba haber WHERE s.activo = 1. Lo dejamos igual o lo sacamos si es sa.
+        const query = sa 
+          ? `SELECT s.id, s.nombre, s.descripcion, s.imagen_url, s.activo, s.contrato_firmado, s.contrato_version, s.representante_nombre, s.representante_discord, s.binance_pay_id, COUNT(u.id) as miembros,
+             (SELECT COUNT(*) FROM mangas WHERE scan_id = s.id) as total_mangas
+             FROM scans s LEFT JOIN usuarios u ON u.scan_id = s.id
+             GROUP BY s.id ORDER BY s.nombre`
+          : `SELECT s.id, s.nombre, s.descripcion, s.imagen_url, s.activo, COUNT(u.id) as miembros,
+             (SELECT COUNT(*) FROM mangas WHERE scan_id = s.id) as total_mangas
+             FROM scans s LEFT JOIN usuarios u ON u.scan_id = s.id
+             WHERE s.activo = 1
+             GROUP BY s.id ORDER BY s.nombre`;
+             
+        const { results } = await env.DB.prepare(query).all();
         return json({ scans: results });
       }
 

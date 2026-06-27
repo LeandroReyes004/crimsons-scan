@@ -2038,7 +2038,7 @@ function SectionScans() {
             <div className="col-span-full bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center py-16 text-gray-400">
               <Layers size={40} className="mb-3 opacity-30"/>
               <p className="font-medium">No hay scans registrados</p>
-              {isSuperAdmin && <p className="text-sm">Hacé click en "Nuevo Scan" para empezar</p>}
+              {isSuperAdmin && <p className="text-sm">Haz clic en "Nuevo Scan" para empezar</p>}
             </div>
           )}
           {data?.scans?.map(scan => {
@@ -2093,6 +2093,34 @@ function SectionScans() {
                 {/* Panel de detalles expandido */}
                 {isExpanded && det && (
                   <div className="border-t border-gray-100 dark:border-white/5 px-5 py-5 bg-gray-50/50 dark:bg-white/2 animate-in slide-in-from-top-2 duration-200">
+                    
+                    {/* Contrato de Alianza */}
+                    <div className="bg-white dark:bg-[#111114] rounded-xl p-4 border border-gray-100 dark:border-white/5 mb-6">
+                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                        <FileText size={12}/> Estado del Contrato
+                      </h4>
+                      {scan.contrato_firmado ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                          <div>
+                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Representante</p>
+                            <p className="font-semibold dark:text-white">{scan.representante_nombre}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Discord</p>
+                            <p className="font-semibold dark:text-white">{scan.representante_discord || 'N/A'}</p>
+                          </div>
+                          <div>
+                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Binance Pay ID</p>
+                            <p className="font-semibold text-emerald-500">{scan.binance_pay_id}</p>
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm font-semibold text-amber-500 flex items-center gap-2">
+                          <AlertTriangle size={14}/> Contrato no firmado o desactualizado
+                        </p>
+                      )}
+                    </div>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
 
                       {/* Mangas */}
