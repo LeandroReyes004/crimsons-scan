@@ -746,7 +746,7 @@ export default {
           if (caller.rol !== 'superadmin' && caller.scan_id) {
             const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
             const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-            if (false /*!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion*/) {
+            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
               return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
             }
           }
@@ -1011,6 +1011,32 @@ export default {
         }
 
         return json({ counted });
+      }
+      // ── GET /api/config/contrato ─────────────────────────
+      if (pathname === '/api/config/contrato' && method === 'GET') {
+        const texto = await env.KV.get('contrato_texto') || '';
+        const version = parseInt(await env.KV.get('contrato_version') || '1', 10);
+        return json({ texto, version });
+      }
+
+      // ── PUT /api/admin/config/contrato ───────────────────
+      if (pathname === '/api/admin/config/contrato' && method === 'PUT') {
+        const sa = await requireSuperAdmin(request, env);
+        if (!sa) return err('No autorizado', 403);
+        const body = await request.json();
+        
+        const currentVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+        const nextVersion = currentVersion + 1;
+        
+        if (body.texto !== undefined) {
+            await env.KV.put('contrato_texto', body.texto);
+        }
+        await env.KV.put('contrato_version', nextVersion.toString());
+        
+        // Resetear firma de todos los scans para que vuelvan a aceptar
+        await env.DB.prepare('UPDATE scans SET contrato_firmado = 0').run();
+        
+        return json({ message: 'Contrato actualizado', version: nextVersion });
       }
 
       // ── GET /api/admin/revenue ────────────────────────────
@@ -1949,6 +1975,30 @@ export default {
         ).bind(nombre, descripcion || null, activo ? 1 : 0, editScan[1]).run();
 
         return json({ message: 'Scan actualizado' });
+      }
+
+      // ── POST /api/scans/:id/firmar-contrato ──────────────────
+      const firmarContrato = pathname.match(/^\/api\/scans\/([^/]+)\/firmar-contrato$/);
+      if (firmarContrato && method === 'POST') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('No autorizado', 401);
+        
+        if (isScanAdmin(admin) && admin.scan_id !== firmarContrato[1]) {
+          return err('Solo podés firmar por tu propio scan', 403);
+        }
+
+        const { representante_nombre, representante_discord, binance_pay_id } = await request.json();
+        if (!representante_nombre || !binance_pay_id) return err('Nombre y Binance ID son requeridos');
+
+        const currentVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+
+        await env.DB.prepare(`
+          UPDATE scans 
+          SET contrato_firmado = 1, contrato_version = ?, representante_nombre = ?, representante_discord = ?, binance_pay_id = ?, fecha_firma = datetime('now')
+          WHERE id = ?
+        `).bind(currentVersion, representante_nombre, representante_discord || null, binance_pay_id, firmarContrato[1]).run();
+
+        return json({ message: 'Contrato firmado exitosamente' });
       }
 
       // ── PUT /api/admin/scans/:id/webhook ─────────────────

@@ -24,7 +24,7 @@ export default function ContractModal({ scanId, onClose }: { scanId: string, onC
         setLoading(false);
       })
       .catch(() => {
-        setTexto('Error de conexin al cargar el contrato.');
+        setTexto('Error de conexión al cargar el contrato.');
         setLoading(false);
       });
   }, []);
@@ -32,7 +32,7 @@ export default function ContractModal({ scanId, onClose }: { scanId: string, onC
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!accepted) {
-      setError('Debes aceptar los trminos para continuar.');
+      setError('Debes aceptar los términos para continuar.');
       return;
     }
     if (!nombre || !binanceId) {
@@ -68,14 +68,19 @@ export default function ContractModal({ scanId, onClose }: { scanId: string, onC
     <div className="fixed inset-0 z-[9999] bg-black/90 flex items-center justify-center p-4 backdrop-blur-sm">
       <div className="bg-[#12121a] border border-rose-600/30 w-full max-w-4xl max-h-[90vh] rounded-xl shadow-2xl shadow-rose-900/20 flex flex-col overflow-hidden">
         
-        <div className="p-6 border-b border-white/5 bg-gradient-to-r from-rose-950/40 to-transparent">
-          <h2 className="text-2xl font-bold text-white flex items-center gap-3">
-            <span className="text-rose-500"></span>
-            Firma de Contrato de Alianza Requerida
-          </h2>
-          <p className="text-gray-400 mt-2 text-sm">
-            Para continuar subiendo contenido y formar parte de la plataforma, debes leer y aceptar los trminos de nuestra alianza.
-          </p>
+        <div className="p-6 border-b border-white/5 bg-gradient-to-r from-rose-950/40 to-transparent flex justify-between items-start">
+          <div>
+            <h2 className="text-2xl font-bold text-white flex items-center gap-3">
+              <span className="text-rose-500"></span>
+              Firma de Contrato de Alianza Requerida
+            </h2>
+            <p className="text-gray-400 mt-2 text-sm">
+              Para continuar subiendo contenido y formar parte de la plataforma, debes leer y aceptar los términos de nuestra alianza.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition-colors p-2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </button>
         </div>
 
         <div className="flex-1 overflow-y-auto p-6 text-gray-300 text-sm md:text-base leading-relaxed bg-[#0a0a0f] space-y-4 whitespace-pre-wrap">
@@ -147,7 +152,7 @@ export default function ContractModal({ scanId, onClose }: { scanId: string, onC
                 </svg>
               </div>
               <span className="text-gray-300 select-none group-hover:text-white transition-colors">
-                He ledo detenidamente y acepto todas las clusulas del contrato de alianza.
+                He leído detenidamente y acepto todas las cláusulas del contrato de alianza.
               </span>
             </label>
 

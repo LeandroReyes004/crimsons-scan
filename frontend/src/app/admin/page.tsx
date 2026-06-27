@@ -197,11 +197,19 @@ export default function AdminPage() {
     </div>
   );
 
-    const needsContract = false; // user && user.scan_id && !user.is_superadmin && (user.scan_contrato_version || 0) < (user.global_contrato_version || 1);
+  const [forceContract, setForceContract] = useState(false);
+
+  useEffect(() => {
+    const handleOpen = () => setForceContract(true);
+    window.addEventListener('open-contract', handleOpen);
+    return () => window.removeEventListener('open-contract', handleOpen);
+  }, []);
+
+  const needsContract = user && user.scan_id && !user.is_superadmin && (user.scan_contrato_version || 0) < (user.global_contrato_version || 1);
 
   return (
     <div className="h-screen overflow-hidden flex bg-gray-50 dark:bg-[#07070a] text-gray-900 dark:text-gray-100 font-sans">
-      {needsContract && <ContractModal scanId={user.scan_id!} onClose={() => {}} />}
+      {(needsContract || forceContract) && <ContractModal scanId={user.scan_id!} onClose={() => setForceContract(false)} />}
 
       {/* ── Overlay mobile ──────────────────────────────── */}
       {sidebarOpen && (
@@ -1888,7 +1896,7 @@ function SectionScans() {
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ texto: contractText }),
       });
-      if (res.ok) setContractMsg('Contrato actualizado y versin incrementada.');
+      if (res.ok) setContractMsg('Contrato actualizado y versión incrementada.');
       else setContractMsg('Error al guardar el contrato.');
     } catch {
       setContractMsg('Error de red.');
@@ -1965,7 +1973,7 @@ function SectionScans() {
       {showContractForm && isSuperAdmin && (
         <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl animate-in slide-in-from-top-2 duration-300">
           <h3 className="font-bold dark:text-white mb-2 flex items-center gap-2"><Edit3 size={16} className="text-rose-500"/> Editar Contrato de Alianza</h3>
-          <p className="text-sm text-gray-500 mb-5">El texto se mostrar a los administradores de scan. Al guardar, se exigir que todos vuelvan a firmar.</p>
+          <p className="text-sm text-gray-500 mb-5">El texto se mostrará a los administradores de scan. Al guardar, se exigirá que todos vuelvan a firmar.</p>
           {contractMsg && (
             <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${contractMsg.includes('Error') ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
               {contractMsg}
@@ -1976,12 +1984,12 @@ function SectionScans() {
               <textarea 
                 value={contractText} onChange={e => setContractText(e.target.value)} required rows={15}
                 className="w-full bg-gray-50 dark:bg-[#07070a] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 dark:text-white focus:outline-none focus:border-rose-500 transition-colors resize-y font-mono text-sm"
-                placeholder="Escribe el contrato aqu..."
+                placeholder="Escribe el contrato aquí..."
               />
             </div>
             <div className="flex justify-end">
               <button type="submit" disabled={contractSaving} className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-bold transition-all">
-                {contractSaving ? 'Guardando...' : 'Guardar Nueva Versin'}
+                {contractSaving ? 'Guardando...' : 'Guardar Nueva Versión'}
               </button>
             </div>
           </form>
@@ -2367,6 +2375,20 @@ function SectionConfig({ scanId }: { scanId: string }) {
                 <p className="text-xs text-gray-400">{scanData?.scan?.descripcion || 'Sin descripción'}</p>
               </div>
             </div>
+            
+            <div className="mb-6 flex gap-3">
+              <button 
+                onClick={() => {
+                   // Truco para abrir el modal voluntariamente
+                   const evt = new CustomEvent('open-contract');
+                   window.dispatchEvent(evt);
+                }}
+                className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-white bg-gray-100 dark:bg-white/5 hover:bg-rose-600 transition px-4 py-2 rounded-xl"
+              >
+                <Edit3 size={14} /> Ver Contrato de Alianza
+              </button>
+            </div>
+
             <div className="grid grid-cols-3 gap-3 mb-5">
               {[
                 { label: 'Obras',    value: scanData?.mangas?.length ?? 0 },
