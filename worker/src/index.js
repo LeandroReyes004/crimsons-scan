@@ -891,9 +891,12 @@ export default {
         }
 
         const cap = await env.DB.prepare(
-          "SELECT c.*, m.es_adulto, m.tipo as manga_tipo FROM capitulos c JOIN mangas m ON m.id = c.manga_id WHERE c.id = ? AND c.estado = 'publicado'"
+          "SELECT c.*, m.es_adulto, m.tipo as manga_tipo, m.es_novela FROM capitulos c JOIN mangas m ON m.id = c.manga_id WHERE c.id = ? AND c.estado = 'publicado'"
         ).bind(chapterPages[1]).first();
         if (!cap) return err('Capítulo no encontrado o no publicado', 404);
+
+        // Corregir el tipo: si es_novela=1 el tipo real es 'novela' aunque la DB guarde 'manga'
+        if (cap && cap.es_novela) cap.manga_tipo = 'novela';
 
         const { results: paginas } = await env.DB.prepare(
           'SELECT * FROM paginas WHERE capitulo_id = ? ORDER BY orden ASC'
