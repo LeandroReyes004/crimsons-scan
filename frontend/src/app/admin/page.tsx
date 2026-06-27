@@ -2085,33 +2085,39 @@ function SectionScans() {
                   <div className="border-t border-gray-100 dark:border-white/5 px-5 py-5 bg-gray-50/50 dark:bg-white/2 animate-in slide-in-from-top-2 duration-200">
                     
                     {/* Contrato de Alianza */}
-                    <div className="bg-white dark:bg-[#111114] rounded-xl p-4 border border-gray-100 dark:border-white/5 mb-6">
-                      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                        <FileText size={12}/> Estado del Contrato
-                      </h4>
-                      {scan.contrato_firmado ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm">
+                    {scan.contrato_firmado ? (
+                      <div className="bg-white dark:bg-[#111114] rounded-xl p-4 border border-gray-100 dark:border-white/5 mb-6 shadow-sm">
+                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                          <FileText size={12}/> Datos de Firma
+                        </h4>
+                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 text-sm">
                           <div>
-                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Representante</p>
-                            <p className="font-semibold dark:text-white">{scan.representante_nombre}</p>
+                            <p className="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-0.5">Representante</p>
+                            <p className="font-bold dark:text-white">{scan.representante_nombre}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Discord</p>
-                            <p className="font-semibold dark:text-white">{scan.representante_discord || 'N/A'}</p>
+                            <p className="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-0.5">Discord</p>
+                            <p className="font-bold dark:text-white">{scan.representante_discord || 'N/A'}</p>
                           </div>
                           <div>
-                            <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-0.5">Binance Pay ID</p>
-                            <p className="font-semibold text-emerald-500">{scan.binance_pay_id}</p>
+                            <p className="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-0.5">Binance Pay</p>
+                            <p className="font-bold text-emerald-500 font-mono">{scan.binance_pay_id}</p>
                           </div>
                         </div>
-                      ) : (
-                        <p className="text-sm font-semibold text-amber-500 flex items-center gap-2">
-                          <AlertTriangle size={14}/> Contrato no firmado o desactualizado
-                        </p>
-                      )}
-                    </div>
+                      </div>
+                    ) : (
+                      <div className="bg-amber-50 dark:bg-amber-500/10 rounded-xl p-4 border border-amber-200 dark:border-amber-500/20 mb-6 flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
+                          <AlertTriangle size={16}/>
+                        </div>
+                        <div>
+                          <p className="text-sm font-bold text-amber-800 dark:text-amber-400">Contrato Pendiente</p>
+                          <p className="text-[10px] text-amber-600/80 dark:text-amber-500/80 font-medium">El administrador no ha firmado la última versión.</p>
+                        </div>
+                      </div>
+                    )}
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="flex flex-col gap-6">
 
                       {/* Mangas */}
                       <div>
@@ -2123,14 +2129,17 @@ function SectionScans() {
                         ) : (
                           <div className="flex flex-col gap-2">
                             {det.mangas.map((m: any) => (
-                              <div key={m.id} className="flex items-center justify-between bg-white dark:bg-[#111114] rounded-xl px-3 py-2.5 border border-gray-100 dark:border-white/5">
-                                <div className="min-w-0">
-                                  <p className="text-sm font-semibold dark:text-white truncate">{m.titulo}</p>
-                                  <p className="text-[10px] text-gray-400">{m.tipo} · {m.caps_publicados} cap{m.caps_publicados !== 1 ? 's' : ''}</p>
+                              <div key={m.id} className="flex items-center gap-3 bg-white dark:bg-[#111114] rounded-xl px-3 py-2.5 border border-gray-100 dark:border-white/5">
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-bold dark:text-white truncate">{m.titulo}</p>
+                                  <div className="flex items-center gap-2 mt-0.5">
+                                    <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">{m.tipo}</span>
+                                    <span className="text-[10px] text-gray-500 font-medium">{m.caps_publicados} cap{m.caps_publicados !== 1 ? 's' : ''}</span>
+                                  </div>
                                 </div>
-                                <div className="flex items-center gap-2 shrink-0 ml-2">
-                                  <span className="text-xs text-gray-400 flex items-center gap-0.5"><Eye size={11}/> {m.views_total}</span>
+                                <div className="flex flex-col items-end shrink-0 gap-1">
                                   <Badge estado={m.estado}/>
+                                  <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1"><Eye size={10}/> {(m.views_total || 0).toLocaleString()}</span>
                                 </div>
                               </div>
                             ))}
