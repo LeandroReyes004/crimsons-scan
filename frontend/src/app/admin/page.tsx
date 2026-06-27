@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 import ContractModal from './components/ContractModal';
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -18,14 +18,14 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
 type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'config' | 'revenue' | 'seguridad' | 'soporte';
 
-// ── Tipos ──────────────────────────────────────────────────
+// â”€â”€ Tipos â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; }
 interface Manga { id: string; titulo: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number; fecha_actualizacion: string; scan_nombre?: string; descripcion?: string | null; es_adulto?: number; scan_id?: string | null; generos?: string; joint_scan_id?: string | null; joint_status?: string | null; joint_scan_nombre?: string | null; }
 interface Capitulo { id: string; numero: number; titulo: string; estado: string; manga_titulo: string; manga_id: string; uploader_username: string; notas_admin: string | null; fecha_subida: string; num_paginas?: number; }
 interface Usuario { id: string; username: string; email: string; rol: string; activo: number; fecha_registro: string; ultimo_acceso: string | null; scan_id?: string; scan_nombre?: string; cuenta_pendiente?: number | boolean; }
 interface Scan { id: string; nombre: string; descripcion: string | null; activo: number; miembros: number; contrato_firmado?: number; representante_nombre?: string; representante_discord?: string; binance_pay_id?: string; }
 
-// ── Hook: fetch con auth ───────────────────────────────────
+// â”€â”€ Hook: fetch con auth â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function useAPI<T>(url: string, deps: any[] = []) {
   const [data, setData] = useState<T | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,13 +46,13 @@ function useAPI<T>(url: string, deps: any[] = []) {
   return { data, loading, error, refetch };
 }
 
-// ── Componentes pequeños ───────────────────────────────────
+// â”€â”€ Componentes pequeÃ±os â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function StatCard({ icon, label, value, color }: { icon: React.ReactNode; label: string; value: number | string; color: string; }) {
   return (
     <div className="bg-white dark:bg-[#111114] rounded-2xl p-5 border border-gray-100 dark:border-white/5 shadow-sm flex items-center gap-4">
       <div className={`p-3 rounded-xl ${color}`}>{icon}</div>
       <div>
-        <p className="text-2xl font-extrabold dark:text-white">{value ?? '—'}</p>
+        <p className="text-2xl font-extrabold dark:text-white">{value ?? 'â€”'}</p>
         <p className="text-xs text-gray-500 font-semibold uppercase tracking-wider">{label}</p>
       </div>
     </div>
@@ -87,6 +87,37 @@ function Badge({ estado }: { estado: string }) {
   );
 }
 
+
+      {/* Disable modal */}
+      {disableModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 flex flex-col gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center shrink-0">
+                <Ban size={20} className="text-orange-500"/>
+              </div>
+              <div>
+                <h3 className="font-extrabold text-lg dark:text-white">Deshabilitar obra</h3>
+                <p className="text-sm text-gray-500 mt-0.5">Esta accion ocultara la obra y todos sus capitulos del sitio publico.</p>
+              </div>
+            </div>
+            <div className="bg-orange-50 dark:bg-orange-500/10 rounded-xl p-3 border border-orange-100 dark:border-orange-500/20">
+              <p className="text-sm font-semibold dark:text-white">{disableModal.manga.titulo}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{disableModal.manga.tipo}</p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold dark:text-white">Razon <span className="text-gray-400 font-normal">(opcional)</span></label>
+              <textarea rows={3} value={disableRazon} onChange={e => setDisableRazon(e.target.value)} placeholder="Ej: Solicitud de derechos de autor, DMCA takedown..." className="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/50"/>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => { setDisableModal(null); setDisableRazon(''); }} className="px-4 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition">Cancelar</button>
+              <button onClick={() => handleDisableManga(disableModal.manga, true)} disabled={disabling} className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-400 text-white transition disabled:opacity-60">
+                {disabling ? <Loader2 size={14} className="animate-spin"/> : <Ban size={14}/>} Deshabilitar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 // ============================================================
 export default function AdminPage() {
   const router = useRouter();
@@ -114,7 +145,7 @@ export default function AdminPage() {
       const { login } = await import('@/lib/auth');
       const u = await login(loginUser, loginPass);
       if (!u.is_superadmin && u.rol !== 'admin' && u.rol !== 'admin_scan' && u.rol !== 'soporte') {
-        logout(); setLoginErr('No tenés permisos de admin.'); return;
+        logout(); setLoginErr('No tenÃ©s permisos de admin.'); return;
       }
       setUser(u);
     } catch (err: any) {
@@ -140,7 +171,7 @@ export default function AdminPage() {
     </div>
   );
 
-  // ── Pantalla de login si no hay sesión ─────────────────
+  // â”€â”€ Pantalla de login si no hay sesiÃ³n â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   if (!user) return (
     <div className="min-h-screen bg-[#07070a] flex items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -148,12 +179,12 @@ export default function AdminPage() {
           <img src="/logo.png" alt="CrimsonScan" className="h-10 w-auto object-contain" />
           <div>
             <p className="font-bold text-white leading-tight">CrimsonHQ</p>
-            <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest">⚡ Acceso Restringido</p>
+            <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest">âš¡ Acceso Restringido</p>
           </div>
         </div>
 
         <form onSubmit={handleLogin} className="bg-[#111114] border border-white/10 rounded-2xl p-7 flex flex-col gap-4 shadow-2xl">
-          <h2 className="text-lg font-bold text-white text-center mb-1">Iniciar Sesión</h2>
+          <h2 className="text-lg font-bold text-white text-center mb-1">Iniciar SesiÃ³n</h2>
 
           {loginErr && (
             <div className="bg-red-500/10 border border-red-500/20 text-red-400 text-sm px-3 py-2 rounded-xl">
@@ -173,12 +204,12 @@ export default function AdminPage() {
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Contraseña</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">ContraseÃ±a</label>
             <input
               type="password"
               value={loginPass}
               onChange={e => setLoginPass(e.target.value)}
-              placeholder="••••••••"
+              placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
               required
               className="bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-white text-sm focus:border-rose-500 outline-none transition"
             />
@@ -191,7 +222,7 @@ export default function AdminPage() {
           </button>
 
           <p className="text-center text-xs text-gray-500 mt-2">
-            ¿No tenés cuenta?{' '}
+            Â¿No tenÃ©s cuenta?{' '}
             <Link href="/register" className="text-rose-500 font-bold hover:underline">
               Registrate
             </Link>
@@ -199,7 +230,7 @@ export default function AdminPage() {
         </form>
 
         <Link href="/" className="block text-center text-xs text-gray-600 hover:text-gray-400 transition mt-5">
-          ← Volver al sitio
+          â† Volver al sitio
         </Link>
       </div>
     </div>
@@ -211,7 +242,7 @@ export default function AdminPage() {
     <div className="h-screen overflow-hidden flex bg-gray-50 dark:bg-[#07070a] text-gray-900 dark:text-gray-100 font-sans">
       {(needsContract || forceContract) && <ContractModal scanId={user.scan_id!} onClose={() => setForceContract(false)} />}
 
-      {/* ── Overlay mobile ──────────────────────────────── */}
+      {/* â”€â”€ Overlay mobile â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {sidebarOpen && (
         <div
           className="fixed inset-0 z-40 bg-black/50 lg:hidden"
@@ -219,7 +250,7 @@ export default function AdminPage() {
         />
       )}
 
-      {/* ── Sidebar ─────────────────────────────────────── */}
+      {/* â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-60 bg-white dark:bg-[#0d0d10] border-r border-gray-200 dark:border-white/5 flex flex-col transform transition-transform duration-300 lg:static lg:translate-x-0 lg:z-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="h-16 px-5 flex items-center gap-2.5 border-b border-gray-200 dark:border-white/5">
           <img src="/logo.png" alt="CrimsonScan" className="h-8 w-auto object-contain" />
@@ -230,7 +261,7 @@ export default function AdminPage() {
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{
               color: user.is_superadmin ? '#f59e0b' : user.rol === 'admin_scan' ? '#f97316' : user.rol === 'soporte' ? '#14b8a6' : '#f43f5e'
             }}>
-              {user.is_superadmin ? '⚡ SuperAdmin' : user.rol === 'admin_scan' ? '🛡 Admin Scan' : user.rol === 'soporte' ? '🎧 Soporte' : 'Admin'}
+              {user.is_superadmin ? 'âš¡ SuperAdmin' : user.rol === 'admin_scan' ? 'ðŸ›¡ Admin Scan' : user.rol === 'soporte' ? 'ðŸŽ§ Soporte' : 'Admin'}
             </p>
           </div>
         </div>
@@ -243,7 +274,7 @@ export default function AdminPage() {
             { id: 'scans',     icon: <Layers size={16}/>,          label: 'Scans',     show: !!user.is_superadmin },
             { id: 'revenue',   icon: <BarChart2 size={16}/>,       label: 'Revenue',   show: !!user.is_superadmin || ((user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id) },
             { id: 'usuarios',  icon: <Users size={16}/>,           label: 'Usuarios',  show: !!user.is_superadmin || user.rol === 'soporte' },
-            { id: 'seguridad', icon: <ShieldCheck size={16}/>,     label: 'Auditoría / Logs', show: !!user.is_superadmin || user.rol === 'soporte' },
+            { id: 'seguridad', icon: <ShieldCheck size={16}/>,     label: 'AuditorÃ­a / Logs', show: !!user.is_superadmin || user.rol === 'soporte' },
             { id: 'config',    icon: <Settings size={16}/>,        label: 'Mi Scan',   show: !user.is_superadmin && (user.rol === 'admin' || user.rol === 'admin_scan') && !!user.scan_id },
             { id: 'soporte',   icon: <MessageSquare size={16}/>,   label: 'Soporte',   show: !!user.is_superadmin || user.rol === 'soporte' },
           ] as const).filter(item => item.show).map(item => (
@@ -274,14 +305,14 @@ export default function AdminPage() {
         </div>
       </aside>
 
-      {/* ── Main ────────────────────────────────────────── */}
+      {/* â”€â”€ Main â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="h-16 bg-white dark:bg-[#0d0d10] border-b border-gray-200 dark:border-white/5 px-4 md:px-8 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
               className="lg:hidden p-2 rounded-lg text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 transition"
-              aria-label="Abrir menú"
+              aria-label="Abrir menÃº"
             >
               <Menu size={20}/>
             </button>
@@ -309,7 +340,7 @@ export default function AdminPage() {
 }
 
 // ============================================================
-//  SECCIÓN: DASHBOARD
+//  SECCIÃ“N: DASHBOARD
 // ============================================================
 function SectionDashboard() {
   const { data, loading, refetch } = useAPI<Stats>('/api/admin/stats');
@@ -338,7 +369,7 @@ function SectionDashboard() {
         </div>
       )}
 
-      {/* Últimos mangas */}
+      {/* Ãšltimos mangas */}
       <div>
         <h3 className="font-bold dark:text-white mb-4 flex items-center gap-2">
           <TrendingUp size={16} className="text-rose-500"/> Proyectos Recientes
@@ -358,7 +389,7 @@ function SectionDashboard() {
                 <Badge estado={m.estado}/>
               </div>
             </div>
-          )) ?? <p className="text-gray-400 text-sm p-5">No hay proyectos aún.</p>}
+          )) ?? <p className="text-gray-400 text-sm p-5">No hay proyectos aÃºn.</p>}
         </div>
       </div>
     </div>
@@ -366,20 +397,20 @@ function SectionDashboard() {
 }
 
 // ============================================================
-//  SECCIÓN: MANGAS
+//  SECCIÃ“N: MANGAS
 // ============================================================
 const GENRES_LIST = [
-  'Acción','Aventura','Comedia','Drama','Fantasía','Romance','Horror','Misterio','Psicológico',
-  'Ciencia Ficción','Sobrenatural','Thriller','Deportes','Histórico','Isekai','Mecha','Magia',
-  'Artes Marciales','Superpoderes','Reencarnación','Supervivencia','Escolar','Vida Escolar',
+  'AcciÃ³n','Aventura','Comedia','Drama','FantasÃ­a','Romance','Horror','Misterio','PsicolÃ³gico',
+  'Ciencia FicciÃ³n','Sobrenatural','Thriller','Deportes','HistÃ³rico','Isekai','Mecha','Magia',
+  'Artes Marciales','Superpoderes','ReencarnaciÃ³n','Supervivencia','Escolar','Vida Escolar',
   'Recuentos de la Vida (Slice of Life)','Tragedia','Adulto','Maduro','Ecchi','Harem','Harem Inverso',
-  'Seinen','Shounen','Shoujo','Josei','Género Bender','Crossdressing','Apocalipsis','Postapocalíptico',
-  'Sistema','Videojuegos','VRMMO','Cultivación','Wuxia','Xianxia','Xuanhuan','Murim','Regresión',
-  'Regresor','Viaje en el Tiempo','Venganza','Villana','Realeza','Nobleza','Política','Militar',
-  'Médico','Cocina','Música','Idol','Oficina','Crimen','Detectives','Mafia','Monstruos','Demonios',
-  'Ángeles','Vampiros','Zombies','Mazmorras','Cazadores','Invocación','Magia Oscura','Alquimia',
-  'Bestias Mágicas','Omegaverse','BL (Boys Love)','GL (Girls Love)','Yuri','Yaoi','Shounen Ai',
-  'Josei Ai','Harén Masculino','Harén Femenino','Sadomasoquismo',
+  'Seinen','Shounen','Shoujo','Josei','GÃ©nero Bender','Crossdressing','Apocalipsis','PostapocalÃ­ptico',
+  'Sistema','Videojuegos','VRMMO','CultivaciÃ³n','Wuxia','Xianxia','Xuanhuan','Murim','RegresiÃ³n',
+  'Regresor','Viaje en el Tiempo','Venganza','Villana','Realeza','Nobleza','PolÃ­tica','Militar',
+  'MÃ©dico','Cocina','MÃºsica','Idol','Oficina','Crimen','Detectives','Mafia','Monstruos','Demonios',
+  'Ãngeles','Vampiros','Zombies','Mazmorras','Cazadores','InvocaciÃ³n','Magia Oscura','Alquimia',
+  'Bestias MÃ¡gicas','Omegaverse','BL (Boys Love)','GL (Girls Love)','Yuri','Yaoi','Shounen Ai',
+  'Josei Ai','HarÃ©n Masculino','HarÃ©n Femenino','Sadomasoquismo',
 ];
 
 function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
@@ -395,7 +426,7 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
   const [estado, setEstado]       = useState(initial?.estado || 'en_curso');
   const [descripcion, setDesc]    = useState(initial?.descripcion || '');
   const [jointScanId, setJointScanId] = useState(initial?.joint_scan_id || '');
-  // Si no es superadmin, el scan_id se fija al del usuario actual (o al del manga si ya tenía uno)
+  // Si no es superadmin, el scan_id se fija al del usuario actual (o al del manga si ya tenÃ­a uno)
   const [scanId, setScanId]       = useState(
     isSuperAdmin
       ? (initial?.scan_id || '')
@@ -424,10 +455,10 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
     setFeedback(null);
     try {
       await onSave({ titulo, tipo, estado, descripcion, generos, scan_id: scanId || null, joint_scan_id: jointScanId || null, es_adulto: esAdulto }, coverFile);
-      setFeedback('✅ Guardado');
+      setFeedback('âœ… Guardado');
       setTimeout(onCancel, 1200);
     } catch (err: any) {
-      setFeedback(`❌ ${err.message}`);
+      setFeedback(`âŒ ${err.message}`);
     } finally {
       setSaving(false);
     }
@@ -437,14 +468,14 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
     <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl animate-in slide-in-from-top-2 duration-300">
       <h3 className="font-bold dark:text-white mb-5 flex items-center gap-2"><Plus size={16} className="text-rose-500"/> {title}</h3>
       {feedback && (
-        <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${feedback.startsWith('✅') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
+        <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${feedback.startsWith('âœ…') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
           {feedback}
         </div>
       )}
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <div className="md:col-span-1 flex flex-col gap-1.5">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Título *</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">TÃ­tulo *</label>
             <input value={titulo} onChange={e => setTitulo(e.target.value)} required placeholder="Ej: Solo Leveling Ragnarok"
               className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"/>
           </div>
@@ -453,7 +484,7 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><Layers size={11}/> Scan Responsable</label>
               <select value={scanId} onChange={e => setScanId(e.target.value)}
                 className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
-                <option value="">— Sin asignar —</option>
+                <option value="">â€” Sin asignar â€”</option>
                 {scans.map(s => (
                   <option key={s.id} value={s.id}>{s.nombre}</option>
                 ))}
@@ -480,10 +511,10 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
             </select>
           </div>
           <div className="flex flex-col gap-1.5 md:col-span-1">
-             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">🤝 Joint (Opcional)</label>
+             <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1">ðŸ¤ Joint (Opcional)</label>
              <select value={jointScanId} onChange={e => setJointScanId(e.target.value)}
                 className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
-                <option value="">— Ninguno —</option>
+                <option value="">â€” Ninguno â€”</option>
                 {scans.filter(s => s.id !== scanId && s.id !== currentUser?.scan_id).map(s => (
                   <option key={s.id} value={s.id}>{s.nombre}</option>
                 ))}
@@ -500,13 +531,13 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
 
         <div className="flex flex-col gap-1.5">
           <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Sinopsis</label>
-          <textarea value={descripcion} onChange={e => setDesc(e.target.value)} rows={2} placeholder="Descripción de la obra..."
+          <textarea value={descripcion} onChange={e => setDesc(e.target.value)} rows={2} placeholder="DescripciÃ³n de la obra..."
             className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none resize-none transition"/>
         </div>
 
         <div className="flex flex-col gap-2">
           <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center justify-between">
-            Géneros
+            GÃ©neros
             {generos.length > 0 && <span className="text-rose-500 normal-case text-[10px] bg-rose-500/10 px-2 py-0.5 rounded-full">{generos.length} seleccionados</span>}
           </label>
           <div className="flex flex-wrap gap-1.5">
@@ -563,9 +594,13 @@ function SectionMangas() {
   const [editPages, setEditPages] = useState<{id:string; orden:number; filename:string; image_url:string}[]>([]);
   const [loadingPages, setLoadingPages] = useState<boolean>(false);
   const [savingOrder, setSavingOrder] = useState<boolean>(false);
+  const [disableModal, setDisableModal] = useState<{manga: Manga} | null>(null);
+  const [disableRazon, setDisableRazon] = useState('');
+  const [disabling, setDisabling] = useState(false);
   const currentUser = getUser();
   const isReadOnly   = currentUser?.rol === 'soporte';
   const isSuperAdmin = !!currentUser?.is_superadmin;
+  const isGlobalAdmin = isSuperAdmin || currentUser?.rol === 'admin';
 
   const toggleCaps = async (mangaId: string) => {
     if (expandedId === mangaId) { setExpandedId(null); return; }
@@ -579,7 +614,7 @@ function SectionMangas() {
   };
 
   const deleteChapterFromManga = async (mangaId: string, capId: string) => {
-    if (!confirm('¿Eliminar este capítulo? Esta acción no se puede deshacer.')) return;
+    if (!confirm('Â¿Eliminar este capÃ­tulo? Esta acciÃ³n no se puede deshacer.')) return;
     setDeletingCap(capId);
     await fetch(`${API}/api/chapters/${capId}`, { method: 'DELETE', headers: authHeaders() });
     setCapsByManga(prev => ({ ...prev, [mangaId]: prev[mangaId].filter(c => c.id !== capId) }));
@@ -593,7 +628,7 @@ function SectionMangas() {
       const d = await res.json();
       if (!res.ok) throw new Error(d.error || 'Error');
       const pages = d.pages || [];
-      if (pages.length === 0) { alert('El capítulo no tiene páginas.'); setDownloadingCap(null); return; }
+      if (pages.length === 0) { alert('El capÃ­tulo no tiene pÃ¡ginas.'); setDownloadingCap(null); return; }
       
       const JSZip = (await import('jszip')).default;
       const zip = new JSZip();
@@ -635,7 +670,7 @@ function SectionMangas() {
       if (!res.ok) throw new Error(d.error);
       setEditPages(d.pages || []);
     } catch (e: any) {
-      alert(`Error al cargar páginas: ${e.message}`);
+      alert(`Error al cargar pÃ¡ginas: ${e.message}`);
       setReorderingCap(null);
     } finally {
       setLoadingPages(false);
@@ -709,7 +744,7 @@ function SectionMangas() {
   };
 
   const handleDelete = async (manga: Manga) => {
-    if (!confirm(`¿Eliminar "${manga.titulo}"? Se borrarán todos sus capítulos y páginas. Esta acción no se puede deshacer.`)) return;
+    if (!confirm(`Â¿Eliminar "${manga.titulo}"? Se borrarÃ¡n todos sus capÃ­tulos y pÃ¡ginas. Esta acciÃ³n no se puede deshacer.`)) return;
     const res = await fetch(`${API}/api/mangas/${manga.id}`, { method: 'DELETE', headers: authHeaders() });
     if (!res.ok) { const d = await res.json(); alert(d.error || 'Error al eliminar'); return; }
     refetch();
@@ -724,6 +759,34 @@ function SectionMangas() {
       });
       if (!res.ok) throw new Error((await res.json()).error);
       refetchJoints();
+      refetch();
+    } catch (e: any) { alert(`Error: ${e.message}`); }
+  };
+
+  const handleDisableManga = async (manga: Manga, disable: boolean) => {
+    setDisabling(true);
+    try {
+      const res = await fetch(`${API}/api/admin/mangas/${manga.id}/disable`, {
+        method: 'PUT',
+        headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ disable, razon: disableRazon || undefined }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
+      setDisableModal(null);
+      setDisableRazon('');
+      refetch();
+    } catch (e: any) { alert(`Error: ${e.message}`); }
+    finally { setDisabling(false); }
+  };
+
+  const handleLeaveJoint = async (manga: Manga) => {
+    if (!confirm(`Â¿Confirmas que querÃ©s salir del joint de "${manga.titulo}"? Tu scan ya no aparecerÃ¡ como colaborador.`)) return;
+    try {
+      const res = await fetch(`${API}/api/admin/joints/${manga.id}/leave`, {
+        method: 'PUT',
+        headers: authHeaders(),
+      });
+      if (!res.ok) throw new Error((await res.json()).error);
       refetch();
     } catch (e: any) { alert(`Error: ${e.message}`); }
   };
@@ -752,7 +815,7 @@ function SectionMangas() {
 
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-extrabold dark:text-white">Gestión de Proyectos</h2>
+          <h2 className="text-2xl font-extrabold dark:text-white">GestiÃ³n de Proyectos</h2>
           <p className="text-gray-500 text-sm mt-1">{data?.mangas?.length ?? 0} obras en total</p>
         </div>
         {!isReadOnly && (
@@ -797,8 +860,8 @@ function SectionMangas() {
           {(!data?.mangas || data.mangas.length === 0) && (
             <div className="flex flex-col items-center py-16 text-gray-400">
               <BookOpen size={40} className="mb-3 opacity-30"/>
-              <p className="font-medium">No hay proyectos creados aún</p>
-              <p className="text-sm">Hacé click en "Nueva Obra" para empezar</p>
+              <p className="font-medium">No hay proyectos creados aÃºn</p>
+              <p className="text-sm">HacÃ© click en "Nueva Obra" para empezar</p>
             </div>
           )}
           {data?.mangas?.filter(m => filterType === 'Todos' || m.tipo.toLowerCase() === filterType.toLowerCase()).map((m, i) => (
@@ -813,7 +876,7 @@ function SectionMangas() {
                   {viewMode === 'grid' && (
                     <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-3">
                       <button onClick={() => toggleCaps(m.id)} className="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded-xl text-sm font-bold shadow-lg flex items-center gap-2 transition-transform hover:scale-105">
-                        <BookOpen size={16}/> Capítulos
+                        <BookOpen size={16}/> CapÃ­tulos
                       </button>
                     </div>
                   )}
@@ -821,7 +884,7 @@ function SectionMangas() {
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
                     <p className={`font-bold text-sm dark:text-white ${viewMode === 'list' ? 'truncate' : 'line-clamp-2'}`} title={m.titulo}>{m.titulo}</p>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">{m.tipo} · <span className="font-mono">{m.id.slice(0,8)}...</span></p>
+                    <p className="text-xs text-gray-400 mt-0.5 truncate">{m.tipo} Â· <span className="font-mono">{m.id.slice(0,8)}...</span></p>
                     {(m as any).generos && JSON.parse((m as any).generos || '[]').length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {JSON.parse((m as any).generos).slice(0,3).map((g: string) => (
@@ -842,8 +905,16 @@ function SectionMangas() {
                       {viewMode === 'list' && (
                         <button onClick={() => toggleCaps(m.id)}
                           className={`p-1.5 rounded-lg transition ${expandedId === m.id ? 'text-rose-500 bg-rose-50 dark:bg-rose-500/10' : 'text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10'}`}
-                          title="Ver capítulos">
+                          title="Ver capÃ­tulos">
                           <ChevronDown size={14} className={`transition-transform ${expandedId === m.id ? 'rotate-180' : ''}`}/>
+                        </button>
+                      )}
+                      {/* Salir del joint â€” solo visible si el scan actual es el joint */}
+                      {!isReadOnly && m.joint_scan_id && m.joint_status === 'aprobado' && !isGlobalAdmin && (
+                        <button onClick={() => handleLeaveJoint(m)}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 transition"
+                          title="Salir del joint">
+                          <span className="text-[10px] font-bold leading-none">EXIT</span>
                         </button>
                       )}
                       {!isReadOnly && (
@@ -851,6 +922,22 @@ function SectionMangas() {
                           className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition" title="Editar">
                           <Edit3 size={14}/>
                         </button>
+                      )}
+                      {/* Deshabilitar obra â€” solo admin global o superadmin */}
+                      {isGlobalAdmin && (
+                        m.estado === 'deshabilitado' ? (
+                          <button onClick={() => handleDisableManga(m, false)}
+                            className="p-1.5 rounded-lg text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition"
+                            title="Reactivar obra">
+                            <Check size={14}/>
+                          </button>
+                        ) : (
+                          <button onClick={() => { setDisableModal({ manga: m }); setDisableRazon(''); }}
+                            className="p-1.5 rounded-lg text-gray-400 hover:text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10 transition"
+                            title="Deshabilitar obra">
+                            <Ban size={14}/>
+                          </button>
+                        )
                       )}
                       {!isReadOnly && (
                         <button onClick={() => handleDelete(m)}
@@ -867,7 +954,7 @@ function SectionMangas() {
                   {loadingCaps === m.id ? (
                     <div className="flex justify-center py-4"><Loader2 size={18} className="animate-spin text-rose-500"/></div>
                   ) : (capsByManga[m.id] || []).length === 0 ? (
-                    <p className="text-xs text-gray-400 text-center py-3">Sin capítulos</p>
+                    <p className="text-xs text-gray-400 text-center py-3">Sin capÃ­tulos</p>
                   ) : (
                     <div className="flex flex-col gap-1">
                       {(capsByManga[m.id] || []).map(cap => (
@@ -875,17 +962,17 @@ function SectionMangas() {
                           <div className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg hover:bg-white dark:hover:bg-white/5 transition">
                             <div className="flex items-center gap-2 min-w-0">
                               <Badge estado={cap.estado}/>
-                              <span className="text-sm dark:text-white font-medium">Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}</span>
+                              <span className="text-sm dark:text-white font-medium">Cap. {cap.numero}{cap.titulo ? ` â€” ${cap.titulo}` : ''}</span>
                             </div>
                             <div className="flex items-center gap-2 shrink-0">
                               <span className="text-xs text-gray-400 flex items-center gap-1"><Eye size={10}/>{cap.views}</span>
                               <button onClick={() => handleDownloadChapter(m, cap)} disabled={downloadingCap === cap.id}
-                                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition disabled:opacity-50" title="Descargar Capítulo">
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition disabled:opacity-50" title="Descargar CapÃ­tulo">
                                 {downloadingCap === cap.id ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>}
                               </button>
                               {!isReadOnly && (
                                 <button onClick={() => openReorder(cap.id)}
-                                  className={`p-1.5 rounded-lg transition ${reorderingCap === cap.id ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10' : 'text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'}`} title="Editar páginas">
+                                  className={`p-1.5 rounded-lg transition ${reorderingCap === cap.id ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10' : 'text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'}`} title="Editar pÃ¡ginas">
                                   <ImageIcon size={12}/>
                                 </button>
                               )}
@@ -902,7 +989,7 @@ function SectionMangas() {
                             <div className="bg-gray-100 dark:bg-black/40 rounded-xl p-4 mt-2 mb-3 mx-2 border border-gray-200 dark:border-white/10 shadow-inner">
                               <div className="flex items-center justify-between mb-3">
                                 <h4 className="text-sm font-bold dark:text-white flex items-center gap-2">
-                                  <ImageIcon size={14} className="text-indigo-500"/> Páginas (Cap. {cap.numero})
+                                  <ImageIcon size={14} className="text-indigo-500"/> PÃ¡ginas (Cap. {cap.numero})
                                 </h4>
                                 <div className="flex gap-2">
                                   <button onClick={() => saveReorder(cap.id)} disabled={savingOrder || editPages.length === 0}
@@ -918,14 +1005,14 @@ function SectionMangas() {
                               {loadingPages ? (
                                 <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-indigo-500"/></div>
                               ) : editPages.length === 0 ? (
-                                <p className="text-xs text-gray-400 text-center py-4">No hay páginas en este capítulo.</p>
+                                <p className="text-xs text-gray-400 text-center py-4">No hay pÃ¡ginas en este capÃ­tulo.</p>
                               ) : (
                                 <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-2">
                                   {editPages.map((page, idx) => (
                                     <div key={page.id} className="flex items-center gap-3 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-lg p-2 shadow-sm">
                                       <img src={page.image_url} alt="" className="w-8 h-12 object-cover rounded bg-gray-200 dark:bg-white/5 shrink-0"/>
                                       <div className="flex-1 min-w-0">
-                                        <p className="text-xs font-bold dark:text-white">Pág. {String(page.orden).padStart(3, '0')}</p>
+                                        <p className="text-xs font-bold dark:text-white">PÃ¡g. {String(page.orden).padStart(3, '0')}</p>
                                         <p className="text-[10px] text-gray-400 truncate">{page.filename}</p>
                                       </div>
                                       <div className="flex gap-1 shrink-0">
@@ -959,7 +1046,7 @@ function SectionMangas() {
 }
 
 // ============================================================
-//  SECCIÓN: AGENDA DE PUBLICACIONES
+//  SECCIÃ“N: AGENDA DE PUBLICACIONES
 // ============================================================
 interface CapAgenda { id: string; numero: number; titulo: string | null; estado: string; fecha_publicacion: string | null; fecha_subida: string; manga_titulo: string; manga_id: string; uploader_username: string; }
 
@@ -993,7 +1080,7 @@ function SectionRevision() {
   };
 
   const deleteChapter = async (id: string) => {
-    if (!confirm('¿Eliminar este capítulo? Esta acción no se puede deshacer.')) return;
+    if (!confirm('Â¿Eliminar este capÃ­tulo? Esta acciÃ³n no se puede deshacer.')) return;
     setProcessing(id);
     await fetch(`${API}/api/chapters/${id}`, { method: 'DELETE', headers: authHeaders() });
     refetch();
@@ -1005,7 +1092,7 @@ function SectionRevision() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-extrabold dark:text-white">Agenda de Publicaciones</h2>
-          <p className="text-gray-500 text-sm mt-1">{data?.capitulos?.length ?? 0} capítulos en espera</p>
+          <p className="text-gray-500 text-sm mt-1">{data?.capitulos?.length ?? 0} capÃ­tulos en espera</p>
         </div>
         <button onClick={refetch} className="flex items-center gap-2 text-sm text-gray-500 hover:text-rose-500 transition">
           <RefreshCw size={15}/> Actualizar
@@ -1017,8 +1104,8 @@ function SectionRevision() {
       ) : data?.capitulos?.length === 0 ? (
         <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center py-16 text-gray-400">
           <Check size={40} className="mb-3 text-emerald-400"/>
-          <p className="font-medium">No hay capítulos programados</p>
-          <p className="text-sm mt-1">Los capítulos subidos aparecen aquí antes de publicarse</p>
+          <p className="font-medium">No hay capÃ­tulos programados</p>
+          <p className="text-sm mt-1">Los capÃ­tulos subidos aparecen aquÃ­ antes de publicarse</p>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
@@ -1040,7 +1127,7 @@ function SectionRevision() {
                     </div>
                     <p className="font-bold dark:text-white">{cap.manga_titulo}</p>
                     <p className="text-sm text-gray-500">
-                      Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''} · por <strong className="text-rose-400">{cap.uploader_username}</strong>
+                      Cap. {cap.numero}{cap.titulo ? ` â€” ${cap.titulo}` : ''} Â· por <strong className="text-rose-400">{cap.uploader_username}</strong>
                     </p>
                   </div>
 
@@ -1083,7 +1170,7 @@ function SectionRevision() {
 }
 
 // ============================================================
-//  SECCIÓN: USUARIOS
+//  SECCIÃ“N: USUARIOS
 // ============================================================
 function SectionUsuarios() {
   const { data, loading, refetch } = useAPI<{ usuarios: Usuario[] }>('/api/admin/users');
@@ -1127,7 +1214,7 @@ function SectionUsuarios() {
   const [editEmailLoad, setEditEmailLoad] = useState(false);
 
   const handleChangeEmail = async (userId: string) => {
-    if (!editEmailVal.trim() || !editEmailVal.includes('@')) { setEditEmailMsg('❌ Email inválido'); return; }
+    if (!editEmailVal.trim() || !editEmailVal.includes('@')) { setEditEmailMsg('âŒ Email invÃ¡lido'); return; }
     setEditEmailLoad(true); setEditEmailMsg(null);
     try {
       const res = await fetch(`${API}/api/admin/users/${userId}`, {
@@ -1137,14 +1224,14 @@ function SectionUsuarios() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setEditEmailMsg('✅ Email actualizado');
+      setEditEmailMsg('âœ… Email actualizado');
       refetch();
       setTimeout(() => { setEditEmailId(null); setEditEmailMsg(null); }, 1500);
-    } catch (e: any) { setEditEmailMsg(`❌ ${e.message}`); }
+    } catch (e: any) { setEditEmailMsg(`âŒ ${e.message}`); }
     finally { setEditEmailLoad(false); }
   };
 
-  // Reset contraseña — v2.0: envía email en lugar de ingresar contraseña manual
+  // Reset contraseÃ±a â€” v2.0: envÃ­a email en lugar de ingresar contraseÃ±a manual
   const [resetingId, setResetingId] = useState<string | null>(null);
   const [resetMsg, setResetMsg]     = useState<string | null>(null);
   const [resetLoading, setResetLoad] = useState(false);
@@ -1164,7 +1251,7 @@ function SectionUsuarios() {
     return matchQ && matchScan && matchRol && matchTab;
   });
 
-  // v2.0 — envía email de reset en lugar de ingresar contraseña manual
+  // v2.0 â€” envÃ­a email de reset en lugar de ingresar contraseÃ±a manual
   const handleResetPassword = async (userId: string) => {
     setResetLoad(true); setResetMsg(null);
     try {
@@ -1175,12 +1262,12 @@ function SectionUsuarios() {
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
       if (d.emailSent) {
-        setResetMsg('✅ Email de reset enviado');
+        setResetMsg('âœ… Email de reset enviado');
       } else {
-        setResetMsg(`⚠️ No se pudo enviar email — link: ${d.setupUrl ?? '(sin RESEND_API_KEY)'}`);
+        setResetMsg(`âš ï¸ No se pudo enviar email â€” link: ${d.setupUrl ?? '(sin RESEND_API_KEY)'}`);
       }
       setTimeout(() => { setResetingId(null); setResetMsg(null); }, 4000);
-    } catch (e: any) { setResetMsg(`❌ ${e.message}`); }
+    } catch (e: any) { setResetMsg(`âŒ ${e.message}`); }
     finally { setResetLoad(false); }
   };
 
@@ -1191,19 +1278,19 @@ function SectionUsuarios() {
       const res = await fetch(`${API}/api/auth/register`, {
         method: 'POST',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        // v2.0 — sin password: el usuario recibe email para configurarla
+        // v2.0 â€” sin password: el usuario recibe email para configurarla
         body: JSON.stringify({ username, email, rol, scan_id: userScanId || null }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
       const msg = d.emailSent
-        ? `✅ Usuario "${username}" creado — email de invitación enviado a ${email}`
-        : `✅ Usuario "${username}" creado — link de setup: ${d.setupUrl ?? '(configurá RESEND_API_KEY)'}`;
+        ? `âœ… Usuario "${username}" creado â€” email de invitaciÃ³n enviado a ${email}`
+        : `âœ… Usuario "${username}" creado â€” link de setup: ${d.setupUrl ?? '(configurÃ¡ RESEND_API_KEY)'}`;
       setFeedback(msg);
       setUsername(''); setEmail(''); setUserScanId('');
       refetch();
       setTimeout(() => setShowForm(false), 3000);
-    } catch (err: any) { setFeedback(`❌ ${err.message}`); }
+    } catch (err: any) { setFeedback(`âŒ ${err.message}`); }
     finally { setSaving(false); }
   };
 
@@ -1246,10 +1333,10 @@ function SectionUsuarios() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setEditScanMsg('✅ Scan actualizado');
+      setEditScanMsg('âœ… Scan actualizado');
       refetch();
       setTimeout(() => { setEditScanId(null); setEditScanMsg(null); }, 1200);
-    } catch (e: any) { setEditScanMsg(`❌ ${e.message}`); }
+    } catch (e: any) { setEditScanMsg(`âŒ ${e.message}`); }
     finally { setEditScanLoad(false); }
   };
 
@@ -1258,7 +1345,7 @@ function SectionUsuarios() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-extrabold dark:text-white">Gestión de Usuarios</h2>
+          <h2 className="text-2xl font-extrabold dark:text-white">GestiÃ³n de Usuarios</h2>
           <p className="text-gray-500 text-sm mt-1">{filtered.length} de {data?.usuarios?.length ?? 0} miembros</p>
         </div>
         {canManageUsers && (
@@ -1318,14 +1405,14 @@ function SectionUsuarios() {
         <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl animate-in slide-in-from-top-2 duration-300">
           <h3 className="font-bold dark:text-white mb-5 flex items-center gap-2"><ShieldCheck size={16} className="text-rose-500"/> Crear Usuario del Staff</h3>
           {feedback && (
-            <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${feedback.startsWith('✅') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
+            <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${feedback.startsWith('âœ…') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
               {feedback}
             </div>
           )}
-          {/* v2.0 — sin campo contraseña: el usuario la configura por email */}
+          {/* v2.0 â€” sin campo contraseÃ±a: el usuario la configura por email */}
           <div className="mb-4 flex items-start gap-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl px-4 py-3 text-xs text-blue-700 dark:text-blue-300">
-            <span className="mt-0.5">📧</span>
-            <span>Se enviará un email al usuario con un link para que configure su propia contraseña. El link expira en 48 hs.</span>
+            <span className="mt-0.5">ðŸ“§</span>
+            <span>Se enviarÃ¡ un email al usuario con un link para que configure su propia contraseÃ±a. El link expira en 48 hs.</span>
           </div>
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {[
@@ -1353,7 +1440,7 @@ function SectionUsuarios() {
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><Layers size={11}/> Scan Asignado</label>
               <select value={userScanId} onChange={e => setUserScanId(e.target.value)}
                 className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
-                <option value="">— Sin scan —</option>
+                <option value="">â€” Sin scan â€”</option>
                 {scansList.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
               </select>
             </div>
@@ -1419,7 +1506,7 @@ function SectionUsuarios() {
                       <Layers size={10}/> {u.scan_nombre}
                     </span>
                   )}
-                  {/* Cambiar rol — solo superadmin */}
+                  {/* Cambiar rol â€” solo superadmin */}
                   {isSuperAdmin && (editRolId === u.id ? (
                     <div className="flex items-center gap-1 flex-wrap">
                       <select value={editRolVal} onChange={e => setEditRolVal(e.target.value)} autoFocus
@@ -1443,28 +1530,28 @@ function SectionUsuarios() {
                       <Edit3 size={14}/>
                     </button>
                   ))}
-                  {/* Cambiar scan — solo superadmin */}
+                  {/* Cambiar scan â€” solo superadmin */}
                   {isSuperAdmin && (
                     <button onClick={() => { setEditScanId(editScanId === u.id ? null : u.id); setEditScanVal(u.scan_id || ''); setEditScanMsg(null); setEditRolId(null); setEditEmailId(null); }}
                       title="Cambiar scan" className="p-1.5 rounded-lg text-gray-400 hover:text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10 transition">
                       <Layers size={14}/>
                     </button>
                   )}
-                  {/* Editar email — solo superadmin */}
+                  {/* Editar email â€” solo superadmin */}
                   {isSuperAdmin && (
                     <button onClick={() => { setEditEmailId(editEmailId === u.id ? null : u.id); setEditEmailVal(u.email); setEditEmailMsg(null); setEditRolId(null); setEditScanId(null); setResetingId(null); }}
                       title="Editar email" className="p-1.5 rounded-lg text-gray-400 hover:text-sky-500 hover:bg-sky-50 dark:hover:bg-sky-500/10 transition">
                       <AtSign size={14}/>
                     </button>
                   )}
-                  {/* Bloquear/activar — superadmin y soporte */}
+                  {/* Bloquear/activar â€” superadmin y soporte */}
                   <button onClick={() => toggleActivo(u)} title={u.activo ? 'Bloquear' : 'Activar'}
                     className={`p-1.5 rounded-lg transition ${u.activo ? 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'}`}>
                     {u.activo ? <Ban size={14}/> : <Check size={14}/>}
                   </button>
-                  {/* Resetear contraseña — superadmin y soporte */}
+                  {/* Resetear contraseÃ±a â€” superadmin y soporte */}
                   <button onClick={() => { setResetingId(resetingId === u.id ? null : u.id); setResetMsg(null); setEditScanId(null); setEditRolId(null); }}
-                    title={!!u.cuenta_pendiente ? 'Reenviar invitación' : 'Resetear contraseña por email'}
+                    title={!!u.cuenta_pendiente ? 'Reenviar invitaciÃ³n' : 'Resetear contraseÃ±a por email'}
                     className={`p-1.5 rounded-lg transition ${!!u.cuenta_pendiente ? 'text-sky-400 hover:text-sky-300 hover:bg-sky-500/10' : 'text-gray-400 hover:text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10'}`}>
                     {!!u.cuenta_pendiente ? <Mail size={14}/> : <ShieldCheck size={14}/>}
                   </button>
@@ -1478,12 +1565,12 @@ function SectionUsuarios() {
                     <Layers size={13}/> Cambiar scan de <strong>{u.username}</strong>
                   </p>
                   {editScanMsg && (
-                    <p className={`text-xs font-medium mb-2 ${editScanMsg.startsWith('✅') ? 'text-emerald-600' : 'text-red-600'}`}>{editScanMsg}</p>
+                    <p className={`text-xs font-medium mb-2 ${editScanMsg.startsWith('âœ…') ? 'text-emerald-600' : 'text-red-600'}`}>{editScanMsg}</p>
                   )}
                   <div className="flex gap-2">
                     <select value={editScanVal} onChange={e => setEditScanVal(e.target.value)}
                       className="flex-1 bg-white dark:bg-black/30 border border-violet-200 dark:border-white/10 px-3 py-2 rounded-lg text-sm dark:text-white focus:border-violet-400 outline-none">
-                      <option value="">— Sin scan —</option>
+                      <option value="">â€” Sin scan â€”</option>
                       {scansList.map(s => <option key={s.id} value={s.id}>{s.nombre}</option>)}
                     </select>
                     <button onClick={() => handleChangeScan(u.id)} disabled={editScanLoad}
@@ -1503,7 +1590,7 @@ function SectionUsuarios() {
                     <AtSign size={13}/> Editar email de <strong>{u.username}</strong>
                   </p>
                   {editEmailMsg && (
-                    <p className={`text-xs font-medium mb-2 ${editEmailMsg.startsWith('✅') ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{editEmailMsg}</p>
+                    <p className={`text-xs font-medium mb-2 ${editEmailMsg.startsWith('âœ…') ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>{editEmailMsg}</p>
                   )}
                   <div className="flex gap-2">
                     <input
@@ -1521,7 +1608,7 @@ function SectionUsuarios() {
                 </div>
               )}
 
-              {/* Panel reset/reenvío invitación — v2.0: siempre envía email */}
+              {/* Panel reset/reenvÃ­o invitaciÃ³n â€” v2.0: siempre envÃ­a email */}
               {isSuperAdmin && resetingId === u.id && (
                 <div className={`mx-5 mb-3 rounded-xl p-4 animate-in slide-in-from-top-1 duration-200 border ${
                   !!u.cuenta_pendiente
@@ -1532,13 +1619,13 @@ function SectionUsuarios() {
                     !!u.cuenta_pendiente ? 'text-sky-700 dark:text-sky-400' : 'text-amber-700 dark:text-amber-400'
                   }`}>
                     {!!u.cuenta_pendiente ? <Mail size={13}/> : <ShieldCheck size={13}/>}
-                    {!!u.cuenta_pendiente ? 'Reenviar invitación' : 'Reset de contraseña'} — <strong>{u.username}</strong>
+                    {!!u.cuenta_pendiente ? 'Reenviar invitaciÃ³n' : 'Reset de contraseÃ±a'} â€” <strong>{u.username}</strong>
                   </p>
                   <p className={`text-xs mb-3 ${!!u.cuenta_pendiente ? 'text-sky-600 dark:text-sky-400/70' : 'text-amber-600 dark:text-amber-400/70'}`}>
-                    Se enviará un email a <strong>{u.email}</strong> con un link para {!!u.cuenta_pendiente ? 'activar su cuenta' : 'configurar una nueva contraseña'}. El link expira en 48 hs.
+                    Se enviarÃ¡ un email a <strong>{u.email}</strong> con un link para {!!u.cuenta_pendiente ? 'activar su cuenta' : 'configurar una nueva contraseÃ±a'}. El link expira en 48 hs.
                   </p>
                   {resetMsg && (
-                    <p className={`text-xs font-medium mb-3 break-all ${resetMsg.startsWith('✅') ? 'text-emerald-600' : resetMsg.startsWith('⚠️') ? 'text-amber-600' : 'text-red-600'}`}>
+                    <p className={`text-xs font-medium mb-3 break-all ${resetMsg.startsWith('âœ…') ? 'text-emerald-600' : resetMsg.startsWith('âš ï¸') ? 'text-amber-600' : 'text-red-600'}`}>
                       {resetMsg}
                     </p>
                   )}
@@ -1550,7 +1637,7 @@ function SectionUsuarios() {
                           : 'bg-amber-500 hover:bg-amber-400'
                       }`}>
                       {resetLoading ? <Loader2 size={14} className="animate-spin"/> : !!u.cuenta_pendiente ? <Mail size={14}/> : <ShieldCheck size={14}/>}
-                      {!!u.cuenta_pendiente ? 'Reenviar invitación' : 'Enviar email de reset'}
+                      {!!u.cuenta_pendiente ? 'Reenviar invitaciÃ³n' : 'Enviar email de reset'}
                     </button>
                     <button onClick={() => { setResetingId(null); setResetMsg(null); }}
                       className="p-2 rounded-lg text-gray-400 hover:bg-white/10 transition"><X size={14}/></button>
@@ -1566,12 +1653,12 @@ function SectionUsuarios() {
 }
 
 // ============================================================
-//  SECCIÓN: SCANS
+//  SECCIÃ“N: SCANS
 // ============================================================
 interface ScanDetail { scan: Scan; mangas: any[]; miembros: any[]; totalViews: number; }
 
 // ============================================================
-//  SECCIÓN: REVENUE SHARE
+//  SECCIÃ“N: REVENUE SHARE
 // ============================================================
 interface RevenueScan {
   id: string; nombre: string; total_views: number; views_mes: number;
@@ -1586,7 +1673,7 @@ interface RevenueManga {
 function SectionRevenue() {
   const currentUser  = getUser();
   const isSuperAdmin = !!currentUser?.is_superadmin;
-  // admin_scan ve solo su propio scan, cargado automáticamente
+  // admin_scan ve solo su propio scan, cargado automÃ¡ticamente
   const ownScanId    = (!isSuperAdmin && currentUser?.scan_id) ? currentUser.scan_id : null;
 
   const { data, loading, refetch } = useAPI<{ scans: RevenueScan[]; grand_total: number; grand_total_mes: number }>(
@@ -1630,9 +1717,9 @@ function SectionRevenue() {
       <div className="flex flex-col gap-6 animate-in fade-in duration-300">
         <div>
           <h2 className="text-2xl font-extrabold dark:text-white flex items-center gap-2">
-            <DollarSign size={22} className="text-emerald-500"/> Revenue — Mi Scan
+            <DollarSign size={22} className="text-emerald-500"/> Revenue â€” Mi Scan
           </h2>
-          <p className="text-gray-500 text-sm mt-1">Vistas de tu scan — se reinician el 1° de cada mes</p>
+          <p className="text-gray-500 text-sm mt-1">Vistas de tu scan â€” se reinician el 1Â° de cada mes</p>
         </div>
         {isLoading && <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>}
         {det && (
@@ -1649,7 +1736,7 @@ function SectionRevenue() {
                 <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-400"><TrendingUp size={20}/></div>
                 <div>
                   <p className="text-2xl font-black dark:text-white">{det.scan_total.toLocaleString()}</p>
-                  <p className="text-xs text-gray-500 font-semibold">vistas históricas</p>
+                  <p className="text-xs text-gray-500 font-semibold">vistas histÃ³ricas</p>
                 </div>
               </div>
             </div>
@@ -1677,14 +1764,14 @@ function SectionRevenue() {
                         {manga.capitulos.map(cap => (
                           <div key={cap.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-white/5 last:border-0">
                             <span className="text-xs text-gray-600 dark:text-gray-300">
-                              Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}
+                              Cap. {cap.numero}{cap.titulo ? ` â€” ${cap.titulo}` : ''}
                             </span>
                             <span className="text-xs font-bold tabular-nums dark:text-white flex items-center gap-1">
                               <Eye size={10} className="text-gray-400"/> {cap.views.toLocaleString()}
                             </span>
                           </div>
                         ))}
-                        {manga.capitulos.length === 0 && <p className="text-xs text-gray-400 italic py-1">Sin capítulos publicados</p>}
+                        {manga.capitulos.length === 0 && <p className="text-xs text-gray-400 italic py-1">Sin capÃ­tulos publicados</p>}
                       </div>
                     )}
                   </div>
@@ -1706,7 +1793,7 @@ function SectionRevenue() {
           <h2 className="text-2xl font-extrabold dark:text-white flex items-center gap-2">
             <DollarSign size={22} className="text-emerald-500"/> Revenue Share
           </h2>
-          <p className="text-gray-500 text-sm mt-1">Vistas acumuladas por scan — base para calcular pagos</p>
+          <p className="text-gray-500 text-sm mt-1">Vistas acumuladas por scan â€” base para calcular pagos</p>
         </div>
         <button onClick={refetch} className="flex items-center gap-2 text-sm text-gray-500 hover:text-rose-500 transition-colors">
           <RefreshCw size={15}/> Actualizar
@@ -1727,7 +1814,7 @@ function SectionRevenue() {
             <div className="w-10 h-10 rounded-xl bg-gray-100 dark:bg-white/5 flex items-center justify-center text-gray-400"><TrendingUp size={20}/></div>
             <div>
               <p className="text-2xl font-black dark:text-white">{data.grand_total.toLocaleString()}</p>
-              <p className="text-xs text-gray-500 font-semibold">vistas históricas totales</p>
+              <p className="text-xs text-gray-500 font-semibold">vistas histÃ³ricas totales</p>
             </div>
           </div>
         </div>
@@ -1752,11 +1839,11 @@ function SectionRevenue() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-bold dark:text-white">{scan.nombre}</p>
-                    <p className="text-xs text-gray-400">{scan.total_mangas} obras · {scan.total_capitulos} caps publicados</p>
+                    <p className="text-xs text-gray-400">{scan.total_mangas} obras Â· {scan.total_capitulos} caps publicados</p>
                   </div>
                   <div className="hidden md:flex flex-col items-end gap-0.5 shrink-0">
                     <p className="text-xl font-black dark:text-white">{(scan.views_mes ?? 0).toLocaleString()} <span className="text-xs text-emerald-500 font-bold">mes</span></p>
-                    <p className="text-xs text-gray-400 tabular-nums">{scan.total_views.toLocaleString()} histórico</p>
+                    <p className="text-xs text-gray-400 tabular-nums">{scan.total_views.toLocaleString()} histÃ³rico</p>
                   </div>
                   {/* Barra de porcentaje */}
                   <div className="hidden lg:block w-32">
@@ -1780,7 +1867,7 @@ function SectionRevenue() {
                         <BookOpen size={12}/> Desglose por obra
                       </p>
                       <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                        Este mes: {(det.scan_total_mes ?? 0).toLocaleString()} · Histórico: {det.scan_total.toLocaleString()}
+                        Este mes: {(det.scan_total_mes ?? 0).toLocaleString()} Â· HistÃ³rico: {det.scan_total.toLocaleString()}
                       </p>
                     </div>
                     <div className="flex flex-col gap-2">
@@ -1794,7 +1881,7 @@ function SectionRevenue() {
                               className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/2 transition text-left">
                               <div className="flex-1 min-w-0">
                                 <p className="text-sm font-bold dark:text-white truncate">{manga.titulo}</p>
-                                <p className="text-[10px] text-gray-400">{manga.tipo} · {manga.capitulos.length} caps</p>
+                                <p className="text-[10px] text-gray-400">{manga.tipo} Â· {manga.capitulos.length} caps</p>
                               </div>
                               <div className="flex items-center gap-3 shrink-0">
                                 <div className="hidden sm:block w-20">
@@ -1810,14 +1897,14 @@ function SectionRevenue() {
                                 <ChevronRight size={12} className={`text-gray-400 transition-transform ${isMangaExpanded ? 'rotate-90' : ''}`}/>
                               </div>
                             </button>
-                            {/* Detalle capítulos */}
+                            {/* Detalle capÃ­tulos */}
                             {isMangaExpanded && (
                               <div className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/20 px-4 py-3 animate-in slide-in-from-top-1 duration-150">
                                 <div className="flex flex-col gap-1">
                                   {manga.capitulos.map(cap => (
                                     <div key={cap.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-white/5 last:border-0">
                                       <span className="text-xs text-gray-600 dark:text-gray-300">
-                                        Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}
+                                        Cap. {cap.numero}{cap.titulo ? ` â€” ${cap.titulo}` : ''}
                                       </span>
                                       <span className="text-xs font-bold tabular-nums dark:text-white flex items-center gap-1">
                                         <Eye size={10} className="text-gray-400"/>
@@ -1826,7 +1913,7 @@ function SectionRevenue() {
                                     </div>
                                   ))}
                                   {manga.capitulos.length === 0 && (
-                                    <p className="text-xs text-gray-400 italic py-1">Sin capítulos publicados</p>
+                                    <p className="text-xs text-gray-400 italic py-1">Sin capÃ­tulos publicados</p>
                                   )}
                                 </div>
                               </div>
@@ -1847,8 +1934,8 @@ function SectionRevenue() {
           {(data?.scans?.length === 0) && (
             <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center py-16 text-gray-400">
               <BarChart2 size={40} className="mb-3 opacity-30"/>
-              <p className="font-medium">No hay datos de revenue aún</p>
-              <p className="text-sm">Las vistas se acumulan automáticamente cuando los usuarios leen</p>
+              <p className="font-medium">No hay datos de revenue aÃºn</p>
+              <p className="text-sm">Las vistas se acumulan automÃ¡ticamente cuando los usuarios leen</p>
             </div>
           )}
         </div>
@@ -1886,7 +1973,7 @@ function SectionScans() {
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
         body: JSON.stringify({ texto: contractText }),
       });
-      if (res.ok) setContractMsg('Contrato actualizado y versión incrementada.');
+      if (res.ok) setContractMsg('Contrato actualizado y versiÃ³n incrementada.');
       else setContractMsg('Error al guardar el contrato.');
     } catch {
       setContractMsg('Error de red.');
@@ -1922,11 +2009,11 @@ function SectionScans() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setFeedback(`✅ Scan "${nombre}" creado`);
+      setFeedback(`âœ… Scan "${nombre}" creado`);
       setNombre(''); setDesc('');
       refetch();
       setTimeout(() => setShowForm(false), 1200);
-    } catch (err: any) { setFeedback(`❌ ${err.message}`); }
+    } catch (err: any) { setFeedback(`âŒ ${err.message}`); }
     finally { setSaving(false); }
   };
 
@@ -1963,7 +2050,7 @@ function SectionScans() {
       {showContractForm && isSuperAdmin && (
         <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl animate-in slide-in-from-top-2 duration-300">
           <h3 className="font-bold dark:text-white mb-2 flex items-center gap-2"><Edit3 size={16} className="text-rose-500"/> Editar Contrato de Alianza</h3>
-          <p className="text-sm text-gray-500 mb-5">El texto se mostrará a los administradores de scan. Al guardar, se exigirá que todos vuelvan a firmar.</p>
+          <p className="text-sm text-gray-500 mb-5">El texto se mostrarÃ¡ a los administradores de scan. Al guardar, se exigirÃ¡ que todos vuelvan a firmar.</p>
           {contractMsg && (
             <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${contractMsg.includes('Error') ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
               {contractMsg}
@@ -1974,12 +2061,12 @@ function SectionScans() {
               <textarea 
                 value={contractText} onChange={e => setContractText(e.target.value)} required rows={15}
                 className="w-full bg-gray-50 dark:bg-[#07070a] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 dark:text-white focus:outline-none focus:border-rose-500 transition-colors resize-y font-mono text-sm"
-                placeholder="Escribe el contrato aquí..."
+                placeholder="Escribe el contrato aquÃ­..."
               />
             </div>
             <div className="flex justify-end">
               <button type="submit" disabled={contractSaving} className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-bold transition-all">
-                {contractSaving ? 'Guardando...' : 'Guardar Nueva Versión'}
+                {contractSaving ? 'Guardando...' : 'Guardar Nueva VersiÃ³n'}
               </button>
             </div>
           </form>
@@ -1990,7 +2077,7 @@ function SectionScans() {
         <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl animate-in slide-in-from-top-2 duration-300">
           <h3 className="font-bold dark:text-white mb-5 flex items-center gap-2"><Layers size={16} className="text-rose-500"/> Registrar Scan</h3>
           {feedback && (
-            <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${feedback.startsWith('✅') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
+            <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${feedback.startsWith('âœ…') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
               {feedback}
             </div>
           )}
@@ -2001,8 +2088,8 @@ function SectionScans() {
                 className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"/>
             </div>
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Descripción</label>
-              <textarea value={descripcion} onChange={e => setDesc(e.target.value)} rows={2} placeholder="Descripción del grupo..."
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">DescripciÃ³n</label>
+              <textarea value={descripcion} onChange={e => setDesc(e.target.value)} rows={2} placeholder="DescripciÃ³n del grupo..."
                 className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none resize-none transition"/>
             </div>
             <div className="flex gap-3 pt-2">
@@ -2059,7 +2146,7 @@ function SectionScans() {
                     )}
                   </div>
 
-                  <p className="text-xs text-gray-400 line-clamp-2 min-h-[2rem] mt-1">{scan.descripcion || 'Sin descripción'}</p>
+                  <p className="text-xs text-gray-400 line-clamp-2 min-h-[2rem] mt-1">{scan.descripcion || 'Sin descripciÃ³n'}</p>
 
                   <div className="flex items-center justify-between border-t border-gray-100 dark:border-white/5 pt-3 mt-2">
                     <div className="flex items-center gap-3 text-[11px] text-gray-500 font-medium">
@@ -2112,7 +2199,7 @@ function SectionScans() {
                         </div>
                         <div>
                           <p className="text-sm font-bold text-amber-800 dark:text-amber-400">Contrato Pendiente</p>
-                          <p className="text-[10px] text-amber-600/80 dark:text-amber-500/80 font-medium">El administrador no ha firmado la última versión.</p>
+                          <p className="text-[10px] text-amber-600/80 dark:text-amber-500/80 font-medium">El administrador no ha firmado la Ãºltima versiÃ³n.</p>
                         </div>
                       </div>
                     )}
@@ -2175,7 +2262,7 @@ function SectionScans() {
                           </div>
                         )}
 
-                        {/* Métricas totales */}
+                        {/* MÃ©tricas totales */}
                         <div className="mt-4 grid grid-cols-3 gap-2">
                           {[
                             { label: 'Obras', value: det.mangas.length, icon: <BookOpen size={14}/> },
@@ -2203,15 +2290,15 @@ function SectionScans() {
 }
 
 // ============================================================
-//  SECCIÓN: CONFIGURACIÓN DEL SCAN (webhook Discord)
+//  SECCIÃ“N: CONFIGURACIÃ“N DEL SCAN (webhook Discord)
 // ============================================================
-const DEFAULT_DISCORD_TEMPLATE = '📖 **{{manga}}** — Capítulo {{capitulo}}{{titulo}}\n\n[👁 Leer ahora]({{url}})';
+const DEFAULT_DISCORD_TEMPLATE = 'ðŸ“– **{{manga}}** â€” CapÃ­tulo {{capitulo}}{{titulo}}\n\n[ðŸ‘ Leer ahora]({{url}})';
 
 function previewTemplate(tpl: string) {
   return (tpl || DEFAULT_DISCORD_TEMPLATE)
     .replace(/\{\{manga\}\}/g, 'Atados por el Pecado')
     .replace(/\{\{capitulo\}\}/g, '42')
-    .replace(/\{\{titulo\}\}/g, ' — El reencuentro')
+    .replace(/\{\{titulo\}\}/g, ' â€” El reencuentro')
     .replace(/\{\{url\}\}/g, 'https://scancrimson.com/manga/reader/...')
     .replace(/\*\*(.*?)\*\*/g, '$1');
 }
@@ -2276,8 +2363,8 @@ function SectionConfig({ scanId }: { scanId: string }) {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setSaved('✅ Webhook guardado');
-    } catch (e: any) { setSaved(`❌ ${e.message}`); }
+      setSaved('âœ… Webhook guardado');
+    } catch (e: any) { setSaved(`âŒ ${e.message}`); }
     finally { setSaving(false); }
   };
 
@@ -2291,8 +2378,8 @@ function SectionConfig({ scanId }: { scanId: string }) {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setSavedRedes('✅ Redes sociales guardadas');
-    } catch (e: any) { setSavedRedes(`❌ ${e.message}`); }
+      setSavedRedes('âœ… Redes sociales guardadas');
+    } catch (e: any) { setSavedRedes(`âŒ ${e.message}`); }
     finally { setSavingRedes(false); }
   };
 
@@ -2305,16 +2392,16 @@ function SectionConfig({ scanId }: { scanId: string }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           embeds: [{
-            title: '✅ Webhook configurado correctamente',
-            description: `El bot de **${scanData?.scan?.nombre || 'tu scan'}** está listo para notificaciones.`,
+            title: 'âœ… Webhook configurado correctamente',
+            description: `El bot de **${scanData?.scan?.nombre || 'tu scan'}** estÃ¡ listo para notificaciones.`,
             color: 0xe11d48,
             footer: { text: "Crimson's Scan" },
             timestamp: new Date().toISOString(),
           }]
         }),
       });
-      setTestMsg(res.ok ? '✅ Mensaje enviado al Discord' : '❌ URL inválida o sin permisos');
-    } catch { setTestMsg('❌ No se pudo conectar con Discord'); }
+      setTestMsg(res.ok ? 'âœ… Mensaje enviado al Discord' : 'âŒ URL invÃ¡lida o sin permisos');
+    } catch { setTestMsg('âŒ No se pudo conectar con Discord'); }
     finally { setTesting(false); }
   };
 
@@ -2329,11 +2416,11 @@ function SectionConfig({ scanId }: { scanId: string }) {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setCreateMsg(`✅ Usuario "${newUser}" creado`);
+      setCreateMsg(`âœ… Usuario "${newUser}" creado`);
       setNewUser(''); setNewEmail(''); setNewPwd(''); setNewRol('uploader');
       refetch();
       setTimeout(() => { setShowForm(false); setCreateMsg(null); }, 1500);
-    } catch (e: any) { setCreateMsg(`❌ ${e.message}`); }
+    } catch (e: any) { setCreateMsg(`âŒ ${e.message}`); }
     finally { setCreating(false); }
   };
 
@@ -2341,7 +2428,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
     const raw = e.target.files?.[0];
     if (imgRef.current) imgRef.current.value = '';
     if (!raw) return;
-    if (raw.size > 5 * 1024 * 1024) { setImgMsg('❌ Máximo 5MB'); return; }
+    if (raw.size > 5 * 1024 * 1024) { setImgMsg('âŒ MÃ¡ximo 5MB'); return; }
     setImgUploading(true); setImgMsg(null);
     const file = await toWebP(raw, 1200);
     const fd = new FormData();
@@ -2351,8 +2438,8 @@ function SectionConfig({ scanId }: { scanId: string }) {
       const d   = await res.json();
       if (!res.ok) throw new Error(d.error);
       setImgKey(Date.now());
-      setImgMsg('✅ Imagen actualizada');
-    } catch (err: any) { setImgMsg(`❌ ${err.message}`); }
+      setImgMsg('âœ… Imagen actualizada');
+    } catch (err: any) { setImgMsg(`âŒ ${err.message}`); }
     finally { setImgUploading(false); }
   };
 
@@ -2377,13 +2464,13 @@ function SectionConfig({ scanId }: { scanId: string }) {
             />
           </div>
           <div className="flex flex-col gap-2 flex-1">
-            <p className="text-sm text-gray-500">Sube una imagen de portada para tu scan (PNG, JPG — máx 5MB). Se mostrará en la página de comunidad.</p>
+            <p className="text-sm text-gray-500">Sube una imagen de portada para tu scan (PNG, JPG â€” mÃ¡x 5MB). Se mostrarÃ¡ en la pÃ¡gina de comunidad.</p>
             <button onClick={() => imgRef.current?.click()} disabled={imgUploading}
               className="flex items-center gap-2 text-sm font-bold text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 px-4 py-2 rounded-xl transition w-fit">
               {imgUploading ? <><Loader2 size={14} className="animate-spin"/> Subiendo...</> : <><Upload size={14}/> Cambiar imagen</>}
             </button>
             <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={handleImgUpload}/>
-            {imgMsg && <p className={`text-xs font-medium ${imgMsg.startsWith('✅') ? 'text-emerald-400' : 'text-red-400'}`}>{imgMsg}</p>}
+            {imgMsg && <p className={`text-xs font-medium ${imgMsg.startsWith('âœ…') ? 'text-emerald-400' : 'text-red-400'}`}>{imgMsg}</p>}
           </div>
         </div>
       </div>
@@ -2399,7 +2486,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
               </div>
               <div>
                 <p className="font-bold dark:text-white">{scanData?.scan?.nombre}</p>
-                <p className="text-xs text-gray-400">{scanData?.scan?.descripcion || 'Sin descripción'}</p>
+                <p className="text-xs text-gray-400">{scanData?.scan?.descripcion || 'Sin descripciÃ³n'}</p>
               </div>
             </div>
             
@@ -2446,14 +2533,14 @@ function SectionConfig({ scanId }: { scanId: string }) {
                 <form onSubmit={handleCreateMember} className="bg-gray-50 dark:bg-black/20 rounded-xl p-4 mb-3 flex flex-col gap-3 border border-gray-200 dark:border-white/10 animate-in slide-in-from-top-1 duration-200">
                   <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Nuevo miembro</p>
                   {createMsg && (
-                    <div className={`p-2 rounded-lg text-xs font-medium ${createMsg.startsWith('✅') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
+                    <div className={`p-2 rounded-lg text-xs font-medium ${createMsg.startsWith('âœ…') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
                       {createMsg}
                     </div>
                   )}
                   <div className="grid grid-cols-2 gap-2">
                     <input value={newUser} onChange={e => setNewUser(e.target.value)} required placeholder="Username" className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none"/>
                     <input value={newEmail} onChange={e => setNewEmail(e.target.value)} required type="email" placeholder="Email" className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none"/>
-                    <input value={newPwd} onChange={e => setNewPwd(e.target.value)} required type="password" placeholder="Contraseña" className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none"/>
+                    <input value={newPwd} onChange={e => setNewPwd(e.target.value)} required type="password" placeholder="ContraseÃ±a" className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none"/>
                     <select value={newRol} onChange={e => setNewRol(e.target.value)} className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none">
                       <option value="uploader">Uploader</option>
                       <option value="admin_scan">Admin Scan</option>
@@ -2473,7 +2560,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
               )}
 
               {scanData?.miembros?.length === 0 ? (
-                <p className="text-xs text-gray-400 italic py-2">Sin miembros aún — agregá el primero</p>
+                <p className="text-xs text-gray-400 italic py-2">Sin miembros aÃºn â€” agregÃ¡ el primero</p>
               ) : (
                 <div className="flex flex-col gap-2">
                   {scanData?.miembros?.map((m: any) => (
@@ -2499,11 +2586,11 @@ function SectionConfig({ scanId }: { scanId: string }) {
           <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Webhook de Discord</p>
             <p className="text-xs text-gray-500 mb-4">
-              Cuando se publique un capítulo de tu scan, el bot notifica automáticamente al canal.
-              En Discord: Canal → Editar → Integraciones → Webhooks → Nuevo webhook.
+              Cuando se publique un capÃ­tulo de tu scan, el bot notifica automÃ¡ticamente al canal.
+              En Discord: Canal â†’ Editar â†’ Integraciones â†’ Webhooks â†’ Nuevo webhook.
             </p>
-            {saved   && <div className={`mb-3 p-3 rounded-xl text-sm font-medium ${saved.startsWith('✅')   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>{saved}</div>}
-            {testMsg && <div className={`mb-3 p-3 rounded-xl text-sm font-medium ${testMsg.startsWith('✅') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>{testMsg}</div>}
+            {saved   && <div className={`mb-3 p-3 rounded-xl text-sm font-medium ${saved.startsWith('âœ…')   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>{saved}</div>}
+            {testMsg && <div className={`mb-3 p-3 rounded-xl text-sm font-medium ${testMsg.startsWith('âœ…') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>{testMsg}</div>}
             <div className="flex flex-col gap-1.5 mb-4">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">URL del Webhook</label>
               <input
@@ -2515,7 +2602,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
             </div>
             <div className="flex flex-col gap-1.5 mb-4">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Mensaje del Discord</label>
-              <p className="text-xs text-gray-400">Usá las variables de abajo. Si lo dejás vacío se usa el mensaje por defecto. Soporta Markdown de Discord.</p>
+              <p className="text-xs text-gray-400">UsÃ¡ las variables de abajo. Si lo dejÃ¡s vacÃ­o se usa el mensaje por defecto. Soporta Markdown de Discord.</p>
               <div className="flex flex-wrap gap-1.5 mb-1">
                 {['{{manga}}', '{{capitulo}}', '{{titulo}}', '{{url}}'].map(v => (
                   <button key={v} type="button"
@@ -2547,7 +2634,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
                 <button onClick={handleTest} disabled={testing}
                   className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition">
                   {testing ? <Loader2 size={16} className="animate-spin"/> : null}
-                  {testing ? 'Enviando...' : '🧪 Probar'}
+                  {testing ? 'Enviando...' : 'ðŸ§ª Probar'}
                 </button>
               )}
             </div>
@@ -2557,12 +2644,12 @@ function SectionConfig({ scanId }: { scanId: string }) {
             <div>
               <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Redes Sociales del Scan</p>
               <p className="text-xs text-gray-500">
-                Ingresá las URLs de las redes sociales de tu grupo. Se mostrarán y enlazarán en tu página pública.
+                IngresÃ¡ las URLs de las redes sociales de tu grupo. Se mostrarÃ¡n y enlazarÃ¡n en tu pÃ¡gina pÃºblica.
               </p>
             </div>
             
             {savedRedes && (
-              <div className={`p-3 rounded-xl text-sm font-medium ${savedRedes.startsWith('✅') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
+              <div className={`p-3 rounded-xl text-sm font-medium ${savedRedes.startsWith('âœ…') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
                 {savedRedes}
               </div>
             )}
@@ -2609,7 +2696,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
 }
 
 // ============================================================
-//  SECCIÓN: SEGURIDAD (Logs)
+//  SECCIÃ“N: SEGURIDAD (Logs)
 // ============================================================
 function SectionSeguridad() {
   const { data, loading, refetch } = useAPI<{ logs: any[] }>('/api/admin/logs');
@@ -2638,7 +2725,7 @@ function SectionSeguridad() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-extrabold dark:text-white flex items-center gap-2">
-            <ShieldCheck size={22} className="text-rose-500"/> Auditoría y Logs
+            <ShieldCheck size={22} className="text-rose-500"/> AuditorÃ­a y Logs
           </h2>
           <p className="text-gray-500 text-sm mt-1">Historial de registros de usuarios, accesos y seguridad del sistema</p>
         </div>
@@ -2647,7 +2734,7 @@ function SectionSeguridad() {
         </button>
       </div>
 
-      {/* Controles de Búsqueda y Filtros */}
+      {/* Controles de BÃºsqueda y Filtros */}
       <div className="flex flex-col sm:flex-row gap-4 items-center justify-between bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 p-4 rounded-2xl shadow-sm">
         <div className="relative w-full sm:max-w-xs">
           <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"/>
@@ -2675,7 +2762,7 @@ function SectionSeguridad() {
             <option value="registro_usuario">Nuevos Registros</option>
             <option value="login_exitoso">Conexiones Exitosas</option>
             <option value="login_fallido">Conexiones Fallidas</option>
-            <option value="robo_imagenes">Robo de Imágenes</option>
+            <option value="robo_imagenes">Robo de ImÃ¡genes</option>
             <option value="error_sistema">Errores de Sistema</option>
           </select>
         </div>
@@ -2689,13 +2776,13 @@ function SectionSeguridad() {
             <div className="flex flex-col items-center py-16 text-gray-400">
               <ShieldCheck size={40} className="mb-3 opacity-30"/>
               <p className="font-medium">No se encontraron registros de seguridad</p>
-              <p className="text-sm">Todo está funcionando correctamente o ajustá tus filtros</p>
+              <p className="text-sm">Todo estÃ¡ funcionando correctamente o ajustÃ¡ tus filtros</p>
             </div>
           ) : (
             <div className="flex flex-col">
               {filteredLogs.map((log: any, i: number) => {
                 const tipo = log.tipo;
-                let title = 'Acción del Sistema';
+                let title = 'AcciÃ³n del Sistema';
                 let icon = <AlertCircle size={20}/>;
                 let badgeClass = 'bg-gray-100 text-gray-600 dark:bg-white/5 dark:text-gray-400';
 
@@ -2712,11 +2799,11 @@ function SectionSeguridad() {
                   icon = <UserPlus size={20}/>;
                   badgeClass = 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20';
                 } else if (tipo === 'login_exitoso') {
-                  title = 'Inicio de Sesión Exitoso';
+                  title = 'Inicio de SesiÃ³n Exitoso';
                   icon = <ShieldCheck size={20}/>;
                   badgeClass = 'bg-blue-500/10 text-blue-500 border border-blue-500/20';
                 } else if (tipo === 'login_fallido') {
-                  title = 'Intento de Conexión Fallido';
+                  title = 'Intento de ConexiÃ³n Fallido';
                   icon = <Ban size={20}/>;
                   badgeClass = 'bg-rose-500/10 text-rose-500 border border-rose-500/20';
                 }
@@ -2754,7 +2841,7 @@ function SectionSeguridad() {
   );
 }
 
-// ── SECCIÓN: SOPORTE ──────────────────────────────────────────
+// â”€â”€ SECCIÃ“N: SOPORTE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function SectionSoporte() {
   const { data, loading, refetch } = useAPI<any>('/api/admin/tickets');
   const [updating, setUpdating] = useState<string | null>(null);
@@ -2783,7 +2870,7 @@ function SectionSoporte() {
     <div className="flex flex-col gap-6 max-w-5xl mx-auto">
       <div>
         <h2 className="text-2xl font-black text-gray-900 dark:text-white flex items-center gap-2">
-          <MessageSquare className="text-rose-500" size={24}/> Buzón de Sugerencias & Soporte
+          <MessageSquare className="text-rose-500" size={24}/> BuzÃ³n de Sugerencias & Soporte
         </h2>
         <p className="text-gray-500 text-sm mt-1">Gestiona los mensajes, sugerencias y reportes de los usuarios.</p>
       </div>
@@ -2792,7 +2879,7 @@ function SectionSoporte() {
         {tickets.length === 0 ? (
           <div className="flex flex-col items-center py-16 text-gray-400">
             <MessageSquare size={40} className="mb-3 opacity-30"/>
-            <p className="font-medium">El buzón está vacío</p>
+            <p className="font-medium">El buzÃ³n estÃ¡ vacÃ­o</p>
             <p className="text-sm">No hay mensajes pendientes.</p>
           </div>
         ) : (

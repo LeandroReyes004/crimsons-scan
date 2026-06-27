@@ -1669,6 +1669,62 @@ export default {
         return json(requests.results);
       }
 
+      // ── PUT /api/admin/mangas/:id/disable ─────────────────
+      // Deshabilita (o reactiva) una obra por derechos de autor u otro motivo.
+      // Solo superadmin o admin global pueden hacerlo.
+      const disableManga = pathname.match(/^\/api\/admin\/mangas\/([^/]+)\/disable$/);
+      if (disableManga && method === 'PUT') {
+        const sa = await requireAdmin(request, env);
+        if (!sa) return err('No autorizado', 401);
+        if (!sa.is_superadmin && sa.rol !== 'admin') return err('Solo el administrador puede deshabilitar obras', 403);
+
+        const { disable, razon } = await request.json(); // disable: true/false
+        const manga = await env.DB.prepare('SELECT id, titulo, estado FROM mangas WHERE id = ?').bind(disableManga[1]).first();
+        if (!manga) return err('Obra no encontrada', 404);
+
+        if (disable) {
+          await env.DB.prepare(
+            "UPDATE mangas SET estado = 'deshabilitado', notas_admin = ?, fecha_actualizacion = datetime('now') WHERE id = ?"
+          ).bind(razon || 'Deshabilitado por el administrador', disableManga[1]).run();
+
+          // Log de auditoría
+          const logId = crypto.randomUUID();
+          const ip = request.headers.get('cf-connecting-ip') || '';
+          await env.DB.prepare(
+            'INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)'
+          ).bind(logId, 'obra_deshabilitada', ip, `admin:${sa.username}`,
+            `Obra "${manga.titulo}" (${disableManga[1]}) deshabilitada. Razón: ${razon || 'Sin especificar'}`).run();
+
+          return json({ message: 'Obra deshabilitada' });
+        } else {
+          await env.DB.prepare(
+            "UPDATE mangas SET estado = 'en_curso', notas_admin = NULL, fecha_actualizacion = datetime('now') WHERE id = ?"
+          ).bind(disableManga[1]).run();
+          return json({ message: 'Obra reactivada' });
+        }
+      }
+
+      // ── PUT /api/admin/joints/:manga_id/leave ─────────────
+      // Permite que el scan invitado se retire de un joint (aprobado o pendiente).
+      const leaveJoint = pathname.match(/^\/api\/admin\/joints\/([^/]+)\/leave$/);
+      if (leaveJoint && method === 'PUT') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('No autorizado', 401);
+        const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id=?').bind(admin.id).first();
+        if (!dbU?.scan_id) return err('No tienes un scan asignado', 403);
+
+        const manga = await env.DB.prepare('SELECT id, titulo, joint_scan_id, joint_status FROM mangas WHERE id = ?').bind(leaveJoint[1]).first();
+        if (!manga) return err('Obra no encontrada', 404);
+        if (manga.joint_scan_id !== dbU.scan_id) return err('Tu scan no es el joint de esta obra', 403);
+
+        // Quitar el joint sin eliminar la obra
+        await env.DB.prepare(
+          "UPDATE mangas SET joint_scan_id = NULL, joint_status = 'aprobado', fecha_actualizacion = datetime('now') WHERE id = ?"
+        ).bind(leaveJoint[1]).run();
+
+        return json({ message: `Saliste del joint de "${manga.titulo}"` });
+      }
+
       // ── PUT /api/admin/joints/:manga_id/action ────────────
       const actionJoint = pathname.match(/^\/api\/admin\/joints\/([^/]+)\/action$/);
       if (actionJoint && method === 'PUT') {
