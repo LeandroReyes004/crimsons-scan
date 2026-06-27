@@ -938,7 +938,7 @@ export default {
           pages,
           capitulo: {
             id: cap.id, numero: cap.numero, titulo: cap.titulo, manga_id: cap.manga_id,
-            manga_tipo: cap.manga_tipo,
+            manga_tipo: cap.manga_tipo ? cap.manga_tipo.toLowerCase() : 'manga',
             es_adulto: !!cap.es_adulto,
             prev_chapter_id: prevCap?.id || null,
             next_chapter_id: nextCap?.id || null,
