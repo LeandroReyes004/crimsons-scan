@@ -1421,16 +1421,16 @@ export default {
       // Recibe UNA imagen, la sube a R2, la registra en D1
       if (pathname === '/api/upload/page' && method === 'POST') {
 
-          if (caller.rol !== 'superadmin' && caller.scan_id) {
-            const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
-            const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-            if (false /*!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion*/) {
-              return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
-            }
-          }
-
         const user = await getUser(request, env);
         if (!user) return err('No autorizado', 401);
+
+        if (!user.is_superadmin && user.rol !== 'admin' && user.scan_id) {
+          const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(user.scan_id).first();
+          const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+          if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+            return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
+          }
+        }
 
         const formData    = await request.formData();
         const capitulo_id = formData.get('capitulo_id');
@@ -1477,16 +1477,16 @@ export default {
       // Recibe un archivo .txt de novela, lo sube a R2, lo registra como página única
       if (pathname === '/api/upload/text' && method === 'POST') {
 
-          if (caller.rol !== 'superadmin' && caller.scan_id) {
-            const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
-            const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-            if (false /*!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion*/) {
-              return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
-            }
-          }
-
         const user = await getUser(request, env);
         if (!user) return err('No autorizado', 401);
+
+        if (!user.is_superadmin && user.rol !== 'admin' && user.scan_id) {
+          const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(user.scan_id).first();
+          const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+          if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+            return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
+          }
+        }
 
         const formData    = await request.formData();
         const capitulo_id = formData.get('capitulo_id');
@@ -1531,16 +1531,16 @@ export default {
       // ── POST /api/upload/cover ───────────────────────────
       if (pathname === '/api/upload/cover' && method === 'POST') {
 
-          if (caller.rol !== 'superadmin' && caller.scan_id) {
-            const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
-            const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-            if (false /*!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion*/) {
-              return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
-            }
-          }
-
         const admin = await requireAdmin(request, env);
         if (!admin) return err('No autorizado', 401);
+
+        if (!admin.is_superadmin && admin.rol !== 'admin' && admin.scan_id) {
+          const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(admin.scan_id).first();
+          const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+          if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+            return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
+          }
+        }
 
         const formData = await request.formData();
         const manga_id = formData.get('manga_id');
