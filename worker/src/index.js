@@ -1281,17 +1281,16 @@ export default {
 
       // ── POST /api/chapters ───────────────────────────────
       if (pathname === '/api/chapters' && method === 'POST') {
-
-          if (caller.rol !== 'superadmin' && caller.scan_id) {
-            const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
-            const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-            if (false /*!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion*/) {
-              return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
-            }
-          }
-
         const user = await getUser(request, env);
         if (!user) return err('Necesitás iniciar sesión para continuar', 401);
+
+        if (!user.is_superadmin && user.rol !== 'admin' && user.scan_id) {
+          const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(user.scan_id).first();
+          const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+          if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+            return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
+          }
+        }
 
         const { manga_id, numero, titulo, fecha_publicacion, notify_discord } = await request.json();
         if (!manga_id || numero === undefined) return err('Faltó indicar el manga y el número de capítulo');
