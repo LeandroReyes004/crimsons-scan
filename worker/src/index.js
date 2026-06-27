@@ -902,7 +902,10 @@ export default {
         const origin  = new URL(request.url).origin;
         const expires = Math.floor(Date.now() / 1000) + 6 * 3600; // firma válida 6 horas
 
-        const pages = await Promise.all(paginas.map(async pag => {
+        const isNovela = (cap.manga_tipo || '').toLowerCase() === 'novela';
+
+        // Para novelas, no generamos tokens de imagen — el frontend pedirá el texto por separado
+        const pages = isNovela ? [] : await Promise.all(paginas.map(async pag => {
           const sig = await signImageToken(chapterPages[1], String(pag.orden), expires, env.IMG_SECRET);
           return {
             id:           pag.id,
