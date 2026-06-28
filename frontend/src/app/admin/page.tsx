@@ -88,36 +88,6 @@ function Badge({ estado }: { estado: string }) {
 }
 
 
-      {/* Disable modal */}
-      {disableModal && (
-        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 flex flex-col gap-4">
-            <div className="flex items-start gap-3">
-              <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center shrink-0">
-                <Ban size={20} className="text-orange-500"/>
-              </div>
-              <div>
-                <h3 className="font-extrabold text-lg dark:text-white">Deshabilitar obra</h3>
-                <p className="text-sm text-gray-500 mt-0.5">Esta accion ocultara la obra y todos sus capitulos del sitio publico.</p>
-              </div>
-            </div>
-            <div className="bg-orange-50 dark:bg-orange-500/10 rounded-xl p-3 border border-orange-100 dark:border-orange-500/20">
-              <p className="text-sm font-semibold dark:text-white">{disableModal.manga.titulo}</p>
-              <p className="text-xs text-gray-500 mt-0.5">{disableModal.manga.tipo}</p>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-sm font-semibold dark:text-white">Razon <span className="text-gray-400 font-normal">(opcional)</span></label>
-              <textarea rows={3} value={disableRazon} onChange={e => setDisableRazon(e.target.value)} placeholder="Ej: Solicitud de derechos de autor, DMCA takedown..." className="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/50"/>
-            </div>
-            <div className="flex gap-3 justify-end">
-              <button onClick={() => { setDisableModal(null); setDisableRazon(''); }} className="px-4 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition">Cancelar</button>
-              <button onClick={() => handleDisableManga(disableModal.manga, true)} disabled={disabling} className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-400 text-white transition disabled:opacity-60">
-                {disabling ? <Loader2 size={14} className="animate-spin"/> : <Ban size={14}/>} Deshabilitar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
 // ============================================================
 export default function AdminPage() {
   const router = useRouter();
@@ -1039,6 +1009,36 @@ function SectionMangas() {
               )}
             </div>
           ))}
+        </div>
+      )}
+      {/* Disable modal */}
+      {disableModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 animate-in fade-in duration-200">
+          <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/10 shadow-2xl w-full max-w-md p-6 flex flex-col gap-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-xl bg-orange-100 dark:bg-orange-500/10 flex items-center justify-center shrink-0">
+                <Ban size={20} className="text-orange-500"/>
+              </div>
+              <div>
+                <h3 className="font-extrabold text-lg dark:text-white">Deshabilitar obra</h3>
+                <p className="text-sm text-gray-500 mt-0.5">Esta accion ocultara la obra y todos sus capitulos del sitio publico.</p>
+              </div>
+            </div>
+            <div className="bg-orange-50 dark:bg-orange-500/10 rounded-xl p-3 border border-orange-100 dark:border-orange-500/20">
+              <p className="text-sm font-semibold dark:text-white">{disableModal.manga.titulo}</p>
+              <p className="text-xs text-gray-500 mt-0.5">{disableModal.manga.tipo}</p>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-sm font-semibold dark:text-white">Razon <span className="text-gray-400 font-normal">(opcional)</span></label>
+              <textarea rows={3} value={disableRazon} onChange={e => setDisableRazon(e.target.value)} placeholder="Ej: Solicitud de derechos de autor, DMCA takedown..." className="w-full bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl px-3 py-2 text-sm dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-orange-500/50"/>
+            </div>
+            <div className="flex gap-3 justify-end">
+              <button onClick={() => { setDisableModal(null); setDisableRazon(''); }} className="px-4 py-2 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition">Cancelar</button>
+              <button onClick={() => handleDisableManga(disableModal.manga, true)} disabled={disabling} className="flex items-center gap-2 px-5 py-2 rounded-xl text-sm font-bold bg-orange-500 hover:bg-orange-400 text-white transition disabled:opacity-60">
+                {disabling ? <Loader2 size={14} className="animate-spin"/> : <Ban size={14}/>} Deshabilitar
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
