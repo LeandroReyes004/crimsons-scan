@@ -29,6 +29,21 @@ const err   = (msg, status = 400) => json({ error: msg }, status);
 // ── Discord: aplica template con variables ─────────────────
 const DEFAULT_DISCORD_TEMPLATE = '📖 **{{manga}}** — Capítulo {{capitulo}}{{titulo}}\n\n[👁 Leer ahora]({{url}})';
 
+// Helper para reintentar subidas a R2 en caso de errores internos transitorios de Cloudflare (ej. 10001)
+async function putWithRetry(env, key, buffer, options, retries = 3) {
+  let lastErr = null;
+  for (let i = 0; i < retries; i++) {
+    try {
+      return await env.R2.put(key, buffer, options);
+    } catch (e) {
+      lastErr = e;
+      if (i === retries - 1) throw e;
+      await new Promise(r => setTimeout(r, 1000 * Math.pow(1.5, i))); // Exponential backoff: 1s, 1.5s, 2.25s
+    }
+  }
+  throw lastErr;
+}
+
 function buildDiscordBody(template, vars) {
   const desc = (template || DEFAULT_DISCORD_TEMPLATE)
     .replace(/\{\{manga\}\}/g, vars.manga)
@@ -622,7 +637,7 @@ export default {
         if (!ALLOWED_IMG.includes(ext)) return err('Formato no permitido. Usá JPG, PNG, WebP o GIF', 400);
         const safeType = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp', gif:'image/gif' }[ext];
         const r2_key = `scancrimson.com/avatars/${user.id}.${ext}`;
-        await env.R2.put(r2_key, await file.arrayBuffer(), { httpMetadata: { contentType: safeType } });
+        await putWithRetry(env, r2_key, await file.arrayBuffer(), { httpMetadata: { contentType: safeType } });
         await env.DB.prepare('UPDATE usuarios SET avatar_url = ? WHERE id = ?').bind(r2_key, user.id).run();
         return json({ avatar_url: r2_key });
       }
@@ -1465,7 +1480,8 @@ export default {
         const capNum = String(cap.numero).replace('.', '-').padStart(3, '0');
         const r2_key = `scancrimson.com/chapters/${cap.manga_id}/cap-${capNum}/${String(numero).padStart(3, '0')}.${ext}`;
 
-        await env.R2.put(r2_key, await file.arrayBuffer(), {
+        const buffer = await file.arrayBuffer();
+        await putWithRetry(env, r2_key, buffer, {
           httpMetadata: { contentType: file.type },
         });
 
@@ -1519,7 +1535,8 @@ export default {
         const capNum = String(cap.numero).replace('.', '-').padStart(3, '0');
         const r2_key = `scancrimson.com/chapters/${cap.manga_id}/cap-${capNum}/content.txt`;
 
-        await env.R2.put(r2_key, await file.arrayBuffer(), {
+        const buffer = await file.arrayBuffer();
+        await putWithRetry(env, r2_key, buffer, {
           httpMetadata: { contentType: 'text/plain; charset=utf-8' },
         });
 
@@ -1560,7 +1577,8 @@ export default {
         const safeType = { jpg:'image/jpeg', jpeg:'image/jpeg', png:'image/png', webp:'image/webp' }[ext];
         const r2_key = `scancrimson.com/covers/${manga_id}.${ext}`;
 
-        await env.R2.put(r2_key, await file.arrayBuffer(), {
+        const buffer = await file.arrayBuffer();
+        await putWithRetry(env, r2_key, buffer, {
           httpMetadata: { contentType: safeType },
         });
 
@@ -1989,7 +2007,7 @@ export default {
         if (!file) return err('Falta el archivo');
         const ext    = (file.name?.split('.').pop() || 'jpg').toLowerCase();
         const r2_key = `scancrimson.com/scans/${scanId}.${ext}`;
-        await env.R2.put(r2_key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type || 'image/jpeg' } });
+        await putWithRetry(env, r2_key, await file.arrayBuffer(), { httpMetadata: { contentType: file.type || 'image/jpeg' } });
         await env.DB.prepare('UPDATE scans SET imagen_url = ? WHERE id = ?').bind(r2_key, scanId).run();
         return json({ imagen_url: r2_key });
       }

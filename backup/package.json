@@ -1,0 +1,16 @@
+{
+  "name": "crimson-backup-tools",
+  "version": "1.0.0",
+  "description": "Herramientas de respaldo y restauración para Crimson Scan (D1 y R2)",
+  "main": "r2-sync.js",
+  "scripts": {
+    "backup:db": "db-backup.bat",
+    "restore:db": "db-restore.bat",
+    "backup:r2": "node r2-sync.js backup",
+    "restore:r2": "node r2-sync.js restore"
+  },
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.500.0",
+    "dotenv": "^16.4.5"
+  }
+}
