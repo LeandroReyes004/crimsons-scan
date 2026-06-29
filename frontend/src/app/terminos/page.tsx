@@ -135,10 +135,10 @@ export default function ReglamentoPage() {
                 Si tienes preguntas sobre nuestros términos o quieres reportar un problema, puedes abrir un ticket de soporte en la parte inferior o enviarnos un email.
               </p>
               <a 
-                href="mailto:soporte@scancrimson.com" 
+                href="mailto:kaiser1205@proton.me" 
                 className="text-xs font-bold text-rose-500 dark:text-rose-400 hover:underline mt-1 flex items-center gap-1.5"
               >
-                soporte@scancrimson.com <ArrowRight size={12} />
+                kaiser1205@proton.me <ArrowRight size={12} />
               </a>
             </div>
           </aside>
@@ -299,10 +299,10 @@ export default function ReglamentoPage() {
                   
                   <div className="flex items-center justify-center p-4 bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 rounded-xl text-center self-center max-w-md w-full shadow-md">
                     <a 
-                      href="mailto:soporte@scancrimson.com" 
+                      href="mailto:kaiser1205@proton.me" 
                       className="text-lg font-black text-rose-600 dark:text-rose-400 hover:underline flex items-center gap-2"
                     >
-                      <Mail size={18} /> soporte@scancrimson.com
+                      <Mail size={18} /> kaiser1205@proton.me
                     </a>
                   </div>
                 </div>
