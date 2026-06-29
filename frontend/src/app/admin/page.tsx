@@ -149,7 +149,7 @@ export default function AdminPage() {
           <img src="/logo.png" alt="CrimsonScan" className="h-10 w-auto object-contain" />
           <div>
             <p className="font-bold text-white leading-tight">CrimsonHQ</p>
-            <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest">âš¡ Acceso Restringido</p>
+            <p className="text-[10px] text-amber-400 font-bold uppercase tracking-widest">⚡ Acceso Restringido</p>
           </div>
         </div>
 
@@ -179,7 +179,7 @@ export default function AdminPage() {
               type="password"
               value={loginPass}
               onChange={e => setLoginPass(e.target.value)}
-              placeholder="”¢”¢”¢”¢”¢”¢”¢”¢"
+              placeholder="••••••••"
               required
               className="bg-black/40 border border-white/10 px-4 py-3 rounded-xl text-white text-sm focus:border-rose-500 outline-none transition"
             />
@@ -231,7 +231,7 @@ export default function AdminPage() {
             <p className="text-[10px] font-bold uppercase tracking-widest" style={{
               color: user.is_superadmin ? '#f59e0b' : user.rol === 'admin_scan' ? '#f97316' : user.rol === 'soporte' ? '#14b8a6' : '#f43f5e'
             }}>
-              {user.is_superadmin ? 'âš¡ SuperAdmin' : user.rol === 'admin_scan' ? 'ðŸ›¡ Admin Scan' : user.rol === 'soporte' ? 'ðŸŽ§ Soporte' : 'Admin'}
+              {user.is_superadmin ? '⚡ SuperAdmin' : user.rol === 'admin_scan' ? '🛡 Admin Scan' : user.rol === 'soporte' ? '🎧 Soporte' : 'Admin'}
             </p>
           </div>
         </div>
