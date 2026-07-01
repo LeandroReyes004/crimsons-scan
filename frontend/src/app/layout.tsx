@@ -41,6 +41,10 @@ export default function RootLayout({
     <html lang="es" suppressHydrationWarning className={`${geistSans.variable} ${geistMono.variable}`}>
       <head>
         <meta name="profiton-domain-verification" content="fc1082b69f555d513ea15de2bdef8e83f88a19279fe8bdff6d1676431b3aed7a" />
+        {/* Monetag Global Popunder Script (Onclick) */}
+        <script dangerouslySetInnerHTML={{
+          __html: `(function(s){s.dataset.zone='11184403',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`
+        }} />
       </head>
       <body className="min-h-full flex flex-col font-sans transition-colors duration-300 dark:bg-[#0a0a0c] dark:text-white bg-slate-50 text-slate-900 pb-28">
         <ThemeProvider
