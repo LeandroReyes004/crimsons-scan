@@ -88,6 +88,7 @@ export async function refreshUser(): Promise<CrimsonUser | null> {
       avatar_url: d.avatar_url || undefined,
       is_superadmin: !!d.is_superadmin,
       scan_id: d.scan_id ?? null,
+      scan_nombre: d.scan_nombre ?? null,
       scan_contrato_firmado: d.scan_contrato_firmado,
       scan_contrato_version: d.scan_contrato_version,
       global_contrato_version: d.global_contrato_version,
