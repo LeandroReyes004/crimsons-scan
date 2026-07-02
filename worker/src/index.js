@@ -2353,6 +2353,54 @@ export default {
         return json({ logs: results || [] });
       }
 
+      // 📖 GET /api/drive/list
+      if (pathname === '/api/drive/list' && method === 'GET') {
+        const u = await getUser(request, env);
+        if (!u || (!u.is_superadmin && !u.scan_nombre?.toLowerCase().includes('crimson'))) return err('No autorizado', 403);
+        const url = new URL(request.url);
+        const id = url.searchParams.get('id');
+        const type = url.searchParams.get('type') || 'folder';
+        if (!id) return err('ID requerido', 400);
+        if (!env.GOOGLE_DRIVE_API_KEY) return err('Falta configurar GOOGLE_DRIVE_API_KEY en el servidor', 500);
+
+        try {
+          if (type === 'folder') {
+            const driveRes = await fetch(`https://www.googleapis.com/drive/v3/files?q='${id}'+in+parents+and+trashed=false&fields=files(id,name,mimeType,size)&pageSize=1000&key=${env.GOOGLE_DRIVE_API_KEY}`);
+            const driveData = await driveRes.json();
+            if (driveData.error) throw new Error(driveData.error.message);
+            return json({ files: driveData.files || [] });
+          } else {
+            const driveRes = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?fields=id,name,mimeType,size&key=${env.GOOGLE_DRIVE_API_KEY}`);
+            const driveData = await driveRes.json();
+            if (driveData.error) throw new Error(driveData.error.message);
+            return json({ files: [driveData] });
+          }
+        } catch (e) {
+          return err('Error de Google Drive: ' + e.message, 500);
+        }
+      }
+
+      // 📖 GET /api/drive/download
+      if (pathname === '/api/drive/download' && method === 'GET') {
+        const u = await getUser(request, env);
+        if (!u || (!u.is_superadmin && !u.scan_nombre?.toLowerCase().includes('crimson'))) return err('No autorizado', 403);
+        const url = new URL(request.url);
+        const id = url.searchParams.get('id');
+        if (!id) return err('ID requerido', 400);
+        if (!env.GOOGLE_DRIVE_API_KEY) return err('Falta configurar GOOGLE_DRIVE_API_KEY', 500);
+
+        const driveRes = await fetch(`https://www.googleapis.com/drive/v3/files/${id}?alt=media&key=${env.GOOGLE_DRIVE_API_KEY}`);
+        if (!driveRes.ok) return err('Error al descargar de Drive: ' + driveRes.statusText, driveRes.status);
+        
+        const newHeaders = new Headers(driveRes.headers);
+        Object.entries(makeCORS(request.headers.get('Origin') || '')).forEach(([k, v]) => newHeaders.set(k, v));
+        
+        return new Response(driveRes.body, {
+          status: driveRes.status,
+          headers: newHeaders
+        });
+      }
+
       return err('Página no encontrada', 404);
 
     } catch (e) {

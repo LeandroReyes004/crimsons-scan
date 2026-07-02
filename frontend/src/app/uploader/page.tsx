@@ -6,7 +6,7 @@ import Link from 'next/link';
 import {
   Upload, BookOpen, ChevronLeft, LogOut, Plus, Check, X, Loader2,
   AlertCircle, ImageIcon, Clock, CheckCircle, XCircle, Trash2, ArrowUp, ArrowDown,
-  Package, FileArchive, Edit3, FileText
+  Package, FileArchive, Edit3, FileText, Cloud
 } from 'lucide-react';
 import { getUser, authHeaders, logout } from '@/lib/auth';
 import { toWebP } from '@/lib/webp';
@@ -45,7 +45,7 @@ export default function UploaderPage() {
   const [selectedManga, setSelected] = useState<Manga | null>(null);
   const [capitulos, setCapitulos]    = useState<Capitulo[]>([]);
   const [scansList, setScansList]    = useState<{id:string, nombre:string}[]>([]);
-  const [view, setView]              = useState<'mangas' | 'chapters' | 'upload' | 'batch' | 'edit'>('mangas');
+  const [view, setView]              = useState<'mangas' | 'chapters' | 'upload' | 'batch' | 'edit' | 'drive'>('mangas');
 
   // Edición de capítulo
   const [editingCap, setEditingCap]   = useState<Capitulo | null>(null);
@@ -85,6 +85,50 @@ export default function UploaderPage() {
   const [batchDone, setBatchDone]         = useState(false);
   const [batchError, setBatchError]       = useState('');
   const zipInputRef = useRef<HTMLInputElement>(null);
+
+  // Drive upload
+  const [driveUrl, setDriveUrl] = useState('');
+  const [driveLoading, setDriveLoading] = useState(false);
+  const [driveError, setDriveError] = useState('');
+
+  const handleDriveImport = async () => {
+    if (!driveUrl) return;
+    setDriveLoading(true); setDriveError('');
+    try {
+      const match = driveUrl.match(/(?:folders\/|file\/d\/|id=)([\w-]+)/);
+      if (!match) throw new Error('URL de Google Drive inválida. Asegurate de que contenga el ID.');
+      const driveId = match[1];
+      const isFolder = driveUrl.includes('folders/');
+
+      const res = await fetch(`${API}/api/drive/list?id=${driveId}&type=${isFolder ? 'folder' : 'file'}`, { headers: authHeaders() });
+      const d = await res.json();
+      if (!res.ok) throw new Error(d.error || 'Error al listar archivos de Drive');
+      if (!d.files || d.files.length === 0) throw new Error('No se encontraron archivos en este enlace.');
+
+      if (!isFolder && (d.files[0].mimeType === 'application/zip' || d.files[0].mimeType === 'application/x-zip-compressed' || d.files[0].name.endsWith('.zip'))) {
+        const fileRes = await fetch(`${API}/api/drive/download?id=${d.files[0].id}`, { headers: authHeaders() });
+        if (!fileRes.ok) throw new Error('Error al descargar de Drive');
+        const blob = await fileRes.blob();
+        const file = new File([blob], d.files[0].name, { type: 'application/zip' });
+        setView('batch');
+        await handleZip(file);
+      } else {
+        const fetchedFiles: File[] = [];
+        for (const fileMeta of d.files) {
+          const fileRes = await fetch(`${API}/api/drive/download?id=${fileMeta.id}`, { headers: authHeaders() });
+          if (!fileRes.ok) throw new Error(`Error al descargar ${fileMeta.name}`);
+          const blob = await fileRes.blob();
+          fetchedFiles.push(new File([blob], fileMeta.name, { type: blob.type }));
+        }
+        setView('upload');
+        await handleFiles(fetchedFiles as any);
+      }
+    } catch (e: any) {
+      setDriveError(e.message);
+    } finally {
+      setDriveLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetch(`${API}/api/mangas?admin=1`, { headers: authHeaders() })
@@ -418,7 +462,7 @@ export default function UploaderPage() {
       <header className="sticky top-0 z-40 bg-white dark:bg-[#0d0d10] border-b border-gray-200 dark:border-white/5 h-14 px-4 flex items-center justify-between shadow-sm gap-2">
         <div className="flex items-center gap-2 min-w-0">
           {view !== 'mangas' && (
-            <button onClick={() => { setView(view === 'upload' || view === 'batch' || view === 'edit' ? 'chapters' : 'mangas'); resetUpload(); setBatchChapters([]); setBatchDone(false); setEditingCap(null); }}
+            <button onClick={() => { setView(view === 'upload' || view === 'batch' || view === 'edit' || view === 'drive' ? 'chapters' : 'mangas'); resetUpload(); setBatchChapters([]); setBatchDone(false); setEditingCap(null); setDriveUrl(''); }}
               className="p-2 rounded-lg text-gray-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition shrink-0">
               <ChevronLeft size={18}/>
             </button>
@@ -426,7 +470,7 @@ export default function UploaderPage() {
           <img src="/logo.png" alt="CrimsonScan" className="h-7 w-auto object-contain shrink-0" />
           <div className="min-w-0">
             <p className="font-bold text-sm dark:text-white leading-tight truncate">
-              {view === 'mangas' ? 'Mis Proyectos' : view === 'chapters' ? selectedManga?.titulo : view === 'batch' ? 'Subir por lotes' : view === 'edit' ? `Editar Cap. ${editingCap?.numero}` : 'Subir Capítulo'}
+              {view === 'mangas' ? 'Mis Proyectos' : view === 'chapters' ? selectedManga?.titulo : view === 'batch' ? 'Subir por lotes' : view === 'edit' ? `Editar Cap. ${editingCap?.numero}` : view === 'drive' ? 'Importar de Drive' : 'Subir Capítulo'}
             </p>
             <p className="text-[10px] text-gray-400 truncate">{user.username}</p>
           </div>
@@ -481,6 +525,12 @@ export default function UploaderPage() {
                 <p className="text-gray-500 text-sm">{capitulos.length} capítulos</p>
               </div>
               <div className="flex gap-2 shrink-0">
+                {user && (user.is_superadmin || user.scan_nombre?.toLowerCase().includes('crimson')) && (
+                  <button onClick={() => { resetUpload(); setView('drive'); }}
+                    className="flex items-center gap-1.5 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/30 text-gray-600 dark:text-gray-300 px-3 py-2.5 rounded-xl text-sm font-bold transition active:scale-95">
+                    <Cloud size={15} className="text-blue-500" /> Drive
+                  </button>
+                )}
                 <button onClick={() => { setBatchChapters([]); setBatchDone(false); setBatchError(''); setView('batch'); }}
                   className="flex items-center gap-1.5 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 hover:border-rose-300 dark:hover:border-rose-500/30 text-gray-600 dark:text-gray-300 px-3 py-2.5 rounded-xl text-sm font-bold transition active:scale-95">
                   <Package size={15}/> ZIP
@@ -526,6 +576,36 @@ export default function UploaderPage() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Importar desde Google Drive ── */}
+        {view === 'drive' && selectedManga && (
+          <div className="animate-in fade-in duration-300 flex flex-col gap-4">
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-6 shadow-sm">
+              <h3 className="font-extrabold text-lg dark:text-white mb-2 flex items-center gap-2">
+                <Cloud className="text-blue-500" /> Importar desde Google Drive
+              </h3>
+              <p className="text-sm text-gray-500 mb-6 leading-relaxed">Pegá el enlace de una carpeta de Google Drive que contenga imágenes, o de un archivo .zip para procesarlo automáticamente y pasarlo al editor.</p>
+              
+              {driveError && (
+                <div className="bg-red-50 border border-red-100 dark:bg-red-500/10 dark:border-red-500/20 text-red-600 dark:text-red-400 text-sm px-4 py-3 rounded-xl mb-4 font-medium flex items-start gap-2">
+                  <AlertCircle size={16} className="mt-0.5 shrink-0"/> {driveError}
+                </div>
+              )}
+              
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Enlace de Google Drive</label>
+                <input type="url" value={driveUrl} onChange={e => setDriveUrl(e.target.value)} placeholder="https://drive.google.com/drive/folders/..." 
+                  className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-4 py-3.5 rounded-xl text-sm dark:text-white focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 outline-none w-full transition-all" />
+              </div>
+
+              <button onClick={handleDriveImport} disabled={!driveUrl || driveLoading}
+                className="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 active:scale-[0.98]">
+                {driveLoading ? <Loader2 size={18} className="animate-spin" /> : <Cloud size={18} />}
+                {driveLoading ? 'Descargando archivos...' : 'Procesar enlace'}
+              </button>
+            </div>
           </div>
         )}
 
