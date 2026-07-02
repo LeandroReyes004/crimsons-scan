@@ -90,10 +90,11 @@ export default function UploaderPage() {
   const [driveUrl, setDriveUrl] = useState('');
   const [driveLoading, setDriveLoading] = useState(false);
   const [driveError, setDriveError] = useState('');
+  const [driveProgress, setDriveProgress] = useState<{current: number, total: number} | null>(null);
 
   const handleDriveImport = async () => {
     if (!driveUrl) return;
-    setDriveLoading(true); setDriveError('');
+    setDriveLoading(true); setDriveError(''); setDriveProgress(null);
     try {
       const match = driveUrl.match(/(?:folders\/|file\/d\/|id=)([\w-]+)/);
       if (!match) throw new Error('URL de Google Drive inválida. Asegurate de que contenga el ID.');
@@ -114,11 +115,14 @@ export default function UploaderPage() {
         await handleZip(file);
       } else {
         const fetchedFiles: File[] = [];
-        for (const fileMeta of d.files) {
+        setDriveProgress({ current: 0, total: d.files.length });
+        for (let i = 0; i < d.files.length; i++) {
+          const fileMeta = d.files[i];
           const fileRes = await fetch(`${API}/api/drive/download?id=${fileMeta.id}`, { headers: authHeaders() });
           if (!fileRes.ok) throw new Error(`Error al descargar ${fileMeta.name}`);
           const blob = await fileRes.blob();
           fetchedFiles.push(new File([blob], fileMeta.name, { type: blob.type }));
+          setDriveProgress({ current: i + 1, total: d.files.length });
         }
         setView('upload');
         await handleFiles(fetchedFiles as any);
@@ -603,8 +607,21 @@ export default function UploaderPage() {
               <button onClick={handleDriveImport} disabled={!driveUrl || driveLoading}
                 className="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white font-extrabold py-3.5 rounded-xl transition-all shadow-lg shadow-blue-600/20 disabled:opacity-50 disabled:pointer-events-none flex items-center justify-center gap-2 active:scale-[0.98]">
                 {driveLoading ? <Loader2 size={18} className="animate-spin" /> : <Cloud size={18} />}
-                {driveLoading ? 'Descargando archivos...' : 'Procesar enlace'}
+                {driveLoading ? (driveProgress ? `Descargando ${driveProgress.current} de ${driveProgress.total}...` : 'Conectando...') : 'Procesar enlace'}
               </button>
+
+              {driveProgress && driveProgress.total > 0 && (
+                <div className="mt-4">
+                  <div className="flex justify-between text-xs font-bold text-gray-500 mb-1.5">
+                    <span>Descargando imágenes</span>
+                    <span>{Math.round((driveProgress.current / driveProgress.total) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-gray-100 dark:bg-white/5 rounded-full h-2.5 overflow-hidden">
+                    <div className="bg-blue-500 h-2.5 rounded-full transition-all duration-300 ease-out" 
+                         style={{ width: `${(driveProgress.current / driveProgress.total) * 100}%` }}></div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         )}
