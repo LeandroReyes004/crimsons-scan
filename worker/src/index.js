@@ -2357,7 +2357,15 @@ export default {
       // 📖 GET /api/drive/list
       if (pathname === '/api/drive/list' && method === 'GET') {
         const u = await getUser(request, env);
-        if (!u || (!u.is_superadmin && !u.scan_nombre?.toLowerCase().includes('crimson'))) return err('No autorizado', 403);
+        let isCrimson = false;
+        if (u) {
+          if (u.is_superadmin) isCrimson = true;
+          else if (u.scan_id) {
+            const sRow = await env.DB.prepare('SELECT nombre FROM scans WHERE id = ?').bind(u.scan_id).first();
+            if (sRow && sRow.nombre.toLowerCase().includes('crimson')) isCrimson = true;
+          }
+        }
+        if (!isCrimson) return err('No autorizado', 403);
         const url = new URL(request.url);
         const id = url.searchParams.get('id');
         const type = url.searchParams.get('type') || 'folder';
@@ -2384,7 +2392,15 @@ export default {
       // 📖 GET /api/drive/download
       if (pathname === '/api/drive/download' && method === 'GET') {
         const u = await getUser(request, env);
-        if (!u || (!u.is_superadmin && !u.scan_nombre?.toLowerCase().includes('crimson'))) return err('No autorizado', 403);
+        let isCrimson = false;
+        if (u) {
+          if (u.is_superadmin) isCrimson = true;
+          else if (u.scan_id) {
+            const sRow = await env.DB.prepare('SELECT nombre FROM scans WHERE id = ?').bind(u.scan_id).first();
+            if (sRow && sRow.nombre.toLowerCase().includes('crimson')) isCrimson = true;
+          }
+        }
+        if (!isCrimson) return err('No autorizado', 403);
         const url = new URL(request.url);
         const id = url.searchParams.get('id');
         if (!id) return err('ID requerido', 400);
