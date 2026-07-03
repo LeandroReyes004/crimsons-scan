@@ -1047,17 +1047,20 @@ export default {
         const body = await request.json();
         
         const currentVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
-        const nextVersion = currentVersion + 1;
         
         if (body.texto !== undefined) {
             await env.KV.put('contrato_texto', body.texto);
         }
-        await env.KV.put('contrato_version', nextVersion.toString());
         
-        // Resetear firma de todos los scans para que vuelvan a aceptar
-        await env.DB.prepare('UPDATE scans SET contrato_firmado = 0').run();
+        if (body.forceResign) {
+          const nextVersion = currentVersion + 1;
+          await env.KV.put('contrato_version', nextVersion.toString());
+          // Resetear firma de todos los scans para que vuelvan a aceptar
+          await env.DB.prepare('UPDATE scans SET contrato_firmado = 0').run();
+          return json({ message: 'Contrato actualizado y firmas reiniciadas', version: nextVersion });
+        }
         
-        return json({ message: 'Contrato actualizado', version: nextVersion });
+        return json({ message: 'Contrato actualizado', version: currentVersion });
       }
 
       // ── GET /api/admin/revenue ────────────────────────────

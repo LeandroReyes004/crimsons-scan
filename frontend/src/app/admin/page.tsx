@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 import ContractModal from './components/ContractModal';
 
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
@@ -1954,6 +1954,7 @@ function SectionScans() {
   const [contractText, setContractText] = useState('');
   const [contractSaving, setContractSaving] = useState(false);
   const [contractMsg, setContractMsg] = useState<string | null>(null);
+  const [forceResign, setForceResign] = useState(false);
 
   const loadContract = async () => {
     try {
@@ -1971,10 +1972,14 @@ function SectionScans() {
       const res = await fetch(`${API}/api/admin/config/contrato`, {
         method: 'PUT',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texto: contractText }),
+        body: JSON.stringify({ texto: contractText, forceResign }),
       });
-      if (res.ok) setContractMsg('Contrato actualizado y versión incrementada.');
-      else setContractMsg('Error al guardar el contrato.');
+      if (res.ok) {
+        const data = await res.json();
+        setContractMsg(data.message || 'Contrato actualizado.');
+      } else {
+        setContractMsg('Error al guardar el contrato.');
+      }
     } catch {
       setContractMsg('Error de red.');
     } finally { setContractSaving(false); }
@@ -2063,6 +2068,18 @@ function SectionScans() {
                 className="w-full bg-gray-50 dark:bg-[#07070a] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 dark:text-white focus:outline-none focus:border-rose-500 transition-colors resize-y font-mono text-sm"
                 placeholder="Escribe el contrato aquí..."
               />
+            </div>
+            <div className="flex items-center gap-3 bg-red-500/5 border border-red-500/10 p-4 rounded-xl">
+              <input
+                type="checkbox"
+                id="force-resign"
+                checked={forceResign}
+                onChange={e => setForceResign(e.target.checked)}
+                className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-rose-600 focus:ring-rose-500 cursor-pointer accent-rose-500"
+              />
+              <label htmlFor="force-resign" className="text-sm font-bold text-gray-700 dark:text-gray-300 cursor-pointer select-none">
+                Forzar reinicio de firmas (Obligar a todos a firmar de nuevo)
+              </label>
             </div>
             <div className="flex justify-end">
               <button type="submit" disabled={contractSaving} className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-bold transition-all">
