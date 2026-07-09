@@ -1,0 +1,15 @@
+          }
+        }
+
+        return json({ mangaId: id, slug, message: 'Manga creado' }, 201);
+      }
+
+      // ── GET /api/mangas/:id ──────────────────────────────
+      const mangaById = pathname.match(/^\/api\/mangas\/([^/]+)$/);
+      if (mangaById && method === 'GET') {
+        const manga = await env.DB.prepare(
+          `SELECT m.*, s.nombre as scan_nombre, s.slug as scan_slug, j.nombre as joint_scan_nombre, j.slug as joint_scan_slug FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id LEFT JOIN scans j ON m.joint_scan_id = j.id AND m.joint_status = 'aprobado' WHERE m.id = ? OR m.slug = ?`
+        ).bind(mangaById[1], mangaById[1]).first();
+        if (!manga) return err('Manga no encontrado', 404);
+
+        const url2 = new URL(request.url);

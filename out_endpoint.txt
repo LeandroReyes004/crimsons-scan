@@ -1,0 +1,27 @@
+      // ── GET /api/chapters/:id/text ──────────────────────
+      const chapterText = pathname.match(/^\/api\/chapters\/([^/]+)\/text$/);
+      if (chapterText && method === 'GET') {
+        // Encontrar la "página" que guarda el .txt
+        const pag = await env.DB.prepare(
+          `SELECT p.r2_key FROM paginas p WHERE p.capitulo_id = ? ORDER BY p.orden ASC LIMIT 1`
+        ).bind(chapterText[1]).first();
+
+        if (!pag) return err('Texto del capítulo no encontrado', 404);
+
+        const object = await env.R2.get(pag.r2_key);
+        if (!object) return err('Archivo no encontrado en storage', 404);
+
+        // Registrar en el historial si el usuario está autenticado
+        const user = await getUser(request, env);
+        if (user) {
+          const cap = await env.DB.prepare("SELECT manga_id, id FROM capitulos WHERE id = ?").bind(chapterText[1]).first();
+          if (cap) {
+            const existeHistorial = await env.DB.prepare('SELECT 1 FROM historial_lectura WHERE usuario_id = ? AND manga_id = ?').bind(user.id, cap.manga_id).first();
+            if (existeHistorial) {
+              await env.DB.prepare('UPDATE historial_lectura SET capitulo_id = ?, leido_en = CURRENT_TIMESTAMP WHERE usuario_id = ? AND manga_id = ?')
+                .bind(cap.id, user.id, cap.manga_id).run();
+            } else {
+              await env.DB.prepare('INSERT INTO historial_lectura (usuario_id, manga_id, capitulo_id) VALUES (?, ?, ?)')
+                .bind(user.id, cap.manga_id, cap.id).run();
+            }
+          }

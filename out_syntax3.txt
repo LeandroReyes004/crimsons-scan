@@ -1,0 +1,30 @@
+        if (!caller || (!caller.is_superadmin && caller.rol !== 'admin' && caller.rol !== 'admin_scan' && caller.rol !== 'uploader')) {
+          return err('No autorizado', 401);
+        }
+
+        const body = await request.json();
+        const { titulo, titulo_alt, descripcion, generos, tipo, estado, scan_id, es_adulto, joint_scan_id } = body;
+        if (!titulo) return err('El título es obligatorio');
+
+        // admin_scan y uploader siempre crean bajo su propio scan — leer scan_id de DB, no del JWT
+        let finalScanId;
+        if (!caller.is_superadmin && caller.rol !== 'admin') {
+          const dbU = await env.DB.prepare('SELECT scan_id FROM usuarios WHERE id = ?').bind(caller.id).first();
+          finalScanId = dbU?.scan_id || null;
+          if (!finalScanId) return err('Tu cuenta no tiene un scan asignado. Contactá al superadmin.', 403);
+        } else {
+          finalScanId = scan_id || null;
+        }
+
+        const id   = crypto.randomUUID();
+        const slug = await uniqueSlug(titulo, 'mangas', env);
+        await env.DB.prepare(
+          `INSERT INTO mangas (id, titulo, titulo_alt, descripcion, generos, tipo, estado, uploader_id, scan_id, es_adulto, slug, es_novela, joint_scan_id, joint_status)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+        ).bind(
+          id, titulo, titulo_alt || null, descripcion || null,
+          JSON.stringify(generos || []), tipo === 'novela' ? 'manga' : (tipo || 'manga'),
+          estado || 'en_curso', caller.id, finalScanId, es_adulto ? 1 : 0, slug, tipo === 'novela' ? 1 : 0,
+          joint_scan_id || null, joint_scan_id ? 'pendiente' : 'aprobado'
+        ).run();
+

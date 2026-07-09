@@ -1,0 +1,45 @@
+      // ── POST /api/upload/text ────────────────────────────
+      // Recibe un archivo .txt de novela, lo sube a R2, lo registra como página única
+      if (pathname === '/api/upload/text' && method === 'POST') {
+
+          if (caller.rol !== 'superadmin' && caller.scan_id) {
+            const scanData = await env.DB.prepare('SELECT contrato_firmado, contrato_version FROM scans WHERE id = ?').bind(caller.scan_id).first();
+            const globalVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
+            if (!scanData || scanData.contrato_firmado === 0 || scanData.contrato_version < globalVersion) {
+              return err('Debes firmar o actualizar tu contrato de alianza en el panel principal antes de subir contenido.', 403);
+            }
+          }
+
+        const user = await getUser(request, env);
+        if (!user) return err('No autorizado', 401);
+
+        const formData    = await request.formData();
+        const capitulo_id = formData.get('capitulo_id');
+        const numero      = parseInt(formData.get('numero'));
+        const file        = formData.get('text');
+
+        if (!capitulo_id || !numero || !file) return err('Faltan campos: capitulo_id, numero, text');
+
+        const cap = await env.DB.prepare(
+          'SELECT c.*, m.id as mid FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.id = ?'
+        ).bind(capitulo_id).first();
+
+        if (!cap) return err('El capítulo no existe o no tenés acceso', 404);
+        const isAdminUser = user.rol === 'admin' || user.is_superadmin;
+        if (cap.uploader_id !== user.id && !isAdminUser) {
+          return err('No tenés permiso para subir texto a este capítulo', 403);
+        }
+
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (ext !== 'txt') {
+          return err('Solo se permiten archivos TXT para novelas', 400);
+        }
+
+        const capNum = String(cap.numero).replace('.', '-').padStart(3, '0');
+        const r2_key = `scancrimson.com/chapters/${cap.manga_id}/cap-${capNum}/content.txt`;
+
+        await env.R2.put(r2_key, await file.arrayBuffer(), {
+          httpMetadata: { contentType: 'text/plain; charset=utf-8' },
+        });
+
+        const id = crypto.randomUUID();

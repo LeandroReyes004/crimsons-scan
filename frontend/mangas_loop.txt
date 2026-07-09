@@ -1,0 +1,5 @@
+Line 326: <StatCard icon={<BookMarked size={20}/>}  label="Proyectos"          value={data?.mangas ?? 0}     color="bg-blue-50 dark:bg-blue-500/10 text-blue-500"/>
+Line 339: {manga_data?.mangas?.slice(0, 5).map((m, i) => (
+Line 747: <p className="text-gray-500 text-sm mt-1">{data?.mangas?.length ?? 0} obras en total</p>
+Line 778: {(!data?.mangas || data.mangas.length === 0) && (
+Line 785: {data?.mangas?.filter(m => filterType === 'Todos' || m.tipo.toLowerCase() === filterType.toLowerCase()).map((m, i) => (

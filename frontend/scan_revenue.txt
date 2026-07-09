@@ -1,0 +1,17 @@
+interface RevenueScan {
+  id: string; nombre: string; total_views: number; views_mes: number;
+  total_mangas: number; total_capitulos: number;
+}
+interface RevenueManga {
+  id: string; titulo: string; views_total: number; views_mes: number; tipo: string; estado: string;
+  capitulos: { id: string; numero: number; titulo: string | null; views: number }[];
+}
+
+function SectionRevenue() {
+  const currentUser  = getUser();
+  const isSuperAdmin = !!currentUser?.is_superadmin;
+  // admin_scan ve solo su propio scan, cargado automáticamente
+  const ownScanId    = (!isSuperAdmin && currentUser?.scan_id) ? currentUser.scan_id : null;
+
+  const { data, loading, refetch } = useAPI<{ scans: RevenueScan[]; grand_total: number; grand_total_mes: number }>(
+    isSuperAdmin ? '/api/admin/revenue' : '/api/admi

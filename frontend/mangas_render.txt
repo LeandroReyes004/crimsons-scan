@@ -1,0 +1,140 @@
+              <p className="font-medium">No hay proyectos creados aún</p>
+              <p className="text-sm">Hacé click en "Nueva Obra" para empezar</p>
+            </div>
+          )}
+          {data?.mangas?.filter(m => filterType === 'Todos' || m.tipo.toLowerCase() === filterType.toLowerCase()).map((m, i) => (
+            <div key={m.id} className={i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}>
+              <div className="flex items-center gap-3 px-3 sm:px-5 py-3 sm:py-4 hover:bg-gray-50 dark:hover:bg-white/2 transition">
+                <div className="w-10 h-14 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0 flex items-center justify-center text-gray-300">
+                  {m.cover_r2_key ? (
+                    <img src={`${API}/api/cover/${m.id}`} alt={m.titulo} className="w-full h-full object-cover" />
+                  ) : (
+                    <BookOpen size={16}/>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm dark:text-white truncate">{m.titulo}</p>
+                  <p className="text-xs text-gray-400 mt-0.5">{m.tipo} · <span className="font-mono">{m.id.slice(0,8)}...</span></p>
+                  {(m as any).generos && JSON.parse((m as any).generos || '[]').length > 0 && (
+                    <div className="flex flex-wrap gap-1 mt-1">
+                      {JSON.parse((m as any).generos).slice(0,3).map((g: string) => (
+                        <span key={g} className="text-[10px] bg-gray-100 dark:bg-white/5 text-gray-500 px-1.5 py-0.5 rounded-full">{g}</span>
+                      ))}
+                      {JSON.parse((m as any).generos).length > 3 && (
+                        <span className="text-[10px] text-gray-400">+{JSON.parse((m as any).generos).length - 3}</span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-gray-400 flex items-center gap-1"><Eye size={12}/>{m.views_total}</span>
+                  <Badge estado={m.estado}/>
+                  <button onClick={() => toggleCaps(m.id)}
+                    className={`p-1.5 rounded-lg transition ${expandedId === m.id ? 'text-rose-500 bg-rose-50 dark:bg-rose-500/10' : 'text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10'}`}
+                    title="Ver capítulos">
+                    <ChevronDown size={14} className={`transition-transform ${expandedId === m.id ? 'rotate-180' : ''}`}/>
+                  </button>
+                  {!isReadOnly && (
+                    <button onClick={() => { setEditing(m); setShowCreate(false); }}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition" title="Editar">
+                      <Edit3 size={14}/>
+                    </button>
+                  )}
+                  {!isReadOnly && (
+                    <button onClick={() => handleDelete(m)}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition" title="Eliminar">
+                      <Trash2 size={14}/>
+                    </button>
+                  )}
+                </div>
+              </div>
+              {expandedId === m.id && (
+                <div className="bg-gray-50 dark:bg-black/20 border-t border-gray-100 dark:border-white/5 px-5 py-3">
+                  {loadingCaps === m.id ? (
+                    <div className="flex justify-center py-4"><Loader2 size={18} className="animate-spin text-rose-500"/></div>
+                  ) : (capsByManga[m.id] || []).length === 0 ? (
+                    <p className="text-xs text-gray-400 text-center py-3">Sin capítulos</p>
+                  ) : (
+                    <div className="flex flex-col gap-1">
+                      {(capsByManga[m.id] || []).map(cap => (
+                        <div key={cap.id} className="flex flex-col">
+                          <div className="flex items-center justify-between gap-2 py-1.5 px-2 rounded-lg hover:bg-white dark:hover:bg-white/5 transition">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Badge estado={cap.estado}/>
+                              <span className="text-sm dark:text-white font-medium">Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}</span>
+                            </div>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-xs text-gray-400 flex items-center gap-1"><Eye size={10}/>{cap.views}</span>
+                              <button onClick={() => handleDownloadChapter(m, cap)} disabled={downloadingCap === cap.id}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition disabled:opacity-50" title="Descargar Capítulo">
+                                {downloadingCap === cap.id ? <Loader2 size={12} className="animate-spin"/> : <Download size={12}/>}
+                              </button>
+                              {!isReadOnly && (
+                                <button onClick={() => openReorder(cap.id)}
+                                  className={`p-1.5 rounded-lg transition ${reorderingCap === cap.id ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10' : 'text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'}`} title="Editar páginas">
+                                  <ImageIcon size={12}/>
+                                </button>
+                              )}
+                              {!isReadOnly && (
+                                <button onClick={() => deleteChapterFromManga(m.id, cap.id)} disabled={deletingCap === cap.id}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition disabled:opacity-50" title="Eliminar">
+                                  {deletingCap === cap.id ? <Loader2 size={12} className="animate-spin"/> : <Trash2 size={12}/>}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {reorderingCap === cap.id && (
+                            <div className="bg-gray-100 dark:bg-black/40 rounded-xl p-4 mt-2 mb-3 mx-2 border border-gray-200 dark:border-white/10 shadow-inner">
+                              <div className="flex items-center justify-between mb-3">
+                                <h4 className="text-sm font-bold dark:text-white flex items-center gap-2">
+                                  <ImageIcon size={14} className="text-indigo-500"/> Páginas (Cap. {cap.numero})
+                                </h4>
+                                <div className="flex gap-2">
+                                  <button onClick={() => saveReorder(cap.id)} disabled={savingOrder || editPages.length === 0}
+                                    className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all disabled:opacity-50 shadow shadow-indigo-600/20 active:scale-95">
+                                    {savingOrder ? <Loader2 size={12} className="animate-spin"/> : <Save size={12}/>} Guardar
+                                  </button>
+                                  <button onClick={() => setReorderingCap(null)} className="p-1.5 rounded-lg text-gray-400 hover:bg-gray-200 dark:hover:bg-white/10 transition">
+                                    <X size={14}/>
+                                  </button>
+                                </div>
+                              </div>
+                              
+                              {loadingPages ? (
+                                <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin text-indigo-500"/></div>
+                              ) : editPages.length === 0 ? (
+                                <p className="text-xs text-gray-400 text-center py-4">No hay páginas en este capítulo.</p>
+                              ) : (
+                                <div className="flex flex-col gap-2 max-h-80 overflow-y-auto pr-2">
+                                  {editPages.map((page, idx) => (
+                                    <div key={page.id} className="flex items-center gap-3 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-lg p-2 shadow-sm">
+                                      <img src={page.image_url} alt="" className="w-8 h-12 object-cover rounded bg-gray-200 dark:bg-white/5 shrink-0"/>
+                                      <div className="flex-1 min-w-0">
+                                        <p className="text-xs font-bold dark:text-white">Pág. {String(page.orden).padStart(3, '0')}</p>
+                                        <p className="text-[10px] text-gray-400 truncate">{page.filename}</p>
+                                      </div>
+                                      <div className="flex gap-1 shrink-0">
+                                        <button onClick={() => moveUp(idx)} disabled={idx === 0}
+                                          className="p-1.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-200 dark:hover:bg-white/10 transition disabled:opacity-30">
+                                          <ArrowUp size={14}/>
+                                        </button>
+                                        <button onClick={() => moveDown(idx)} disabled={idx === editPages.length - 1}
+                                          className="p-1.5 rounded bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-gray-200 dark:hover:bg-white/10 transition disabled:opacity-30">
+                                          <ArrowDown size={14}/>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}

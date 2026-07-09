@@ -1,0 +1,61 @@
+Start at 871
+      // ── GET /api/chapters/:id/pages ──────────────────────
+      // Genera un token de un solo uso por página (5 min TTL en KV)
+      const chapterPages = pathname.match(/^\/api\/chapters\/([^/]+)\/pages$/);
+      if (chapterPages && method === 'GET') {
+        // Validación Anti-Robo de API
+        const originHeader = request.headers.get('Origin') || request.headers.get('Referer') || '';
+        const clientHeader = request.headers.get('x-crimson-client');
+        const isFromFrontend = originHeader.includes('scancrimson.com') || originHeader.includes('localhost') || originHeader.includes('vercel.app');
+        const isFromMobile = clientHeader === 'mobile-app';
+        
+        if (!isFromFrontend && !isFromMobile) {
+          const logId = crypto.randomUUID();
+          const ip = request.headers.get('cf-connecting-ip') || request.headers.get('x-forwarded-for') || '';
+          const ua = request.headers.get('user-agent') || '';
+          try {
+            await recordViolation(ip, env);
+            await env.DB.prepare('INSERT INTO system_logs (id, tipo, ip, user_agent, detalles) VALUES (?, ?, ?, ?, ?)')
+              .bind(logId, 'robo_imagenes', ip, ua, `Intento de acceso a la lista de páginas desde un bot o script.\nOrigen: ${originHeader || 'Ninguno/Bot'}`).run();
+          } catch(e) {}
+          return err('Acceso denegado por políticas de seguridad', 403);
+        }
+
+        const cap = await env.DB.prepare(
+          "SELECT c.*, m.es_adulto, m.tipo as manga_tipo FROM capitulos c JOIN mangas m ON m.id = c.manga_id WHERE c.id = ? AND c.estado = 'publicado'"
+        ).bind(chapterPages[1]).first();
+        if (!cap) return err('Capítulo no encontrado o no publicado', 404);
+
+        const { results: paginas } = await env.DB.prepare(
+          'SELECT * FROM paginas WHERE capitulo_id = ? ORDER BY orden ASC'
+        ).bind(chapterPages[1]).all();
+
+        const origin  = new URL(request.url).origin;
+        const expires = Math.floor(Date.now() / 1000) + 6 * 3600; // firma válida 6 horas
+
+        const pages = await Promise.all(paginas.map(async pag => {
+          const sig = await signImageToken(chapterPages[1], String(pag.orden), expires, env.IMG_SECRET);
+          return {
+            id:           pag.id,
+            numero:       pag.numero,
+            scramble_map: JSON.parse(pag.scramble_map || '[]'),
+            image_url:    `${origin}/api/reader/${chapterPages[1]}/${pag.orden}?ts=${expires}&sig=${sig}`,
+          };
+        }));
+
+        const [prevCap, nextCap] = await Promise.all([
+          env.DB.prepare(
+            "SELECT id FROM capitulos WHERE manga_id = ? AND estado = 'publicado' AND numero < ? ORDER BY numero DESC LIMIT 1"
+          ).bind(cap.manga_id, cap.numero).first(),
+          env.DB.prepare(
+            "SELECT id FROM capitulos WHERE manga_id = ? AND estado = 'publicado' AND numero > ? ORDER BY numero ASC LIMIT 1"
+          ).bind(cap.manga_id, cap.numero).first(),
+        ]);
+
+        // Registrar en el historial si el usuario está autenticado
+        const user = await getUser(request, env);
+        if (user) {
+          const existeHistorial = await env.DB.prepare('SELECT 1 FROM historial_lectura WHERE usuario_id = ? AND manga_id = ?').bind(user.id, cap.manga_id).first();
+          if (existeHistorial) {
+            await env.DB.prepare('UPDATE historial_lectura SET capitulo_id = ?, leido_en = CURRENT_TIMESTAMP WHERE usuario_id = ? AND manga_id = ?')
+              .bind(cap.id, user.id, cap.manga_id).run();

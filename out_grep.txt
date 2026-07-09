@@ -1,0 +1,10 @@
+Line 872: // ── GET /api/chapters/:id/pages ──────────────────────
+Line 950: // ── POST /api/chapters/:id/view ──────────────────────
+Line 1124: // ── GET /api/chapters/:id/text ──────────────────────
+Line 1257: // ── POST /api/chapters ───────────────────────────────
+Line 1258: if (pathname === '/api/chapters' && method === 'POST') {
+Line 1328: // ── PUT /api/chapters/:id/publish ────────────────────
+Line 1758: // ── PUT /api/chapters/:id/reschedule ─────────────────
+Line 1778: // ── PUT /api/chapters/:id ────────────────────────────
+Line 1839: // ── DELETE /api/chapters/:id ──────────────────────────
+Line 1864: // ── PUT /api/chapters/:id/reject ─────────────────────

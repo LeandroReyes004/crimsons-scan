@@ -5,7 +5,7 @@ import Script from 'next/script';
 
 const EXCLUDED = ['/admin', '/uploader', '/manga/reader'];
 
-export default function GlobalPopunders() {
+export default function GlobalPopunders() { return null;
   const pathname = usePathname();
   const isExcluded = EXCLUDED.some(p => pathname?.startsWith(p));
   

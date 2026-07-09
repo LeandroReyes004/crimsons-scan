@@ -1,0 +1,28 @@
+        if (joint_scan_id) {
+          const scanInvited = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(joint_scan_id).first();
+          const scanCreator = await env.DB.prepare('SELECT webhook_discord, discord_template FROM scans WHERE id = ?').bind(finalScanId).first();
+          if (scanInvited?.webhook_discord) {
+            ctx.waitUntil(fetch(scanInvited.webhook_discord, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: buildDiscordBody(scanInvited.discord_template, {
+                manga: titulo, capitulo: '', titulo: ' (Invitación a Joint pendiente)', url: `${env.FRONTEND_URL}/admin`
+              })
+            }).catch(e => console.error('Discord webhook error:', e)));
+          }
+          if (scanCreator?.webhook_discord && scanCreator.webhook_discord !== scanInvited?.webhook_discord) {
+            ctx.waitUntil(fetch(scanCreator.webhook_discord, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: buildDiscordBody(scanCreator.discord_template, {
+                manga: titulo, capitulo: '', titulo: ' (Invitación a Joint enviada)', url: `${env.FRONTEND_URL}/admin`
+              })
+            }).catch(e => console.error('Discord webhook error:', e)));
+          }
+        }
+
+        return json({ mangaId: id, slug, message: 'Manga creado' }, 201);
+      }
+
+      // ── GET /api/mangas/:id ──────────────────────────────
+      const mangaById = pathname.match(/^\/api\/mangas\/([^/]+)$/);

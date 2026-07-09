@@ -1,0 +1,10 @@
+Line 613: // ── POST /api/upload/avatar ───────────────────────────
+Line 614: if (pathname === '/api/upload/avatar' && method === 'POST') {
+Line 1396: // ── POST /api/upload/page ────────────────────────────
+Line 1398: if (pathname === '/api/upload/page' && method === 'POST') {
+Line 1452: // ── POST /api/upload/text ────────────────────────────
+Line 1454: if (pathname === '/api/upload/text' && method === 'POST') {
+Line 1507: // ── POST /api/upload/cover ───────────────────────────
+Line 1508: if (pathname === '/api/upload/cover' && method === 'POST') {
+Line 1885: // ── POST /api/upload/scan-image ──────────────────────
+Line 1886: if (pathname === '/api/upload/scan-image' && method === 'POST') {

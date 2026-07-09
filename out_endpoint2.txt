@@ -1,0 +1,20 @@
+            } else {
+              await env.DB.prepare('INSERT INTO historial_lectura (usuario_id, manga_id, capitulo_id) VALUES (?, ?, ?)')
+                .bind(user.id, cap.manga_id, cap.id).run();
+            }
+          }
+        }
+
+        return new Response(object.body, {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'Cache-Control': 'public, max-age=3600',
+            ...CORS,
+          },
+        });
+      }
+
+      // ── GET /api/admin/chapters/:id/pages/list ───────────
+      // Lista de páginas de un capítulo para gestión (requiere auth)
+      const pagesList = pathname.match(/^\/api\/admin\/chapters\/([^/]+)\/pages\/list$/);
+      if (pagesList && method === 'GET') {
