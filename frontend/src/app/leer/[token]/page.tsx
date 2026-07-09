@@ -93,7 +93,7 @@ export default function ChapterReaderPage() {
   }, [currentPage, chapterId]);
 
   useEffect(() => {
-    if (!chapterId || !isHuman) return;
+    if (!token || !isHuman) return;
     let cancelled = false;
     setLoading(true);
     setError(null);
