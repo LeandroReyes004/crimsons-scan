@@ -2323,6 +2323,7 @@ function previewTemplate(tpl: string) {
 function SectionConfig({ scanId }: { scanId: string }) {
   const [webhook, setWebhook]               = useState('');
   const [discordTemplate, setDiscordTemplate] = useState('');
+  const [telegramChatId, setTelegramChatId] = useState('');
   const [saved, setSaved]                   = useState<string | null>(null);
   const [saving, setSaving]                 = useState(false);
   const [testing, setTesting]               = useState(false);
@@ -2358,6 +2359,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
 
   useEffect(() => {
     if (scanData?.scan?.webhook_discord) setWebhook(scanData.scan.webhook_discord);
+    if (scanData?.scan?.telegram_chat_id) setTelegramChatId(scanData.scan.telegram_chat_id);
     if (scanData?.scan?.discord_template) setDiscordTemplate(scanData.scan.discord_template);
     if (scanData?.scan?.redes) {
       try {
@@ -2376,7 +2378,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
       const res = await fetch(`${API}/api/admin/scans/${scanId}/webhook`, {
         method: 'PUT',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ webhook_discord: webhook || null, discord_template: discordTemplate || null }),
+        body: JSON.stringify({ webhook_discord: webhook || null, discord_template: discordTemplate || null, telegram_chat_id: telegramChatId || null }),
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
