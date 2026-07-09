@@ -1488,9 +1488,10 @@ export default {
               let discordTemplate = null;
               try {
                 const scanData = await env.DB.prepare(
-                  `SELECT s.webhook_discord, s.discord_template
+                  `SELECT s.webhook_discord, s.discord_template, s.telegram_chat_id
                    FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
                 ).bind(capForWh.manga_id).first();
+                
                 if (scanData?.webhook_discord) {
                   webhookUrl = scanData.webhook_discord;
                   discordTemplate = scanData.discord_template;
@@ -1503,6 +1504,27 @@ export default {
                     discordTemplate = adminScanData.discord_template;
                   }
                 }
+
+                // --- Telegram en Publish ---
+                if (scanData?.telegram_chat_id && env.TELEGRAM_BOT_TOKEN) {
+                  const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`;
+                  const coverUrl = `${env.FRONTEND_URL}/api/cover/${capForWh.manga_id}`;
+                  const capSecret = await env.DB.prepare('SELECT secret_token FROM capitulos WHERE id = ?').bind(publishCap[1]).first();
+                  const secretLink = `${env.FRONTEND_URL}/leer/${capSecret?.secret_token}`;
+                  const caption = `📖 *${capForWh.manga_titulo}*\\n\\nNuevo Capítulo ${capForWh.numero}${capForWh.titulo ? ` - ${capForWh.titulo}` : ''} disponible ahora.\\n\\n🔗 [Leer Capítulo aquí](${secretLink})`;
+                  
+                  await fetch(telegramUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      chat_id: scanData.telegram_chat_id,
+                      photo: coverUrl,
+                      caption: caption,
+                      parse_mode: 'Markdown'
+                    })
+                  }).catch(e => console.error('Telegram Error', e));
+                }
+                // -----------------------------
               } catch {}
 
               if (!webhookUrl) return;
