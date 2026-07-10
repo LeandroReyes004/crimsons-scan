@@ -1,0 +1,1 @@
+ALTER TABLE scans ADD COLUMN role_id TEXT;
