@@ -1124,8 +1124,10 @@ export default {
         const sa = await requireSuperAdmin(request, env);
         if (!sa) return err('Solo el superadmin puede consultar revenue', 403);
 
-        const { results: scans } = await env.DB.prepare(
-          `SELECT s.id, s.nombre,
+        const url = new URL(request.url);
+        const mes = url.searchParams.get('mes');
+
+        let query = `SELECT s.id, s.nombre,
                   COALESCE(SUM(m.views_total), 0) as total_views,
                   COALESCE(SUM(m.views_mes), 0)   as views_mes,
                   COUNT(DISTINCT m.id) as total_mangas,
@@ -1134,8 +1136,25 @@ export default {
            LEFT JOIN mangas m ON m.scan_id = s.id
            LEFT JOIN capitulos c ON c.manga_id = m.id AND c.estado = 'publicado'
            GROUP BY s.id, s.nombre
-           ORDER BY views_mes DESC`
-        ).all();
+           ORDER BY views_mes DESC`;
+           
+        let scans;
+        if (mes && mes.match(/^\d{4}-\d{2}$/)) {
+          query = `SELECT s.id, s.nombre,
+                    COALESCE(SUM(m.views_total), 0) as total_views,
+                    (SELECT COUNT(*) FROM manga_views_dedup vd JOIN mangas m2 ON vd.manga_id = m2.id WHERE m2.scan_id = s.id AND vd.fecha LIKE ?) as views_mes,
+                    COUNT(DISTINCT m.id) as total_mangas,
+                    COUNT(DISTINCT c.id) as total_capitulos
+             FROM scans s
+             LEFT JOIN mangas m ON m.scan_id = s.id
+             LEFT JOIN capitulos c ON c.manga_id = m.id AND c.estado = 'publicado'
+             GROUP BY s.id, s.nombre
+             ORDER BY views_mes DESC`;
+          scans = await env.DB.prepare(query).bind(`${mes}-%`).all();
+        } else {
+          scans = await env.DB.prepare(query).all();
+        }
+        scans = scans.results;
 
         const grandTotal    = scans.reduce((sum, s) => sum + (s.total_views || 0), 0);
         const grandTotalMes = scans.reduce((sum, s) => sum + (s.views_mes || 0), 0);
@@ -1156,10 +1175,23 @@ export default {
         // soporte: no tiene acceso a revenue
         if (isSoporte(caller)) return err('No tenés permisos para ver revenue', 403);
 
-        const { results: mangas } = await env.DB.prepare(
-          `SELECT id, titulo, views_total, views_mes, tipo, estado
-           FROM mangas WHERE scan_id = ? ORDER BY views_mes DESC`
-        ).bind(revenueScan[1]).all();
+        const url = new URL(request.url);
+        const mes = url.searchParams.get('mes');
+
+        let query = `SELECT id, titulo, views_total, views_mes, tipo, estado
+           FROM mangas WHERE scan_id = ? ORDER BY views_mes DESC`;
+           
+        let mangas;
+        if (mes && mes.match(/^\d{4}-\d{2}$/)) {
+          query = `SELECT id, titulo, views_total, 
+                   (SELECT COUNT(*) FROM manga_views_dedup vd WHERE vd.manga_id = mangas.id AND vd.fecha LIKE ?) as views_mes,
+                   tipo, estado
+           FROM mangas WHERE scan_id = ? ORDER BY views_mes DESC`;
+          mangas = await env.DB.prepare(query).bind(`${mes}-%`, revenueScan[1]).all();
+        } else {
+          mangas = await env.DB.prepare(query).bind(revenueScan[1]).all();
+        }
+        mangas = mangas.results;
 
         const mangasConCaps = await Promise.all(mangas.map(async (manga) => {
           const { results: caps } = await env.DB.prepare(
