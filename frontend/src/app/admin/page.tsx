@@ -1695,6 +1695,16 @@ function SectionRevenue() {
   const [scanDetail, setScanDetail]         = useState<Record<string, { mangas: RevenueManga[]; scan_total: number; scan_total_mes: number }>>({});
   const [loadingDetail, setLoadingDetail]   = useState<string | null>(null);
   const [expandedManga, setExpandedManga]   = useState<string | null>(null);
+  const [selectedScans, setSelectedScans]   = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (data?.scans) setSelectedScans(new Set(data.scans.map(s => s.id)));
+  }, [data]);
+
+  const selectedViewsMes = useMemo(() => {
+    if (!data?.scans) return 0;
+    return data.scans.filter(s => selectedScans.has(s.id)).reduce((sum, s) => sum + (s.views_mes || 0), 0);
+  }, [data, selectedScans]);
 
   useEffect(() => {
     setScanDetail({});
@@ -1860,17 +1870,34 @@ function SectionRevenue() {
             const isExpanded = expandedScan === scan.id;
             const isLoading = loadingDetail === scan.id;
             const pctGlobal = pct(scan.total_views, data?.grand_total ?? 0);
+            const isSelected = selectedScans.has(scan.id);
+            const toggleSelection = () => {
+              const newSet = new Set(selectedScans);
+              if (isSelected) newSet.delete(scan.id);
+              else newSet.add(scan.id);
+              setSelectedScans(newSet);
+            };
 
             return (
-              <div key={scan.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
+              <div key={scan.id} className={`bg-white dark:bg-[#111114] rounded-2xl border ${isSelected ? 'border-gray-100 dark:border-white/5' : 'border-gray-200 dark:border-white/10 opacity-60'} overflow-hidden transition-opacity`}>
                 {/* Fila del scan */}
                 <div className="flex items-center gap-4 px-5 py-4">
                   <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center text-emerald-500 shrink-0 font-black text-lg">
                     {scan.nombre.charAt(0)}
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="font-bold dark:text-white">{scan.nombre}</p>
-                    <p className="text-xs text-gray-400">{scan.total_mangas} obras · {scan.total_capitulos} caps publicados</p>
+                  <div className="flex-1 min-w-0 flex items-center gap-3">
+                    {isSuperAdmin && (
+                      <input 
+                        type="checkbox" 
+                        checked={isSelected} 
+                        onChange={toggleSelection} 
+                        className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 bg-gray-100 dark:bg-white/5 cursor-pointer shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-bold dark:text-white truncate">{scan.nombre}</p>
+                      <p className="text-xs text-gray-400 truncate">{scan.total_mangas} obras · {scan.total_capitulos} caps publicados</p>
+                    </div>
                   </div>
                   <div className="hidden md:flex flex-col items-end gap-0.5 shrink-0">
                     <p className="text-xl font-black dark:text-white">{(scan.views_mes ?? 0).toLocaleString()} <span className="text-xs text-emerald-500 font-bold">mes</span></p>
@@ -1878,10 +1905,16 @@ function SectionRevenue() {
                   </div>
                   {/* Ganancia calculada / Barra de porcentaje */}
                   <div className="hidden lg:flex flex-col gap-1.5 items-end w-32 shrink-0">
-                    {isSuperAdmin && totalIngresos !== '' && data?.grand_total_mes && data.grand_total_mes > 0 ? (
-                      <p className="text-emerald-500 font-bold text-sm">
-                        Pago: ${ (((scan.views_mes ?? 0) / data.grand_total_mes) * (Number(totalIngresos) * 0.75)).toFixed(2) }
-                      </p>
+                    {isSuperAdmin && totalIngresos !== '' && selectedViewsMes > 0 ? (
+                      isSelected ? (
+                        <p className="text-emerald-500 font-bold text-sm">
+                          Pago: ${ (((scan.views_mes ?? 0) / selectedViewsMes) * (Number(totalIngresos) * 0.75)).toFixed(2) }
+                        </p>
+                      ) : (
+                        <p className="text-gray-400 font-bold text-sm">
+                          $0.00 <span className="text-xs font-normal">(Excluido)</span>
+                        </p>
+                      )
                     ) : null}
                     <div className="h-2 w-full bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
                       <div className="h-full bg-gradient-to-r from-emerald-500 to-teal-400 rounded-full transition-all"

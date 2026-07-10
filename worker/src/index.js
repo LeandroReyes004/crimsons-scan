@@ -1143,20 +1143,13 @@ export default {
 
         const url = new URL(request.url);
         const mes = url.searchParams.get('mes');
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const isPastMonth = mes && mes.match(/^\d{4}-\d{2}$/) && mes !== currentMonth;
 
-        let query = `SELECT s.id, s.nombre,
-                  COALESCE(SUM(m.views_total), 0) as total_views,
-                  COALESCE(SUM(m.views_mes), 0)   as views_mes,
-                  COUNT(DISTINCT m.id) as total_mangas,
-                  COUNT(DISTINCT c.id) as total_capitulos
-           FROM scans s
-           LEFT JOIN mangas m ON m.scan_id = s.id
-           LEFT JOIN capitulos c ON c.manga_id = m.id AND c.estado = 'publicado'
-           GROUP BY s.id, s.nombre
-           ORDER BY views_mes DESC`;
-           
+        let query;
         let scans;
-        if (mes && mes.match(/^\d{4}-\d{2}$/)) {
+        if (isPastMonth) {
           query = `SELECT s.id, s.nombre,
                     COALESCE(SUM(m.views_total), 0) as total_views,
                     COALESCE((SELECT SUM(views_mes) FROM revenue_historial rh WHERE rh.scan_id = s.id AND rh.mes = ?), 0) as views_mes,
@@ -1206,12 +1199,13 @@ export default {
 
         const url = new URL(request.url);
         const mes = url.searchParams.get('mes');
+        const now = new Date();
+        const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+        const isPastMonth = mes && mes.match(/^\d{4}-\d{2}$/) && mes !== currentMonth;
 
-        let query = `SELECT id, titulo, views_total, views_mes, tipo, estado
-           FROM mangas WHERE scan_id = ? ORDER BY views_mes DESC`;
-           
+        let query;
         let mangas;
-        if (mes && mes.match(/^\d{4}-\d{2}$/)) {
+        if (isPastMonth) {
           query = `SELECT m.id, m.titulo, m.views_total, 
                    COALESCE((SELECT views_mes FROM revenue_historial rh WHERE rh.manga_id = m.id AND rh.mes = ?), 0) as views_mes,
                    m.tipo, m.estado
