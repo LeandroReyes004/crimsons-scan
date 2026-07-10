@@ -337,6 +337,23 @@ export default {
 
       // ── Reset mensual de vistas (1° de cada mes a medianoche ARG) ──
       if (event.cron === '0 3 1 * *') {
+        try {
+          const lastMonthDate = new Date();
+          lastMonthDate.setMonth(lastMonthDate.getMonth() - 1);
+          const yyyy = lastMonthDate.getFullYear();
+          const mm = String(lastMonthDate.getMonth() + 1).padStart(2, '0');
+          const pastMes = `${yyyy}-${mm}`; 
+          const ts = new Date().toISOString();
+
+          await env.DB.prepare(`
+            INSERT INTO revenue_historial (id, scan_id, manga_id, mes, views_mes, fecha_registro)
+            SELECT lower(hex(randomblob(16))), scan_id, id, ?, views_mes, ?
+            FROM mangas WHERE views_mes > 0
+          `).bind(pastMes, ts).run();
+        } catch (e) {
+          console.error("Error guardando historial de revenue:", e);
+        }
+
         await env.DB.prepare('UPDATE mangas SET views_mes = 0').run();
         return;
       }
@@ -1142,16 +1159,28 @@ export default {
         if (mes && mes.match(/^\d{4}-\d{2}$/)) {
           query = `SELECT s.id, s.nombre,
                     COALESCE(SUM(m.views_total), 0) as total_views,
-                    (SELECT COUNT(*) FROM manga_views_dedup vd JOIN mangas m2 ON vd.manga_id = m2.id WHERE m2.scan_id = s.id AND vd.fecha LIKE ?) as views_mes,
+                    COALESCE((SELECT SUM(views_mes) FROM revenue_historial rh WHERE rh.scan_id = s.id AND rh.mes = ?), 0) as views_mes,
                     COUNT(DISTINCT m.id) as total_mangas,
                     COUNT(DISTINCT c.id) as total_capitulos
              FROM scans s
              LEFT JOIN mangas m ON m.scan_id = s.id
              LEFT JOIN capitulos c ON c.manga_id = m.id AND c.estado = 'publicado'
+             WHERE s.activo = 1
              GROUP BY s.id, s.nombre
              ORDER BY views_mes DESC`;
-          scans = await env.DB.prepare(query).bind(`${mes}-%`).all();
+          scans = await env.DB.prepare(query).bind(mes).all();
         } else {
+          query = `SELECT s.id, s.nombre,
+                    COALESCE(SUM(m.views_total), 0) as total_views,
+                    COALESCE(SUM(m.views_mes), 0)   as views_mes,
+                    COUNT(DISTINCT m.id) as total_mangas,
+                    COUNT(DISTINCT c.id) as total_capitulos
+             FROM scans s
+             LEFT JOIN mangas m ON m.scan_id = s.id
+             LEFT JOIN capitulos c ON c.manga_id = m.id AND c.estado = 'publicado'
+             WHERE s.activo = 1
+             GROUP BY s.id, s.nombre
+             ORDER BY views_mes DESC`;
           scans = await env.DB.prepare(query).all();
         }
         scans = scans.results;
@@ -1183,12 +1212,20 @@ export default {
            
         let mangas;
         if (mes && mes.match(/^\d{4}-\d{2}$/)) {
-          query = `SELECT id, titulo, views_total, 
-                   (SELECT COUNT(*) FROM manga_views_dedup vd WHERE vd.manga_id = mangas.id AND vd.fecha LIKE ?) as views_mes,
-                   tipo, estado
-           FROM mangas WHERE scan_id = ? ORDER BY views_mes DESC`;
-          mangas = await env.DB.prepare(query).bind(`${mes}-%`, revenueScan[1]).all();
+          query = `SELECT m.id, m.titulo, m.views_total, 
+                   COALESCE((SELECT views_mes FROM revenue_historial rh WHERE rh.manga_id = m.id AND rh.mes = ?), 0) as views_mes,
+                   m.tipo, m.estado
+           FROM mangas m 
+           JOIN scans s ON m.scan_id = s.id
+           WHERE m.scan_id = ? AND s.activo = 1
+           ORDER BY views_mes DESC`;
+          mangas = await env.DB.prepare(query).bind(mes, revenueScan[1]).all();
         } else {
+          query = `SELECT m.id, m.titulo, m.views_total, m.views_mes, m.tipo, m.estado
+           FROM mangas m 
+           JOIN scans s ON m.scan_id = s.id
+           WHERE m.scan_id = ? AND s.activo = 1
+           ORDER BY views_mes DESC`;
           mangas = await env.DB.prepare(query).bind(revenueScan[1]).all();
         }
         mangas = mangas.results;
