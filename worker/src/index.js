@@ -7,7 +7,7 @@ const ALLOWED_ORIGINS = ['https://scancrimson.com', 'https://www.scancrimson.com
 
 const BASE_CORS = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Fingerprint',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Fingerprint, X-Crimson-Reader',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Vary': 'Origin',
@@ -1266,6 +1266,11 @@ export default {
           } catch(e) {}
           await recordViolation(ip, env);
           return err('Acceso denegado', 403);
+        }
+
+        // --- PROTECCIÓN CONTRA APERTURA DIRECTA ---
+        if (request.headers.get('X-Crimson-Reader') !== 'true') {
+          return err('Acceso directo denegado', 403);
         }
 
         // Buscar r2_key en D1

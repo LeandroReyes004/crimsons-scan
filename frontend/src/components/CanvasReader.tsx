@@ -19,8 +19,15 @@ const CanvasPageRenderer = ({ imageUrl, scrambleMap, userId }: Props) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    fetch(imageUrl)
-      .then(res => res.blob())
+    fetch(imageUrl, {
+      headers: {
+        'X-Crimson-Reader': 'true'
+      }
+    })
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.blob();
+      })
       .then(blob => {
         const url = URL.createObjectURL(blob);
         const img = new Image();
