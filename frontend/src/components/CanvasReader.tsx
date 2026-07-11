@@ -19,46 +19,54 @@ const CanvasPageRenderer = ({ imageUrl, scrambleMap, userId }: Props) => {
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    const img = new Image();
-    img.crossOrigin = 'anonymous'; // Necesario para leer la imagen en el canvas (CORS)
-    img.onload = () => {
-      // Ajustar resolución interna del canvas al tamaño real de la imagen
-      canvas.width = img.width;
-      canvas.height = img.height;
-      
-      // Dibujar imagen original
-      ctx.drawImage(img, 0, 0);
+    fetch(imageUrl)
+      .then(res => res.blob())
+      .then(blob => {
+        const url = URL.createObjectURL(blob);
+        const img = new Image();
+        img.onload = () => {
+          // Ajustar resolución interna del canvas al tamaño real de la imagen
+          canvas.width = img.width;
+          canvas.height = img.height;
+          
+          // Dibujar imagen original
+          ctx.drawImage(img, 0, 0);
 
-      // --- MARCA DE AGUA INVISIBLE (FORENSE) ---
-      // Con opacidad casi en cero (1.5%), el ojo humano no lo nota,
-      // pero si se altera el contraste en Photoshop, revela al infractor.
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.015)'; 
-      ctx.font = 'bold 36px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
-      // Rotar el canvas para un patrón diagonal
-      ctx.rotate(-Math.PI / 6); 
-      
-      // Dibujar repetidamente por toda la imagen
-      const stepX = 400;
-      const stepY = 300;
-      for (let x = -img.width; x < img.width * 2; x += stepX) {
-        for (let y = -img.height; y < img.height * 2; y += stepY) {
-          ctx.fillText(`CrimsonScan | UID: ${userId}`, x, y);
-        }
-      }
-      
-      // Restaurar estado del canvas
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      
-      setLoaded(true);
-    };
-    img.onerror = () => {
-      setError(true);
-      setLoaded(true);
-    };
-    img.src = imageUrl;
+          // --- MARCA DE AGUA INVISIBLE (FORENSE) ---
+          ctx.fillStyle = 'rgba(255, 255, 255, 0.015)'; 
+          ctx.font = 'bold 36px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          
+          // Rotar el canvas para un patrón diagonal
+          ctx.rotate(-Math.PI / 6); 
+          
+          // Dibujar repetidamente por toda la imagen
+          const stepX = 400;
+          const stepY = 300;
+          for (let x = -img.width; x < img.width * 2; x += stepX) {
+            for (let y = -img.height; y < img.height * 2; y += stepY) {
+              ctx.fillText(`CrimsonScan | UID: ${userId}`, x, y);
+            }
+          }
+          
+          // Restaurar estado del canvas
+          ctx.setTransform(1, 0, 0, 1, 0, 0);
+          
+          URL.revokeObjectURL(url);
+          setLoaded(true);
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          setError(true);
+          setLoaded(true);
+        };
+        img.src = url;
+      })
+      .catch(() => {
+        setError(true);
+        setLoaded(true);
+      });
   }, [imageUrl, userId]);
 
   return (
