@@ -41,6 +41,13 @@ export async function generateMetadata({ params }: { params: Promise<{ id: strin
   }
 }
 
+import AntiDevTools from '@/components/AntiDevTools';
+
 export default function ReaderLayout({ children }: { children: React.ReactNode }) {
-  return children;
+  return (
+    <>
+      <AntiDevTools />
+      {children}
+    </>
+  );
 }

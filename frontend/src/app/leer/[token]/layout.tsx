@@ -7,6 +7,13 @@ export const metadata: Metadata = {
   },
 };
 
+import AntiDevTools from '@/components/AntiDevTools';
+
 export default function LeerLayout({ children }: { children: React.ReactNode }) {
-  return <>{children}</>;
+  return (
+    <>
+      <AntiDevTools />
+      {children}
+    </>
+  );
 }
