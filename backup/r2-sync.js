@@ -51,6 +51,7 @@ async function backupR2() {
     }
 
     for (const item of response.Contents) {
+      if (item.Key.endsWith('/')) continue;
       const localFilePath = path.join(LOCAL_DIR, item.Key);
       
       // Si el archivo ya existe y el tamaño coincide (o si prefieres comprobar fecha), lo omitimos

@@ -7,10 +7,14 @@
     "backup:db": "db-backup.bat",
     "restore:db": "db-restore.bat",
     "backup:r2": "node r2-sync.js backup",
-    "restore:r2": "node r2-sync.js restore"
+    "restore:r2": "node r2-sync.js restore",
+    "gui": "node server.js",
+    "backup:zip": "node zip-code.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.500.0",
-    "dotenv": "^16.4.5"
+    "archiver": "^8.0.0",
+    "dotenv": "^16.4.5",
+    "express": "^5.2.1"
   }
 }

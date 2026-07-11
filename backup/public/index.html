@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crimson Backup Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Crimson <span>Backup</span></h1>
+            <p>Panel de control para respaldos locales</p>
+        </header>
+
+        <main>
+            <div class="actions">
+                <button class="btn btn-primary" onclick="startBackup('db')">
+                    <span class="icon">💾</span> Backup Base de Datos
+                </button>
+                <button class="btn btn-secondary" onclick="startBackup('r2')">
+                    <span class="icon">🖼️</span> Backup Imágenes (R2)
+                </button>
+                <button class="btn btn-accent" onclick="startBackup('zip')">
+                    <span class="icon">📦</span> Zip Código Fuente
+                </button>
+            </div>
+
+            <div class="terminal-container">
+                <div class="terminal-header">
+                    <div class="dots">
+                        <span class="dot red"></span>
+                        <span class="dot yellow"></span>
+                        <span class="dot green"></span>
+                    </div>
+                    <span class="title">Logs en vivo</span>
+                </div>
+                <div class="terminal-body" id="terminal">
+                    <div>Bienvenido al panel de control de backups. Esperando órdenes...</div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

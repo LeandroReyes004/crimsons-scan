@@ -9,7 +9,7 @@ import { getUser } from '@/lib/auth';
 // Páginas donde no mostramos la barra de anuncios
 const EXCLUDED = ['/admin', '/uploader', '/manga/reader'];
 
-export default function LateralAds() { return null;
+export default function LateralAds() {
   const [closed, setClosed]   = useState(false);
   const [visible, setVisible] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
