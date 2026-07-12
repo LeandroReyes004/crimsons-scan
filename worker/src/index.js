@@ -1109,7 +1109,16 @@ export default {
       if (pathname === '/api/config/contrato' && method === 'GET') {
         const texto = await env.KV.get('contrato_texto') || '';
         const version = parseInt(await env.KV.get('contrato_version') || '1', 10);
-        return json({ texto, version });
+        
+        let scanInfo = null;
+        try {
+          const u = await getUser(request, env);
+          if (u && u.scan_id) {
+            scanInfo = await env.DB.prepare('SELECT representante_nombre, representante_discord, binance_pay_id FROM scans WHERE id = ?').bind(u.scan_id).first();
+          }
+        } catch(e) {}
+        
+        return json({ texto, version, scanInfo });
       }
 
       // ── PUT /api/admin/config/contrato ───────────────────

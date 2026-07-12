@@ -17,10 +17,15 @@ export default function ContractModal({ scanId, onClose }: { scanId: string, onC
   const [accepted, setAccepted] = useState(false);
 
   useEffect(() => {
-    fetch(`${API}/api/config/contrato`)
+    fetch(`${API}/api/config/contrato`, { headers: authHeaders() })
       .then(r => r.json())
       .then((res: any) => {
         setTexto(res.texto || 'Error cargando contrato.');
+        if (res.scanInfo) {
+          setNombre(res.scanInfo.representante_nombre || '');
+          setDiscord(res.scanInfo.representante_discord || '');
+          setBinanceId(res.scanInfo.binance_pay_id || '');
+        }
         setLoading(false);
       })
       .catch(() => {
