@@ -1118,6 +1118,10 @@ export default {
         if (!sa) return err('No autorizado', 403);
         const body = await request.json();
         
+        if (body.pin !== '1025') {
+          return err('PIN de seguridad incorrecto', 403);
+        }
+        
         const currentVersion = parseInt(await env.KV.get('contrato_version') || '1', 10);
         
         if (body.texto !== undefined) {

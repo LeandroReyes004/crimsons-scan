@@ -2024,6 +2024,7 @@ function SectionScans() {
   const [contractSaving, setContractSaving] = useState(false);
   const [contractMsg, setContractMsg] = useState<string | null>(null);
   const [forceResign, setForceResign] = useState(false);
+  const [contractPin, setContractPin] = useState('');
 
   const loadContract = async () => {
     try {
@@ -2041,7 +2042,7 @@ function SectionScans() {
       const res = await fetch(`${API}/api/admin/config/contrato`, {
         method: 'PUT',
         headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-        body: JSON.stringify({ texto: contractText, forceResign }),
+        body: JSON.stringify({ texto: contractText, forceResign, pin: contractPin }),
       });
       if (res.ok) {
         const data = await res.json();
@@ -2149,6 +2150,16 @@ function SectionScans() {
               <label htmlFor="force-resign" className="text-sm font-bold text-gray-700 dark:text-gray-300 cursor-pointer select-none">
                 Forzar reinicio de firmas (Obligar a todos a firmar de nuevo)
               </label>
+            </div>
+            <div>
+              <input
+                type="password"
+                placeholder="PIN de seguridad para guardar"
+                value={contractPin}
+                onChange={e => setContractPin(e.target.value)}
+                required
+                className="w-full bg-gray-50 dark:bg-[#07070a] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 dark:text-white focus:outline-none focus:border-rose-500 transition-colors text-sm"
+              />
             </div>
             <div className="flex justify-end">
               <button type="submit" disabled={contractSaving} className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-bold transition-all">
