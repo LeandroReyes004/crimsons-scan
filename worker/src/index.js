@@ -44,6 +44,15 @@ async function putWithRetry(env, key, buffer, options, retries = 3) {
   throw lastErr;
 }
 
+const DEFAULT_TELEGRAM_TEMPLATE = `📖 *{{manga}}*\n\nNuevo Capítulo {{capitulo}}{{titulo}} disponible ahora.\n\n🔗 [Leer Capítulo aquí]({{url}})`;
+function buildTelegramCaption(template, vars) {
+  return (template || DEFAULT_TELEGRAM_TEMPLATE)
+    .replace(/\{\{manga\}\}/g, vars.manga)
+    .replace(/\{\{capitulo\}\}/g, vars.capitulo)
+    .replace(/\{\{titulo\}\}/g, vars.titulo ? ` — ${vars.titulo}` : '')
+    .replace(/\{\{url\}\}/g, vars.url);
+}
+
 function buildDiscordBody(template, vars) {
   const desc = (template || DEFAULT_DISCORD_TEMPLATE)
     .replace(/\{\{manga\}\}/g, vars.manga)
@@ -1494,14 +1503,19 @@ export default {
             // -- Notificación Telegram --
             try {
               const scanData = await env.DB.prepare(
-                `SELECT m.titulo as manga_titulo, m.cover_r2_key, s.telegram_chat_id 
+                `SELECT m.titulo as manga_titulo, m.cover_r2_key, s.telegram_chat_id, s.telegram_template 
                  FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
               ).bind(manga_id).first();
               if (scanData?.telegram_chat_id && env.TELEGRAM_BOT_TOKEN) {
                 const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`;
                 const coverUrl = `https://crimson-api.leandro-reyes1025.workers.dev/api/cover/${manga_id}`;
                 const secretLink = `${env.FRONTEND_URL}/leer/${secret_token}`;
-                const caption = `📖 *${scanData.manga_titulo}*\n\nNuevo Capítulo ${numero}${titulo ? ` - ${titulo}` : ''} disponible ahora.\n\n🔗 [Leer Capítulo aquí](${secretLink})`;
+                const caption = buildTelegramCaption(scanData.telegram_template, {
+                  manga: scanData.manga_titulo || '',
+                  capitulo: numero,
+                  titulo: titulo || '',
+                  url: secretLink
+                });
                 
                 await fetch(telegramUrl, {
                   method: 'POST',
@@ -1598,7 +1612,12 @@ export default {
                   const coverUrl = `https://crimson-api.leandro-reyes1025.workers.dev/api/cover/${capForWh.manga_id}`;
                   const capSecret = await env.DB.prepare('SELECT secret_token FROM capitulos WHERE id = ?').bind(publishCap[1]).first();
                   const secretLink = `${env.FRONTEND_URL}/leer/${capSecret?.secret_token}`;
-                  const caption = `📖 *${capForWh.manga_titulo}*\n\nNuevo Capítulo ${capForWh.numero}${capForWh.titulo ? ` - ${capForWh.titulo}` : ''} disponible ahora.\n\n🔗 [Leer Capítulo aquí](${secretLink})`;
+                  const caption = buildTelegramCaption(scanData.telegram_template, {
+                    manga: capForWh.manga_titulo,
+                    capitulo: capForWh.numero,
+                    titulo: capForWh.titulo || '',
+                    url: secretLink
+                  });
                   
                   await fetch(telegramUrl, {
                     method: 'POST',
