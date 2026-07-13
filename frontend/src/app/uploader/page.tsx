@@ -188,7 +188,7 @@ export default function UploaderPage() {
         const res = await fetch(`${API}/api/chapters`, {
           method: 'POST',
           headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-          body: JSON.stringify({ manga_id: selectedManga.id, numero: num, titulo: capTitulo || null, fecha_publicacion: fechaPub || null, notify_discord: notifyDiscord }),
+          body: JSON.stringify({ manga_id: selectedManga.id, numero: num, titulo: capTitulo || null, fecha_publicacion: fechaPub ? new Date(fechaPub).toISOString() : null, notify_discord: notifyDiscord }),
         });
         const d = await res.json();
         if (!res.ok) { setCreateError(d.error || 'Error al crear'); setUploading(false); return; }
@@ -373,7 +373,12 @@ export default function UploaderPage() {
   const openEdit = async (cap: Capitulo) => {
     setEditingCap(cap);
     setEditNumero(String(cap.numero));
-    setEditFecha((cap as any).fecha_publicacion ? new Date((cap as any).fecha_publicacion).toISOString().slice(0, 16) : '');
+      let editLocal = '';
+      if ((cap as any).fecha_publicacion) {
+        const d = new Date((cap as any).fecha_publicacion);
+        editLocal = new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+      }
+      setEditFecha(editLocal);
     setEditMsg(null);
     setEditPages([]);
     setView('edit');
@@ -438,7 +443,7 @@ export default function UploaderPage() {
         body: JSON.stringify({
           numero: parseFloat(editNumero),
           titulo: editTitulo || null,
-          fecha_publicacion: editFecha || null
+          fecha_publicacion: editFecha ? new Date(editFecha).toISOString() : null
         }),
       });
       const d = await res.json();
