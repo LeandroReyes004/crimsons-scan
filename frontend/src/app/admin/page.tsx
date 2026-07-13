@@ -210,7 +210,7 @@ export default function AdminPage() {
 
   return (
     <div className="h-screen overflow-hidden flex bg-gray-50 dark:bg-[#07070a] text-gray-900 dark:text-gray-100 font-sans">
-      {(needsContract || forceContract) && <ContractModal scanId={user.scan_id!} onClose={() => setForceContract(false)} />}
+      {(needsContract || forceContract) && <ContractModal scanId={user.scan_id!} onClose={() => setForceContract(false)} alreadySigned={!!user.scan_contrato_firmado} />}
 
       {/* ── Overlay mobile ──────────────────────────────── */}
       {sidebarOpen && (

@@ -5,7 +5,7 @@ import { authHeaders } from '@/lib/auth';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
-export default function ContractModal({ scanId, onClose }: { scanId: string, onClose: () => void }) {
+export default function ContractModal({ scanId, onClose, alreadySigned }: { scanId: string, onClose: () => void, alreadySigned?: boolean }) {
   const [texto, setTexto] = useState('');
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -99,78 +99,95 @@ export default function ContractModal({ scanId, onClose }: { scanId: string, onC
         </div>
 
         <div className="p-6 border-t border-white/5 bg-[#12121a]">
-          {error && (
-            <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-          
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">Nombre / Nick *</label>
-                <input 
-                  type="text" 
-                  required
-                  value={nombre}
-                  onChange={e => setNombre(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-rose-500 transition-colors"
-                  placeholder="Tu nombre o nick"
-                />
+          {alreadySigned ? (
+            <div className="flex flex-col items-center justify-center gap-3">
+              <div className="bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-6 py-4 rounded-xl text-center font-bold w-full">
+                ✅ El contrato ya ha sido firmado por el representante de tu scan.
               </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">Discord *</label>
-                <input 
-                  type="text"
-                  required
-                  value={discord}
-                  onChange={e => setDiscord(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-rose-500 transition-colors"
-                  placeholder="Usuario de Discord"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">Binance Pay ID *</label>
-                <input 
-                  type="text" 
-                  required
-                  value={binanceId}
-                  onChange={e => setBinanceId(e.target.value)}
-                  className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-rose-500 transition-colors"
-                  placeholder="ID para pagos"
-                />
-              </div>
-            </div>
-
-            <label className="flex items-center gap-3 cursor-pointer group mt-4">
-              <div className="relative flex items-center justify-center">
-                <input 
-                  type="checkbox" 
-                  required
-                  checked={accepted}
-                  onChange={e => setAccepted(e.target.checked)}
-                  className="peer sr-only" 
-                />
-                <div className="w-5 h-5 border-2 border-white/20 rounded bg-black/50 peer-checked:bg-rose-600 peer-checked:border-rose-600 transition-all"></div>
-                <svg className="absolute w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
-                </svg>
-              </div>
-              <span className="text-gray-300 select-none group-hover:text-white transition-colors">
-                He leído detenidamente y acepto todas las cláusulas del contrato de alianza.
-              </span>
-            </label>
-
-            <div className="flex justify-end pt-4">
               <button
-                type="submit"
-                disabled={submitting || !accepted}
-                className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg font-bold transition-all shadow-lg shadow-rose-900/20 active:scale-[0.98]"
+                type="button"
+                onClick={onClose}
+                className="mt-2 bg-gray-800 hover:bg-gray-700 text-white px-8 py-3 rounded-lg font-bold transition-all shadow-lg active:scale-[0.98]"
               >
-                {submitting ? 'Firmando...' : 'Firmar y Continuar'}
+                Cerrar Contrato
               </button>
             </div>
-          </form>
+          ) : (
+            <>
+              {error && (
+                <div className="mb-4 p-3 bg-red-500/10 border border-red-500/30 text-red-400 rounded-lg text-sm">
+                  {error}
+                </div>
+              )}
+              
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">Nombre / Nick *</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={nombre}
+                      onChange={e => setNombre(e.target.value)}
+                      className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-rose-500 transition-colors"
+                      placeholder="Tu nombre o nick"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">Discord *</label>
+                    <input 
+                      type="text"
+                      required
+                      value={discord}
+                      onChange={e => setDiscord(e.target.value)}
+                      className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-rose-500 transition-colors"
+                      placeholder="Usuario de Discord"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-gray-400 mb-1 uppercase tracking-wider">Binance Pay ID *</label>
+                    <input 
+                      type="text" 
+                      required
+                      value={binanceId}
+                      onChange={e => setBinanceId(e.target.value)}
+                      className="w-full bg-black/50 border border-white/10 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-rose-500 transition-colors"
+                      placeholder="ID para pagos"
+                    />
+                  </div>
+                </div>
+
+                <label className="flex items-center gap-3 cursor-pointer group mt-4">
+                  <div className="relative flex items-center justify-center">
+                    <input 
+                      type="checkbox" 
+                      required
+                      checked={accepted}
+                      onChange={e => setAccepted(e.target.checked)}
+                      className="peer sr-only" 
+                    />
+                    <div className="w-5 h-5 border-2 border-white/20 rounded bg-black/50 peer-checked:bg-rose-600 peer-checked:border-rose-600 transition-all"></div>
+                    <svg className="absolute w-3.5 h-3.5 text-white opacity-0 peer-checked:opacity-100 transition-opacity pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={3}>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                    </svg>
+                  </div>
+                  <span className="text-gray-300 select-none group-hover:text-white transition-colors">
+                    He leído detenidamente y acepto todas las cláusulas del contrato de alianza.
+                  </span>
+                </label>
+
+                <div className="flex justify-end pt-4">
+                  <button
+                    type="submit"
+                    disabled={submitting || !accepted}
+                    className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 disabled:cursor-not-allowed text-white px-8 py-3 rounded-lg font-bold transition-all shadow-lg shadow-rose-900/20 active:scale-[0.98]"
+                  >
+                    {submitting ? 'Firmando...' : 'Firmar y Continuar'}
+                  </button>
+                </div>
+              </form>
+            </>
+          )}
         </div>
       </div>
     </div>
