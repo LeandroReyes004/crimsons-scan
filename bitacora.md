@@ -32,3 +32,21 @@ eedsContract en dmin/page.tsx que forzaba el modal de contrato de alianza.
 **Archivos modificados:**
 - `frontend/src/app/admin/components/ContractModal.tsx`
 - `frontend/src/app/admin/page.tsx`
+
+## [13/07/2026] - Fix: Caché y Estado Inicial de Contratos (Admin)
+**Qué se hizo:**
+1. Se encontró un caso borde donde, justo después de iniciar sesión o de firmar el contrato, Next.js guardaba en caché el estado de `scan_contrato_firmado: 0`, haciendo que el modal volviera a saltar a los admins incluso si ya lo habían firmado correctamente en la base de datos.
+2. Se corrigió el backend (`worker/src/index.js`) para que devuelva el estado del contrato inmediatamente durante el `login`.
+3. Se añadió política `no-store` en `refreshUser` (`lib/auth.ts`) para obligar al navegador a siempre verificar si hay nuevas firmas en la API sin depender de cachés antiguos.
+
+**Archivos modificados:**
+- `worker/src/index.js`
+- `frontend/src/lib/auth.ts`
+
+## [13/07/2026] - Mejora: Portadas en notificaciones de Discord y Telegram
+**Qué se hizo:**
+1. Se refactorizó la función `buildDiscordBody` en el backend para que el webhook de Discord se envíe como un *Embed* enriquecido (en lugar de texto plano) y así pueda incluir la imagen de portada (`cover_url`) del manga.
+2. Se corrigió el código de notificación de Telegram (`/api/chapters`). Antes utilizaba el endpoint `sendMessage` mandando solo texto. Ahora utiliza `sendPhoto`, permitiendo adjuntar la portada como imagen principal y enviar el texto del anuncio como pie de foto (`caption`).
+
+**Archivos modificados:**
+- `worker/src/index.js`
