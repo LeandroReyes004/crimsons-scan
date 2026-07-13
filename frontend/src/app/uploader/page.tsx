@@ -152,6 +152,20 @@ export default function UploaderPage() {
     setView('chapters');
   }, []);
 
+  useEffect(() => {
+    if (mangas.length > 0) {
+      const searchParams = new URLSearchParams(window.location.search);
+      const mId = searchParams.get('manga_id');
+      if (mId && !selectedManga) {
+        const found = mangas.find(m => m.id === mId);
+        if (found) {
+          loadChapters(found);
+          window.history.replaceState({}, '', '/uploader');
+        }
+      }
+    }
+  }, [mangas, loadChapters, selectedManga]);
+
   const ALLOWED_TYPES_IMG = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
   const ALLOWED_TYPES_TXT = ['text/plain'];
 

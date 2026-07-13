@@ -208,6 +208,14 @@ export default function AdminPage() {
 
   const needsContract = user && user.scan_id && !user.is_superadmin && !user.scan_contrato_firmado && user.rol === 'admin_scan';
 
+  useEffect(() => {
+    const handleNav = (e: any) => {
+      if (e.detail) setSection(e.detail);
+    };
+    window.addEventListener('nav-section', handleNav);
+    return () => window.removeEventListener('nav-section', handleNav);
+  }, []);
+
   return (
     <div className="h-screen overflow-hidden flex bg-gray-50 dark:bg-[#07070a] text-gray-900 dark:text-gray-100 font-sans">
       {(needsContract || forceContract) && <ContractModal scanId={user.scan_id!} onClose={() => setForceContract(false)} alreadySigned={!!user.scan_contrato_firmado} />}
@@ -251,10 +259,10 @@ export default function AdminPage() {
             <button
               key={item.id}
               onClick={() => { setSection(item.id); setSidebarOpen(false); }}
-              className={`flex items-center gap-3 w-full px-3 py-2.5 rounded-xl text-sm font-semibold transition-all ${
+              className={`flex items-center gap-3 w-full px-3 py-2.5 text-sm font-semibold transition-all ${
                 section === item.id
-                  ? 'bg-rose-600 text-white shadow-md shadow-rose-600/20'
-                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5'
+                  ? 'border-l-4 border-rose-500 bg-rose-50 dark:bg-rose-500/10 text-rose-600 dark:text-rose-500 rounded-r-xl rounded-l-sm'
+                  : 'text-gray-500 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 rounded-xl'
               }`}
             >
               {item.icon} {item.label}
@@ -335,7 +343,7 @@ function SectionDashboard() {
           <StatCard icon={<BookMarked size={20}/>}  label="Proyectos"          value={data?.mangas ?? 0}     color="bg-blue-50 dark:bg-blue-500/10 text-blue-500"/>
           <StatCard icon={<BookOpen size={20}/>}    label="Caps Publicados"    value={data?.capitulos ?? 0}   color="bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500"/>
           <StatCard icon={<Users size={20}/>}       label="Scanners"           value={data?.scanners ?? 0}    color="bg-purple-50 dark:bg-purple-500/10 text-purple-500"/>
-          <StatCard icon={<Clock size={20}/>}       label="Pendientes"         value={data?.pendientes ?? 0}  color="bg-amber-50 dark:bg-amber-500/10 text-amber-500"/>
+          <StatCard icon={<Clock size={20}/>}       label="Caps. en Revisión"  value={data?.pendientes ?? 0}  color="bg-amber-50 dark:bg-amber-500/10 text-amber-500"/>
         </div>
       )}
 
@@ -348,7 +356,9 @@ function SectionDashboard() {
           {manga_data?.mangas?.slice(0, 5).map((m, i) => (
             <div key={m.id} className={`flex items-center justify-between px-5 py-3.5 ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-rose-500/20 to-orange-500/20 flex items-center justify-center text-rose-500 font-bold text-sm">{i + 1}</div>
+                <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-100 dark:bg-white/5 shrink-0 border border-gray-200 dark:border-white/10">
+                  <img src={m.cover_r2_key ? `${API}/api/cover/${m.id}` : '/portada.jpg'} alt="" className="w-full h-full object-cover" />
+                </div>
                 <div>
                   <p className="font-semibold text-sm dark:text-white">{m.titulo}</p>
                   <p className="text-xs text-gray-400">{m.tipo}</p>
@@ -357,6 +367,12 @@ function SectionDashboard() {
               <div className="flex items-center gap-3">
                 <span className="text-xs text-gray-400 flex items-center gap-1"><Eye size={12}/> {m.views_total}</span>
                 <Badge estado={m.estado}/>
+                <Link href={`/uploader?manga_id=${m.id}`} className="w-8 h-8 flex items-center justify-center rounded-lg bg-rose-50 dark:bg-rose-500/10 text-rose-500 hover:bg-rose-100 dark:hover:bg-rose-500/20 transition-colors shrink-0 ml-1">
+                  <Upload size={14}/>
+                </Link>
+                <button onClick={() => window.dispatchEvent(new CustomEvent('nav-section', { detail: 'mangas' }))} className="w-8 h-8 flex items-center justify-center rounded-lg bg-gray-50 dark:bg-white/5 text-gray-500 hover:bg-gray-100 dark:hover:bg-white/10 transition-colors shrink-0">
+                  <Edit3 size={14}/>
+                </button>
               </div>
             </div>
           )) ?? <p className="text-gray-400 text-sm p-5">No hay proyectos aún.</p>}
