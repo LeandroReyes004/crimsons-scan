@@ -1498,6 +1498,7 @@ export default {
                  FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
               ).bind(manga_id).first();
               if (scanData?.telegram_chat_id && env.TELEGRAM_BOT_TOKEN) {
+                const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`;
                 const coverUrl = `https://crimson-api.leandro-reyes1025.workers.dev/api/cover/${manga_id}`;
                 const secretLink = `${env.FRONTEND_URL}/leer/${secret_token}`;
                 const caption = `📖 *${scanData.manga_titulo}*\n\nNuevo Capítulo ${numero}${titulo ? ` - ${titulo}` : ''} disponible ahora.\n\n🔗 [Leer Capítulo aquí](${secretLink})`;
@@ -1507,11 +1508,11 @@ export default {
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
                     chat_id: scanData.telegram_chat_id,
-                    text: caption,
-                    
+                    photo: coverUrl,
+                    caption: caption,
                     parse_mode: 'Markdown'
                   })
-                });
+                }).catch(e => console.error('Telegram Error', e));
               }
             } catch (e) {
               console.error('Error Telegram:', e);
@@ -1593,19 +1594,19 @@ export default {
 
                 // --- Telegram en Publish ---
                 if (scanData?.telegram_chat_id && env.TELEGRAM_BOT_TOKEN) {
-                  const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`;
+                  const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`;
                   const coverUrl = `https://crimson-api.leandro-reyes1025.workers.dev/api/cover/${capForWh.manga_id}`;
                   const capSecret = await env.DB.prepare('SELECT secret_token FROM capitulos WHERE id = ?').bind(publishCap[1]).first();
                   const secretLink = `${env.FRONTEND_URL}/leer/${capSecret?.secret_token}`;
-                  const caption = `📖 *${capForWh.manga_titulo}*\\n\\nNuevo Capítulo ${capForWh.numero}${capForWh.titulo ? ` - ${capForWh.titulo}` : ''} disponible ahora.\\n\\n🔗 [Leer Capítulo aquí](${secretLink})`;
+                  const caption = `📖 *${capForWh.manga_titulo}*\n\nNuevo Capítulo ${capForWh.numero}${capForWh.titulo ? ` - ${capForWh.titulo}` : ''} disponible ahora.\n\n🔗 [Leer Capítulo aquí](${secretLink})`;
                   
                   await fetch(telegramUrl, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
                       chat_id: scanData.telegram_chat_id,
-                      text: caption,
-                      
+                      photo: coverUrl,
+                      caption: caption,
                       parse_mode: 'Markdown'
                     })
                   }).catch(e => console.error('Telegram Error', e));
