@@ -50,15 +50,17 @@ function buildDiscordBody(template, vars) {
     .replace(/\{\{capitulo\}\}/g, vars.capitulo)
     .replace(/\{\{titulo\}\}/g, vars.titulo ? ` — ${vars.titulo}` : '')
     .replace(/\{\{url\}\}/g, vars.url);
-  return JSON.stringify({
-    embeds: [{
-      description: desc,
-      color: 0xe11d48,
-      url: vars.url,
-      footer: { text: "Crimson's Scan" },
-      timestamp: new Date().toISOString(),
-    }]
-  });
+  const embed = {
+    description: desc,
+    color: 0xe11d48,
+    url: vars.url,
+    footer: { text: "Crimson's Scan" },
+    timestamp: new Date().toISOString(),
+  };
+  if (vars.cover_url) {
+    embed.image = { url: vars.cover_url };
+  }
+  return JSON.stringify({ embeds: [embed] });
 }
 
 // ── JWT (Web Crypto nativo — sin dependencias) ─────────────
