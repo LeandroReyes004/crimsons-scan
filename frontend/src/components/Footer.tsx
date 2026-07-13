@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { MessageSquare, X, Send, Loader2, CheckCircle2, Shield } from 'lucide-react';
 import { getUser } from '@/lib/auth';
@@ -7,6 +8,7 @@ import { getUser } from '@/lib/auth';
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
 export default function Footer() {
+  const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [tipo, setTipo] = useState('sugerencia');
   const [mensaje, setMensaje] = useState('');
@@ -14,6 +16,9 @@ export default function Footer() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState('');
+
+  if (pathname?.startsWith('/admin') || pathname?.startsWith('/uploader')) return null;
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

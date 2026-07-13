@@ -503,16 +503,22 @@ export default function UploaderPage() {
                 <p className="font-medium">No tenés obras asignadas</p>
               </div>
             ) : (
-              <div className="flex flex-col gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
                 {mangas.map(m => (
                   <button key={m.id} onClick={() => loadChapters(m)}
-                    className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4 flex items-center gap-4 hover:border-rose-300 dark:hover:border-rose-500/30 active:scale-[0.98] transition-all text-left w-full">
-                    <div className="w-10 h-14 rounded-xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 flex items-center justify-center text-rose-500 shrink-0"><BookOpen size={18}/></div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-bold text-sm dark:text-white truncate">{m.titulo}</p>
-                      <p className="text-xs text-gray-400 mt-0.5 capitalize">{m.tipo}</p>
+                    className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4 flex flex-col items-center gap-3 hover:border-rose-300 dark:hover:border-rose-500/30 active:scale-[0.98] transition-all text-center w-full shadow-sm hover:shadow-md h-full">
+                    <div className="w-16 h-20 rounded-xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 flex items-center justify-center text-rose-500 shrink-0 shadow-inner">
+                      <BookOpen size={28}/>
                     </div>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${m.estado === 'en_curso' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' : 'bg-gray-100 text-gray-500 dark:bg-white/5'}`}>{m.estado}</span>
+                    <div className="flex-1 flex flex-col justify-between w-full">
+                      <div className="mb-2">
+                        <p className="font-extrabold text-sm dark:text-white line-clamp-2 leading-tight">{m.titulo}</p>
+                        <p className="text-[11px] text-gray-400 mt-1 capitalize font-medium">{m.tipo}</p>
+                      </div>
+                      <div className="mt-auto">
+                        <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full ${m.estado === 'en_curso' ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400' : 'bg-gray-100 text-gray-500 dark:bg-white/5'}`}>{m.estado}</span>
+                      </div>
+                    </div>
                   </button>
                 ))}
               </div>
