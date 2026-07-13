@@ -76,7 +76,8 @@ export async function refreshUser(): Promise<CrimsonUser | null> {
   if (!token) return null;
   try {
     const res = await fetch(`${API_URL}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, 'Cache-Control': 'no-cache' },
+      cache: 'no-store'
     });
     if (!res.ok) { logout(); return null; }
     const d = await res.json();

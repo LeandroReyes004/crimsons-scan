@@ -422,7 +422,7 @@ export default {
         if (!username || !password) return err('Ingresá tu usuario y contraseña');
 
         const user = await env.DB.prepare(
-          `SELECT u.*, s.nombre as scan_nombre
+          `SELECT u.*, s.nombre as scan_nombre, s.contrato_firmado as scan_contrato_firmado
            FROM usuarios u LEFT JOIN scans s ON u.scan_id = s.id
            WHERE u.username = ?`
         ).bind(username).first();
@@ -466,7 +466,7 @@ export default {
 
         return json({
           token,
-          user: { id: user.id, username: user.username, display_name: user.display_name || null, rol: user.rol, avatar_url: user.avatar_url, is_superadmin: user.is_superadmin === 1, scan_id: user.scan_id || null, scan_nombre: user.scan_nombre || null }
+          user: { id: user.id, username: user.username, display_name: user.display_name || null, rol: user.rol, avatar_url: user.avatar_url, is_superadmin: user.is_superadmin === 1, scan_id: user.scan_id || null, scan_nombre: user.scan_nombre || null, scan_contrato_firmado: user.scan_contrato_firmado || 0 }
         });
       }
 
