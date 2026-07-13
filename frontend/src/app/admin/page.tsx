@@ -2405,6 +2405,16 @@ function previewTemplate(tpl: string) {
     .replace(/\*\*(.*?)\*\*/g, '$1');
 }
 
+const DEFAULT_TELEGRAM_TEMPLATE = `📖 *{{manga}}*\n\nNuevo Capítulo {{capitulo}}{{titulo}} disponible ahora.\n\n🔗 [Leer Capítulo aquí]({{url}})`;
+  
+function previewTelegramTemplate(tpl: string) {
+  return (tpl || DEFAULT_TELEGRAM_TEMPLATE)
+    .replace(/\{\{manga\}\}/g, 'Atados por el Pecado')
+    .replace(/\{\{capitulo\}\}/g, '42')
+    .replace(/\{\{titulo\}\}/g, ' — El reencuentro')
+    .replace(/\{\{url\}\}/g, 'https://scancrimson.com/leer/token_secreto');
+}
+
 function SectionConfig({ scanId }: { scanId: string }) {
   const [webhook, setWebhook]               = useState('');
   const [discordTemplate, setDiscordTemplate] = useState('');
