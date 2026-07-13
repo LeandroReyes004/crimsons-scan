@@ -43,10 +43,22 @@ eedsContract en dmin/page.tsx que forzaba el modal de contrato de alianza.
 - `worker/src/index.js`
 - `frontend/src/lib/auth.ts`
 
-## [13/07/2026] - Mejora: Portadas en notificaciones de Discord y Telegram
+## [13/07/2026] - Mejora: Notificaciones y plantillas para Discord y Telegram
 **Qué se hizo:**
-1. Se refactorizó la función `buildDiscordBody` en el backend para que el webhook de Discord se envíe como un *Embed* enriquecido (en lugar de texto plano) y así pueda incluir la imagen de portada (`cover_url`) del manga.
-2. Se corrigió el código de notificación de Telegram (`/api/chapters`). Antes utilizaba el endpoint `sendMessage` mandando solo texto. Ahora utiliza `sendPhoto`, permitiendo adjuntar la portada como imagen principal y enviar el texto del anuncio como pie de foto (`caption`).
+1. Se refactorizó la función `buildDiscordBody` en el backend para que el webhook de Discord se envíe como un *Embed* enriquecido y así pueda incluir la imagen de portada (`cover_url`) del manga.
+2. Se corrigió el código de notificación de Telegram (`/api/chapters`). Ahora utiliza `sendPhoto`, permitiendo adjuntar la portada como imagen principal y enviar el texto del anuncio como pie de foto (`caption`).
+3. Se añadió un panel de configuración visual en `/admin` que permite a los líderes de scan personalizar su propio mensaje (plantilla) para Telegram de la misma forma que Discord, usando variables como `{{manga}}` o `{{capitulo}}`.
+4. Se corrigió un error en el worker que causaba que el texto de la plantilla de Telegram (`telegram_template`) no se guardara correctamente en la base de datos (D1).
+5. Se corrigieron pequeños bugs visuales en el panel Uploader donde el mensaje "Configuración guardada exitosamente" aparecía en secciones equivocadas.
 
 **Archivos modificados:**
 - `worker/src/index.js`
+- `frontend/src/app/admin/page.tsx`
+## [13/07/2026] - Fix: Zona Horaria al programar capítulos
+**Qué se hizo:**
+1. Se identificó que al programar un capítulo desde el panel Uploader, la hora local elegida por los usuarios se enviaba tal cual al servidor, causando que el worker (que opera en UTC) publicara horas antes o después de lo esperado.
+2. Se corrigió el componente `uploader/page.tsx` para que convierta estrictamente la hora local elegida por el uploader al formato ISO estándar UTC (`.toISOString()`) antes de enviarlo al backend, unificando la zona horaria en toda la plataforma.
+3. Al editar un capítulo programado, el sistema ahora convierte automáticamente la hora UTC de la base de datos de regreso a la zona horaria local del dispositivo para que el usuario siempre vea la hora correcta en su pantalla.
+
+**Archivos modificados:**
+- `frontend/src/app/uploader/page.tsx`
