@@ -1488,6 +1488,9 @@ export default {
         // Notificar Discord y Telegram si se pidió y el capítulo quedó publicado
         if (notify_discord && estado === 'publicado') {
           ctx.waitUntil((async () => {
+            const apiDomain = new URL(request.url).origin;
+            const secretLink = `${env.FRONTEND_URL}/leer/${secret_token}`;
+
             // -- Notificación Telegram --
             try {
               const scanData = await env.DB.prepare(
@@ -1495,8 +1498,7 @@ export default {
                  FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
               ).bind(manga_id).first();
               if (scanData?.telegram_chat_id && env.TELEGRAM_BOT_TOKEN) {
-                const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`;
-                const coverUrl = `${env.FRONTEND_URL}/api/cover/${manga_id}`;
+                const coverUrl = `https://crimson-api.leandro-reyes1025.workers.dev/api/cover/${manga_id}`;
                 const secretLink = `${env.FRONTEND_URL}/leer/${secret_token}`;
                 const caption = `📖 *${scanData.manga_titulo}*\n\nNuevo Capítulo ${numero}${titulo ? ` - ${titulo}` : ''} disponible ahora.\n\n🔗 [Leer Capítulo aquí](${secretLink})`;
                 
@@ -1522,7 +1524,7 @@ export default {
               ).bind(manga_id).first();
               const webhookUrl = scanData?.webhook_discord || env.DISCORD_WEBHOOK_URL;
               if (!webhookUrl) return;
-              const mangaUrl = `${env.FRONTEND_URL}/manga/reader/${manga_id}`;
+              const secretLink = `${env.FRONTEND_URL}/leer/${secret_token}`;
               await fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1530,7 +1532,8 @@ export default {
                   manga: scanData?.manga_titulo || '',
                   capitulo: numero,
                   titulo: titulo || '',
-                  url: mangaUrl,
+                  url: secretLink,
+                  cover_url: `https://crimson-api.leandro-reyes1025.workers.dev/api/cover/${manga_id}`
                 }),
               });
             } catch {}
@@ -1591,7 +1594,7 @@ export default {
                 // --- Telegram en Publish ---
                 if (scanData?.telegram_chat_id && env.TELEGRAM_BOT_TOKEN) {
                   const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendMessage`;
-                  const coverUrl = `${env.FRONTEND_URL}/api/cover/${capForWh.manga_id}`;
+                  const coverUrl = `https://crimson-api.leandro-reyes1025.workers.dev/api/cover/${capForWh.manga_id}`;
                   const capSecret = await env.DB.prepare('SELECT secret_token FROM capitulos WHERE id = ?').bind(publishCap[1]).first();
                   const secretLink = `${env.FRONTEND_URL}/leer/${capSecret?.secret_token}`;
                   const caption = `📖 *${capForWh.manga_titulo}*\\n\\nNuevo Capítulo ${capForWh.numero}${capForWh.titulo ? ` - ${capForWh.titulo}` : ''} disponible ahora.\\n\\n🔗 [Leer Capítulo aquí](${secretLink})`;
@@ -1611,8 +1614,10 @@ export default {
               } catch {}
 
               if (!webhookUrl) return;
+              
+              const capSecretForDiscord = await env.DB.prepare('SELECT secret_token FROM capitulos WHERE id = ?').bind(publishCap[1]).first();
+              const secretLink = `${env.FRONTEND_URL}/leer/${capSecretForDiscord?.secret_token}`;
 
-              const mangaUrl = `${env.FRONTEND_URL}/manga/reader/${capForWh.manga_id}`;
               await fetch(webhookUrl, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -1620,7 +1625,8 @@ export default {
                   manga: capForWh.manga_titulo,
                   capitulo: capForWh.numero,
                   titulo: capForWh.titulo || '',
-                  url: mangaUrl,
+                  url: secretLink,
+                  cover_url: `https://crimson-api.leandro-reyes1025.workers.dev/api/cover/${capForWh.manga_id}`
                 }),
               });
             } catch {}
