@@ -1205,8 +1205,22 @@ function SectionRevision() {
     setProcessing(null);
   };
 
+  const groupedCaps = (data?.capitulos ?? []).reduce((acc: Record<string, CapAgenda[]>, cap) => {
+    let groupName = "Sin Fecha Programada";
+    if (cap.fecha_publicacion) {
+        const date = new Date(cap.fecha_publicacion);
+        const formattedDate = date.toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+        groupName = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
+    }
+    if (!acc[groupName]) {
+      acc[groupName] = [];
+    }
+    acc[groupName].push(cap);
+    return acc;
+  }, {});
+
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+    <div className="flex flex-col gap-8 animate-in fade-in duration-300">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-extrabold dark:text-white">Agenda de Publicaciones</h2>
@@ -1226,75 +1240,99 @@ function SectionRevision() {
           <p className="text-sm mt-1">Los capítulos subidos aparecen aquí antes de publicarse</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 gap-4">
-          {data?.capitulos?.map(cap => {
-            const esProgramado = cap.estado === 'programado' && cap.fecha_publicacion;
-            const fechaLocal = cap.fecha_publicacion ? new Date(cap.fecha_publicacion) : null;
-            const yaVencio = fechaLocal && fechaLocal < new Date();
-            return (
-              <div key={cap.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 shadow-sm flex flex-col h-full">
-                <div className="flex-1 mb-4">
-                  <div className="flex items-center gap-2 mb-3 flex-wrap">
-                    <Badge estado={cap.estado}/>
-                    {esProgramado && !yaVencio && (
-                      <span className="text-xs bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-400 px-2 py-1 rounded-full font-bold flex items-center gap-1">
-                        <Clock size={12}/> {fechaLocal!.toLocaleString('es', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' })}
-                      </span>
-                    )}
-                  </div>
-                  <p className="font-extrabold text-lg dark:text-white leading-tight mb-1 line-clamp-2">{cap.manga_titulo}</p>
-                  <p className="text-sm text-gray-500 font-medium">
-                    Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}
-                  </p>
-                  <p className="text-xs text-gray-400 mt-1">
-                    por <strong className="text-rose-500 font-bold">{cap.uploader_username}</strong>
-                  </p>
-                </div>
+        <div className="flex flex-col gap-8">
+          {Object.entries(groupedCaps).map(([dateLabel, caps]) => (
+            <div key={dateLabel} className="flex flex-col gap-3">
+              <h3 className="text-xs font-bold text-gray-400 uppercase tracking-widest pl-2">{dateLabel}</h3>
+              <div className="flex flex-col rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-[#111114] shadow-sm">
+                {caps.map((cap, i) => {
+                  const esProgramado = cap.estado === 'programado' && cap.fecha_publicacion;
+                  const fechaLocal = cap.fecha_publicacion ? new Date(cap.fecha_publicacion) : null;
+                  const yaVencio = fechaLocal && fechaLocal < new Date();
+                  
+                  return (
+                    <div key={cap.id} className={`flex flex-col lg:flex-row items-start lg:items-center justify-between p-4 gap-4 transition hover:bg-gray-50 dark:hover:bg-white/2 ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
+                      
+                      {/* Lado Izquierdo: Info de Manga */}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-extrabold text-[15px] dark:text-white truncate" title={cap.manga_titulo}>{cap.manga_titulo}</p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-xs font-semibold text-gray-400">Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}</span>
+                          <span className="w-1 h-1 rounded-full bg-gray-300 dark:bg-white/10"></span>
+                          <span className="text-xs font-medium text-blue-500/80 dark:text-blue-400/80 truncate">por {cap.uploader_username}</span>
+                        </div>
+                      </div>
+                      
+                      {/* Centro: Tiempo (solo si no estamos editando) */}
+                      {editingId !== cap.id && (
+                        <div className="flex items-center gap-3 shrink-0">
+                          {!esProgramado && <Badge estado={cap.estado}/>}
+                          {esProgramado && !yaVencio && (
+                             <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 flex items-center gap-1.5 border border-gray-200 dark:border-white/5">
+                               <Clock size={12} className="opacity-70"/>
+                               {fechaLocal!.toLocaleTimeString('es', { hour:'2-digit', minute:'2-digit' })}
+                               <span className="opacity-50 ml-1 font-normal">({Math.ceil((fechaLocal!.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))}d)</span>
+                             </span>
+                          )}
+                          {esProgramado && yaVencio && (
+                             <span className="text-[11px] font-bold px-3 py-1.5 rounded-full bg-orange-100 dark:bg-orange-500/10 text-orange-700 dark:text-orange-400 flex items-center gap-1.5 border border-orange-200 dark:border-orange-500/20">
+                               <Clock size={12}/> Vencido
+                             </span>
+                          )}
+                        </div>
+                      )}
 
-                <div className="shrink-0 mt-auto">
-                  {editingId === cap.id ? (
-                    <div className="flex flex-col gap-2 w-full">
-                      <input type="datetime-local" value={newFecha} onChange={e => setNewFecha(e.target.value)}
-                        className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none w-full transition"/>
-                      <div className="grid grid-cols-2 gap-2">
-                        <button onClick={() => reschedule(cap.id)} disabled={processing === cap.id}
-                          className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-3 py-2.5 rounded-xl transition flex justify-center items-center gap-2">
-                          {processing === cap.id ? <Loader2 size={16} className="animate-spin"/> : 'Guardar'}
-                        </button>
-                        <button onClick={() => setEditingId(null)} className="bg-gray-100 dark:bg-white/5 text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white text-sm font-bold px-3 py-2.5 rounded-xl transition">Cancelar</button>
-                      </div>
+                      {/* Lado Derecho: Acciones o Modo Edición */}
+                      {editingId === cap.id ? (
+                         <div className="flex items-center gap-2 shrink-0 w-full lg:w-auto mt-3 lg:mt-0">
+                           <input type="datetime-local" value={newFecha} onChange={e => setNewFecha(e.target.value)}
+                             className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none w-full lg:w-48 transition"/>
+                           <button onClick={() => reschedule(cap.id)} disabled={processing === cap.id}
+                             className="bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-4 py-2 rounded-xl transition flex justify-center items-center h-[38px]">
+                             {processing === cap.id ? <Loader2 size={16} className="animate-spin"/> : 'Guardar'}
+                           </button>
+                           <button onClick={() => setEditingId(null)} className="text-gray-400 hover:text-white p-2 rounded-xl hover:bg-white/10 transition">
+                             <X size={16}/>
+                           </button>
+                         </div>
+                      ) : (
+                         <div className="flex items-center gap-1 shrink-0 mt-3 lg:mt-0 ml-auto lg:ml-0">
+                            <button onClick={() => {
+                                setEditingId(cap.id);
+                                if (cap.fecha_publicacion) {
+                                  const d = new Date(cap.fecha_publicacion);
+                                  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+                                  setNewFecha(local.toISOString().slice(0,16));
+                                } else {
+                                  setNewFecha('');
+                                }
+                              }}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10 transition"
+                              title="Reprogramar">
+                              <Clock size={14}/> <span>Reprogramar</span>
+                            </button>
+                            
+                            <button onClick={() => publishNow(cap.id)} disabled={processing === cap.id}
+                              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-[11px] font-bold text-gray-400 border border-transparent hover:border-emerald-500/30 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 transition disabled:opacity-50"
+                              title="Publicar ahora de inmediato">
+                              {processing === cap.id ? <Loader2 size={14} className="animate-spin"/> : <Check size={14}/>} <span className="hidden sm:inline">Publicar ya</span>
+                            </button>
+                            
+                            <div className="w-[1px] h-4 bg-gray-200 dark:bg-white/10 mx-1"></div>
+
+                            <button onClick={() => deleteChapter(cap.id)} disabled={processing === cap.id}
+                              className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition"
+                              title="Eliminar capítulo">
+                              {processing === cap.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
+                            </button>
+                         </div>
+                      )}
                     </div>
-                  ) : (
-                    <div className="flex flex-col gap-2 w-full">
-                      <button onClick={() => publishNow(cap.id)} disabled={processing === cap.id}
-                        className="flex justify-center items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold px-3 py-3 rounded-xl transition disabled:opacity-50 w-full shadow-lg shadow-emerald-600/20 active:scale-[0.98]">
-                        {processing === cap.id ? <Loader2 size={16} className="animate-spin"/> : <Check size={16}/>} Publicar ahora
-                      </button>
-                      <div className="grid grid-cols-4 gap-2">
-                        <button onClick={() => {
-                            setEditingId(cap.id);
-                            if (cap.fecha_publicacion) {
-                              const d = new Date(cap.fecha_publicacion);
-                              const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
-                              setNewFecha(local.toISOString().slice(0,16));
-                            } else {
-                              setNewFecha('');
-                            }
-                          }}
-                          className="col-span-3 flex justify-center items-center gap-2 bg-blue-50 text-blue-600 hover:bg-blue-100 dark:bg-blue-500/10 dark:text-blue-400 dark:hover:bg-blue-500/20 text-sm font-bold px-3 py-2.5 rounded-xl transition active:scale-[0.98]">
-                          <Clock size={16}/> Reprogramar
-                        </button>
-                        <button onClick={() => deleteChapter(cap.id)} disabled={processing === cap.id}
-                          className="col-span-1 flex justify-center items-center p-2.5 rounded-xl text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition active:scale-[0.98]">
-                          {processing === cap.id ? <Loader2 size={18} className="animate-spin"/> : <Trash2 size={18}/>}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       )}
     </div>
