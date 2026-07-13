@@ -132,7 +132,16 @@ export default function AdminPage() {
   useEffect(() => {
     const handleOpen = () => setForceContract(true);
     window.addEventListener('open-contract', handleOpen);
-    return () => window.removeEventListener('open-contract', handleOpen);
+    
+    const handleNav = (e: any) => {
+      if (e.detail) setSection(e.detail);
+    };
+    window.addEventListener('nav-section', handleNav);
+    
+    return () => {
+      window.removeEventListener('open-contract', handleOpen);
+      window.removeEventListener('nav-section', handleNav);
+    };
   }, []);
 
   if (!mounted) return (
@@ -207,14 +216,6 @@ export default function AdminPage() {
   );
 
   const needsContract = user && user.scan_id && !user.is_superadmin && !user.scan_contrato_firmado && user.rol === 'admin_scan';
-
-  useEffect(() => {
-    const handleNav = (e: any) => {
-      if (e.detail) setSection(e.detail);
-    };
-    window.addEventListener('nav-section', handleNav);
-    return () => window.removeEventListener('nav-section', handleNav);
-  }, []);
 
   return (
     <div className="h-screen overflow-hidden flex bg-gray-50 dark:bg-[#07070a] text-gray-900 dark:text-gray-100 font-sans">
