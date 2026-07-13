@@ -2560,11 +2560,14 @@ function SectionConfig({ scanId }: { scanId: string }) {
   };
 
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-300 max-w-xl">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-300 max-w-6xl w-full">
       <div>
         <h2 className="text-2xl font-extrabold dark:text-white">Mi Scan</h2>
         <p className="text-gray-500 text-sm mt-1">Miembros y notificaciones</p>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+        <div className="flex flex-col gap-6">
 
       {/* Imagen del scan */}
       <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 flex flex-col gap-4">
@@ -2593,7 +2596,6 @@ function SectionConfig({ scanId }: { scanId: string }) {
       {loading ? (
         <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
       ) : (
-        <>
           <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Tu scan</p>
             <div className="flex items-center gap-3 mb-4">
@@ -2699,6 +2701,11 @@ function SectionConfig({ scanId }: { scanId: string }) {
               )}
             </div>
           </div>
+          )}
+        </div>
+
+        {!loading && (
+          <div className="flex flex-col gap-6">
           <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5">
             <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Bot de Telegram</p>
             <p className="text-xs text-gray-500 mb-4">
@@ -2853,8 +2860,9 @@ function SectionConfig({ scanId }: { scanId: string }) {
               </button>
             </div>
           </div>
-        </>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
