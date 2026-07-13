@@ -13,3 +13,12 @@
 
 **DÃ³nde nos quedamos:**
 - Todas las vistas mencionadas fueron convertidas a cuadriculas ("en cuadro"). Listos para la siguiente tarea de la sesiÃ³n o validaciÃ³n en navegador.
+
+## [13/07/2026] - Fix: Modal de Contrato bloqueando Uploaders
+**Qué se hizo:**
+1. Se corrigió la condición 
+eedsContract en dmin/page.tsx que forzaba el modal de contrato de alianza.
+2. Ahora solo los usuarios con el rol dmin_scan (líderes del scan) serán bloqueados por este modal; los uploaders ya no verán el modal que no pueden firmar.
+
+**Archivos modificados:**
+- rontend/src/app/admin/page.tsx`n
