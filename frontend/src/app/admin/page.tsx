@@ -2705,6 +2705,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
               Cuando se publique un capítulo, el bot notificará automáticamente a tu canal de Telegram.
               Agrega tu bot como administrador en el canal y pega aquí el Chat ID (ej. -10012345678).
             </p>
+            {saved   && <div className={`mb-3 p-3 rounded-xl text-sm font-medium ${saved.startsWith('✅')   ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>{saved}</div>}
             <div className="flex flex-col gap-1.5 mb-4">
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Chat ID del Canal</label>
               <input
