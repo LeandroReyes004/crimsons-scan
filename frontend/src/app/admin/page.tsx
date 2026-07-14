@@ -9,7 +9,7 @@ import {
   ChevronRight, ChevronDown, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
   Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign, Search, MessageSquare,
-  ArrowUp, ArrowDown, Save, Download, FileText, AlertTriangle
+  ArrowUp, ArrowDown, Save, Download, FileText, AlertTriangle, MousePointerClick
 } from 'lucide-react';
 import { getUser, getToken, authHeaders, logout, refreshUser } from '@/lib/auth';
 import { toWebP } from '@/lib/webp';
@@ -2207,6 +2207,7 @@ function SectionScans() {
       if (res.ok) {
         const data = await res.json();
         setContractMsg(data.message || 'Contrato actualizado.');
+        setShowContractForm(false);
       } else {
         setContractMsg('Error al guardar el contrato.');
       }
@@ -2214,6 +2215,7 @@ function SectionScans() {
       setContractMsg('Error de red.');
     } finally { setContractSaving(false); }
   };
+
   const [nombre, setNombre]           = useState('');
   const [descripcion, setDesc]        = useState('');
   const [saving, setSaving]           = useState(false);
@@ -2223,13 +2225,15 @@ function SectionScans() {
   const [loadingId, setLoadingId]     = useState<string | null>(null);
 
   const loadDetails = async (scanId: string) => {
-    if (expandedId === scanId) { setExpandedId(null); return; }
+    if (expandedId === scanId) return; // Ya está seleccionado
+    setExpandedId(scanId);
+    if (details[scanId]) return; // Ya lo tenemos cacheado
+    
     setLoadingId(scanId);
     try {
       const res = await fetch(`${API}/api/scans/${scanId}/details`, { headers: authHeaders() });
       const d = await res.json();
       setDetails(prev => ({ ...prev, [scanId]: d }));
-      setExpandedId(scanId);
     } finally { setLoadingId(null); }
   };
 
@@ -2244,11 +2248,11 @@ function SectionScans() {
       });
       const d = await res.json();
       if (!res.ok) throw new Error(d.error);
-      setFeedback(`âœ… Scan "${nombre}" creado`);
+      setFeedback(`✅ Scan "${nombre}" creado`);
       setNombre(''); setDesc('');
       refetch();
       setTimeout(() => setShowForm(false), 1200);
-    } catch (err: any) { setFeedback(`âŒ ${err.message}`); }
+    } catch (err: any) { setFeedback(`❌ ${err.message}`); }
     finally { setSaving(false); }
   };
 
@@ -2261,8 +2265,11 @@ function SectionScans() {
     refetch();
   };
 
+  const activeScan = data?.scans?.find(s => s.id === expandedId);
+  const activeDet = expandedId ? details[expandedId] : null;
+
   return (
-    <div className="flex flex-col gap-6 animate-in fade-in duration-300">
+    <div className="flex flex-col gap-6 animate-in fade-in duration-300 relative">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-2xl font-extrabold dark:text-white">Grupos de Scan</h2>
@@ -2270,7 +2277,7 @@ function SectionScans() {
         </div>
         {isSuperAdmin && (
           <div className="flex gap-3">
-            <button onClick={() => { setShowContractForm(!showContractForm); setShowForm(false); if (!showContractForm) loadContract(); }}
+            <button onClick={() => { setShowContractForm(true); setShowForm(false); loadContract(); }}
               className="flex items-center gap-2 bg-[#1a1a24] hover:bg-[#252533] border border-white/10 text-white px-4 py-2.5 rounded-xl text-sm font-bold transition-all">
               <Edit3 size={16}/> Editar Contrato
             </button>
@@ -2282,264 +2289,315 @@ function SectionScans() {
         )}
       </div>
 
+      {/* MODAL: Contrato de Alianza */}
       {showContractForm && isSuperAdmin && (
-        <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl animate-in slide-in-from-top-2 duration-300">
-          <h3 className="font-bold dark:text-white mb-2 flex items-center gap-2"><Edit3 size={16} className="text-rose-500"/> Editar Contrato de Alianza</h3>
-          <p className="text-sm text-gray-500 mb-5">El texto se mostrará a los administradores de scan. Al guardar, se exigirá que todos vuelvan a firmar.</p>
-          {contractMsg && (
-            <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${contractMsg.includes('Error') ? 'bg-red-500/10 text-red-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
-              {contractMsg}
-            </div>
-          )}
-          <form onSubmit={handleSaveContract} className="flex flex-col gap-4">
-            <div>
-              <textarea 
-                value={contractText} onChange={e => setContractText(e.target.value)} required rows={15}
-                className="w-full bg-gray-50 dark:bg-[#07070a] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 dark:text-white focus:outline-none focus:border-rose-500 transition-colors resize-y font-mono text-sm"
-                placeholder="Escribe el contrato aquí..."
-              />
-            </div>
-            <div className="flex items-center gap-3 bg-red-500/5 border border-red-500/10 p-4 rounded-xl">
-              <input
-                type="checkbox"
-                id="force-resign"
-                checked={forceResign}
-                onChange={e => setForceResign(e.target.checked)}
-                className="h-4 w-4 rounded border-gray-300 dark:border-white/10 text-rose-600 focus:ring-rose-500 cursor-pointer accent-rose-500"
-              />
-              <label htmlFor="force-resign" className="text-sm font-bold text-gray-700 dark:text-gray-300 cursor-pointer select-none">
-                Forzar reinicio de firmas (Obligar a todos a firmar de nuevo)
-              </label>
-            </div>
-            <div>
-              <input
-                type="password"
-                placeholder="PIN de seguridad para guardar"
-                value={contractPin}
-                onChange={e => setContractPin(e.target.value)}
-                required
-                className="w-full bg-gray-50 dark:bg-[#07070a] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 dark:text-white focus:outline-none focus:border-rose-500 transition-colors text-sm"
-              />
-            </div>
-            <div className="flex justify-end">
-              <button type="submit" disabled={contractSaving} className="bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white px-6 py-2.5 rounded-xl font-bold transition-all">
-                {contractSaving ? 'Guardando...' : 'Guardar Nueva Versión'}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowContractForm(false)}></div>
+          <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-y-auto shadow-2xl relative z-10 flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="sticky top-0 bg-white/80 dark:bg-[#111114]/80 backdrop-blur-md border-b border-gray-200 dark:border-white/10 px-6 py-4 flex items-center justify-between">
+              <h3 className="font-extrabold text-lg dark:text-white flex items-center gap-2">
+                <Edit3 size={18} className="text-rose-500"/> Editor de Contrato de Alianza
+              </h3>
+              <button onClick={() => setShowContractForm(false)} className="p-2 bg-gray-100 dark:bg-white/5 text-gray-500 hover:text-white rounded-full transition">
+                <X size={16}/>
               </button>
             </div>
-          </form>
+            <div className="p-6">
+              {contractMsg && (
+                <div className={`mb-6 p-4 rounded-xl text-sm font-bold ${contractMsg.includes('Error') ? 'bg-red-500/10 text-red-500 border border-red-500/20' : 'bg-emerald-500/10 text-emerald-500 border border-emerald-500/20'}`}>
+                  {contractMsg}
+                </div>
+              )}
+              <form onSubmit={handleSaveContract} className="flex flex-col gap-6">
+                
+                {/* Editor Simulado */}
+                <div className="bg-gray-50 dark:bg-[#0B0B0F] border border-gray-200 dark:border-white/10 rounded-xl overflow-hidden focus-within:border-rose-500 transition-colors shadow-inner">
+                  <div className="bg-gray-100 dark:bg-white/5 border-b border-gray-200 dark:border-white/10 px-3 py-2 flex items-center gap-1">
+                    <div className="w-3 h-3 rounded-full bg-red-400"></div><div className="w-3 h-3 rounded-full bg-amber-400"></div><div className="w-3 h-3 rounded-full bg-emerald-400"></div>
+                    <span className="ml-3 text-[10px] font-bold uppercase text-gray-500 tracking-wider">Editor Visual</span>
+                  </div>
+                  <textarea 
+                    value={contractText} onChange={e => setContractText(e.target.value)} required rows={18}
+                    className="w-full bg-transparent px-6 py-5 dark:text-gray-200 focus:outline-none resize-y prose prose-sm dark:prose-invert font-sans leading-relaxed"
+                    placeholder="Escribe el contrato aquí... usa formato Markdown para títulos (## CLÁUSULA) o listas (- Obligación)."
+                  />
+                </div>
+
+                {/* Acción Destructiva */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 bg-amber-500/10 border border-amber-500/30 p-5 rounded-xl">
+                  <div className="flex gap-3">
+                    <div className="mt-0.5 shrink-0"><AlertTriangle size={20} className="text-amber-500"/></div>
+                    <div>
+                      <p className="font-bold text-amber-700 dark:text-amber-400 text-sm">Forzar reinicio de firmas</p>
+                      <p className="text-xs text-amber-600/80 dark:text-amber-500/80 mt-0.5 max-w-md">Si activas esto, todos los líderes de scan tendrán que volver a aceptar los términos para usar la plataforma.</p>
+                    </div>
+                  </div>
+                  
+                  {/* Toggle Switch */}
+                  <label className="relative inline-flex items-center cursor-pointer shrink-0">
+                    <input type="checkbox" className="sr-only peer" checked={forceResign} onChange={e => setForceResign(e.target.checked)}/>
+                    <div className="w-11 h-6 bg-gray-300 dark:bg-gray-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                  </label>
+                </div>
+
+                {/* Footer del Modal */}
+                <div className="flex flex-col sm:flex-row items-center justify-end gap-3 pt-4 border-t border-gray-200 dark:border-white/10 mt-2">
+                  <input
+                    type="password"
+                    placeholder="PIN de seguridad"
+                    value={contractPin}
+                    onChange={e => setContractPin(e.target.value)}
+                    required
+                    className="w-full sm:w-64 bg-gray-100 dark:bg-[#07070a] border border-gray-200 dark:border-white/10 rounded-xl px-4 py-3 dark:text-white focus:outline-none focus:border-rose-500 transition-colors text-sm"
+                  />
+                  <button type="submit" disabled={contractSaving} className="w-full sm:w-auto bg-rose-600 hover:bg-rose-500 disabled:opacity-50 text-white px-8 py-3 rounded-xl font-bold transition-all flex items-center justify-center shadow-lg shadow-rose-600/20">
+                    {contractSaving ? 'Procesando...' : 'Guardar Nueva Versión'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
         </div>
       )}
 
+      {/* MODAL: Nuevo Scan */}
       {showForm && isSuperAdmin && (
-        <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl animate-in slide-in-from-top-2 duration-300">
-          <h3 className="font-bold dark:text-white mb-5 flex items-center gap-2"><Layers size={16} className="text-rose-500"/> Registrar Scan</h3>
-          {feedback && (
-            <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${feedback.startsWith('âœ…') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
-              {feedback}
-            </div>
-          )}
-          <form onSubmit={handleCreate} className="flex flex-col gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Nombre del Scan *</label>
-              <input value={nombre} onChange={e => setNombre(e.target.value)} required placeholder="Ej: Crimson Scan"
-                className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"/>
-            </div>
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Descripción</label>
-              <textarea value={descripcion} onChange={e => setDesc(e.target.value)} rows={2} placeholder="Descripción del grupo..."
-                className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none resize-none transition"/>
-            </div>
-            <div className="flex gap-3 pt-2">
-              <button type="submit" disabled={saving || !nombre}
-                className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition">
-                {saving ? <Loader2 size={16} className="animate-spin"/> : <Check size={16}/>}
-                {saving ? 'Creando...' : 'Crear Scan'}
-              </button>
-              <button type="button" onClick={() => setShowForm(false)}
-                className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition">
-                Cancelar
-              </button>
-            </div>
-          </form>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+           <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setShowForm(false)}></div>
+           <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl w-full max-w-md p-6 relative z-10 animate-in zoom-in-95 duration-200">
+            <h3 className="font-extrabold text-lg dark:text-white mb-5 flex items-center gap-2"><Layers size={18} className="text-rose-500"/> Registrar Nuevo Scan</h3>
+            {feedback && (
+              <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${feedback.startsWith('✅') ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 dark:text-red-400'}`}>
+                {feedback}
+              </div>
+            )}
+            <form onSubmit={handleCreate} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Nombre del Scan *</label>
+                <input value={nombre} onChange={e => setNombre(e.target.value)} required placeholder="Ej: Crimson Scan"
+                  className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"/>
+              </div>
+              <div className="flex flex-col gap-1.5">
+                <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Descripción</label>
+                <textarea value={descripcion} onChange={e => setDesc(e.target.value)} rows={3} placeholder="Descripción del grupo..."
+                  className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none resize-none transition"/>
+              </div>
+              <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-white/5 mt-2">
+                <button type="button" onClick={() => setShowForm(false)}
+                  className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition">
+                  Cancelar
+                </button>
+                <button type="submit" disabled={saving || !nombre}
+                  className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition shadow-lg shadow-rose-600/20">
+                  {saving ? <Loader2 size={16} className="animate-spin"/> : <Check size={16}/>}
+                  {saving ? 'Creando...' : 'Crear Scan'}
+                </button>
+              </div>
+            </form>
+           </div>
         </div>
       )}
 
       {loading ? (
-        <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
+        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-rose-500" size={40}/></div>
+      ) : data?.scans?.length === 0 ? (
+        <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center py-24 text-gray-400">
+          <Layers size={48} className="mb-4 opacity-20"/>
+          <p className="font-bold text-lg text-gray-300">No hay scans registrados</p>
+          {isSuperAdmin && <p className="text-sm mt-1">Haz clic en "Nuevo Scan" para empezar</p>}
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {data?.scans?.length === 0 && (
-            <div className="col-span-full bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 flex flex-col items-center py-16 text-gray-400">
-              <Layers size={40} className="mb-3 opacity-30"/>
-              <p className="font-medium">No hay scans registrados</p>
-              {isSuperAdmin && <p className="text-sm">Haz clic en "Nuevo Scan" para empezar</p>}
-            </div>
-          )}
-          {data?.scans?.map(scan => {
-            const det = details[scan.id];
-            const isExpanded = expandedId === scan.id;
-            const isLoading = loadingId === scan.id;
-            return (
-              <div key={scan.id} className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden flex flex-col">
-                {/* Cabecera del scan (card) */}
-                <div className="flex flex-col gap-3 px-5 py-5">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/20 to-rose-500/20 flex items-center justify-center text-violet-500 shrink-0 text-xl font-black">
-                        {scan.nombre.charAt(0)}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-bold dark:text-white truncate">{scan.nombre}</p>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-1 ${scan.activo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-gray-100 text-gray-500'}`}>
-                          {scan.activo ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </div>
+        <div className="flex flex-col lg:flex-row gap-6 lg:h-[calc(100vh-140px)]">
+          {/* LEFT PANE (Master - Lista de Scans) */}
+          <div className="w-full lg:w-[35%] shrink-0 flex flex-col gap-3 lg:overflow-y-auto pr-1 pb-4 custom-scrollbar">
+            {data?.scans?.map(scan => (
+              <div key={scan.id} onClick={() => loadDetails(scan.id)}
+                className={`flex items-center gap-3 p-3 rounded-xl border transition-all cursor-pointer ${expandedId === scan.id ? 'bg-white dark:bg-white/10 border-rose-500 shadow-md scale-[1.01]' : 'bg-white dark:bg-[#111114] border-gray-100 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/20'}`}>
+                
+                <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500/20 to-rose-500/20 flex items-center justify-center text-violet-500 shrink-0 font-black shadow-inner">
+                  {scan.nombre.charAt(0)}
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm dark:text-white truncate">{scan.nombre}</p>
+                  <p className="text-[10px] text-gray-500 truncate mt-0.5 flex items-center gap-1.5">
+                    <span className={`w-1.5 h-1.5 rounded-full ${scan.activo ? 'bg-emerald-500' : 'bg-gray-500'}`}></span>
+                    {scan.activo ? 'Activo' : 'Inactivo'}
+                    <span className="opacity-50">·</span>
+                    <Users size={10}/> {scan.miembros}
+                  </p>
+                </div>
+                
+                <ChevronRight size={16} className={`shrink-0 transition-colors ${expandedId === scan.id ? 'text-rose-500' : 'text-gray-400 opacity-0 group-hover:opacity-100'}`} />
+              </div>
+            ))}
+          </div>
+
+          {/* RIGHT PANE (Detail - Workspace) */}
+          <div className="w-full lg:w-[65%] flex flex-col bg-white dark:bg-[#111114] rounded-2xl border border-gray-200 dark:border-white/5 lg:overflow-y-auto custom-scrollbar relative shadow-sm">
+            {!expandedId || !activeScan ? (
+              <div className="flex-1 flex flex-col items-center justify-center text-gray-400 p-12 text-center h-full min-h-[400px]">
+                <MousePointerClick size={48} className="mb-4 opacity-20"/>
+                <p className="font-bold text-lg dark:text-gray-300">Selecciona un Scan</p>
+                <p className="text-sm max-w-xs mt-1">Haz clic en un grupo de la lista izquierda para ver sus obras, miembros y datos de firma.</p>
+              </div>
+            ) : loadingId === expandedId ? (
+              <div className="flex-1 flex flex-col items-center justify-center p-12 h-full min-h-[400px]">
+                <Loader2 size={32} className="animate-spin text-rose-500 mb-3"/>
+                <p className="text-sm text-gray-500 font-medium">Cargando detalles de {activeScan.nombre}...</p>
+              </div>
+            ) : (
+              <div className="flex flex-col p-6 animate-in fade-in duration-200">
+                
+                {/* Cabecera del Detalle */}
+                <div className="flex items-start justify-between mb-8 pb-6 border-b border-gray-100 dark:border-white/5">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500/20 to-rose-500/20 flex items-center justify-center text-violet-500 text-3xl font-black shadow-inner">
+                      {activeScan.nombre.charAt(0)}
                     </div>
-                    {isSuperAdmin && (
-                      <button onClick={() => toggleActivo(scan)}
-                        className={`p-2 rounded-lg transition shrink-0 ${scan.activo ? 'text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10' : 'text-gray-400 hover:text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10'}`}>
-                        {scan.activo ? <Ban size={16}/> : <Check size={16}/>}
-                      </button>
-                    )}
+                    <div>
+                      <h3 className="text-2xl font-extrabold dark:text-white leading-tight">{activeScan.nombre}</h3>
+                      <p className="text-sm text-gray-500 max-w-md mt-1">{activeScan.descripcion || 'Sin descripción'}</p>
+                    </div>
                   </div>
-
-                  <p className="text-xs text-gray-400 line-clamp-2 min-h-[2rem] mt-1">{scan.descripcion || 'Sin descripción'}</p>
-
-                  <div className="flex items-center justify-between border-t border-gray-100 dark:border-white/5 pt-3 mt-2">
-                    <div className="flex items-center gap-3 text-[11px] text-gray-500 font-medium">
-                      <span className="flex items-center gap-1"><Users size={12}/> {scan.miembros} miem.</span>
-                      {det && (
-                        <>
-                          <span className="flex items-center gap-1"><BookOpen size={12}/> {det.mangas.length} proy.</span>
-                          <span className="flex items-center gap-1"><Eye size={12}/> {det.totalViews >= 1000 ? (det.totalViews/1000).toFixed(1)+'k' : det.totalViews} vis.</span>
-                        </>
-                      )}
-                    </div>
-                    <button onClick={() => loadDetails(scan.id)} disabled={isLoading}
-                      className="flex items-center gap-1 text-[11px] font-bold text-violet-500 hover:text-violet-400 transition">
-                      {isLoading ? <Loader2 size={12} className="animate-spin"/> : isExpanded ? 'Ocultar' : 'Detalles'}
-                      <ChevronRight size={12} className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}/>
+                  {isSuperAdmin && (
+                    <button onClick={() => toggleActivo(activeScan)}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${activeScan.activo ? 'border-red-500/20 text-red-500 hover:bg-red-500/10' : 'border-emerald-500/20 text-emerald-500 hover:bg-emerald-500/10'}`}>
+                      {activeScan.activo ? <><Ban size={14}/> Desactivar</> : <><Check size={14}/> Activar</>}
                     </button>
-                  </div>
+                  )}
                 </div>
 
-
-                {/* Panel de detalles expandido */}
-                {isExpanded && det && (
-                  <div className="border-t border-gray-100 dark:border-white/5 px-5 py-5 bg-gray-50/50 dark:bg-white/2 animate-in slide-in-from-top-2 duration-200">
-                    
-                    {/* Contrato de Alianza */}
-                    {scan.contrato_firmado ? (
-                      <div className="bg-white dark:bg-[#111114] rounded-xl p-4 border border-gray-100 dark:border-white/5 mb-6 shadow-sm">
-                        <h4 className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                          <FileText size={12}/> Datos de Firma
-                        </h4>
-                        <div className="flex flex-col sm:flex-row gap-4 sm:gap-6 text-sm">
-                          <div>
-                            <p className="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-0.5">Representante</p>
-                            <p className="font-bold dark:text-white">{scan.representante_nombre}</p>
-                          </div>
-                          <div>
-                            <p className="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-0.5">Discord</p>
-                            <p className="font-bold dark:text-white">{scan.representante_discord || 'N/A'}</p>
-                          </div>
-                          <div>
-                            <p className="text-[9px] text-gray-500 uppercase font-black tracking-wider mb-0.5">Binance Pay</p>
-                            <p className="font-bold text-emerald-500 font-mono">{scan.binance_pay_id}</p>
-                          </div>
-                        </div>
+                {/* Sección Superior: Datos de Firma */}
+                <div className="mb-8">
+                  <div className="flex items-center gap-2 mb-4">
+                    <FileText size={16} className="text-gray-400"/>
+                    <h4 className="text-sm font-bold dark:text-gray-300 uppercase tracking-widest">Datos de Firma</h4>
+                  </div>
+                  
+                  {activeScan.contrato_firmado ? (
+                    <div className="bg-gray-50 dark:bg-white/5 rounded-2xl p-5 border border-gray-200 dark:border-white/5 flex flex-col md:flex-row gap-6">
+                      <div className="flex-1">
+                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-wider mb-1">Representante</p>
+                        <p className="font-bold text-sm dark:text-white">{activeScan.representante_nombre}</p>
                       </div>
-                    ) : (
-                      <div className="bg-amber-50 dark:bg-amber-500/10 rounded-xl p-4 border border-amber-200 dark:border-amber-500/20 mb-6 flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0">
-                          <AlertTriangle size={16}/>
-                        </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-wider mb-1">Discord ID</p>
+                        <p className="font-bold text-sm dark:text-white">{activeScan.representante_discord || 'N/A'}</p>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[10px] text-gray-500 uppercase font-black tracking-wider mb-1">Binance Pay</p>
+                        <p className="font-bold text-sm text-emerald-600 dark:text-emerald-400 font-mono bg-emerald-500/10 inline-block px-2 py-0.5 rounded">{activeScan.binance_pay_id || 'PENDIENTE'}</p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="bg-amber-50 dark:bg-amber-500/10 rounded-2xl p-5 border border-amber-200 dark:border-amber-500/20 flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-full bg-amber-100 dark:bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 shadow-inner">
+                        <AlertTriangle size={20}/>
+                      </div>
+                      <div>
+                        <p className="text-base font-bold text-amber-800 dark:text-amber-400">Contrato Pendiente de Firma</p>
+                        <p className="text-xs text-amber-600/80 dark:text-amber-500/80 font-medium mt-0.5">El administrador del scan aún no ha firmado la última versión del acuerdo de alianza.</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Métricas Rápidas */}
+                {activeDet && (
+                  <div className="grid grid-cols-3 gap-4 mb-8">
+                    {[
+                      { label: 'Total Obras', value: activeDet.mangas.length, icon: <BookOpen size={16}/> },
+                      { label: 'Visitas Totales', value: (activeDet.totalViews >= 1000 ? (activeDet.totalViews/1000).toFixed(1)+'k' : activeDet.totalViews) || '0', icon: <Eye size={16}/> },
+                      { label: 'Capítulos', value: activeDet.mangas.reduce((s: number, m: any) => s + (m.caps_publicados || 0), 0), icon: <BookMarked size={16}/> },
+                    ].map(stat => (
+                      <div key={stat.label} className="bg-gray-50 dark:bg-[#151518] rounded-xl p-4 border border-gray-100 dark:border-white/5 flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-white dark:bg-white/5 flex items-center justify-center text-violet-500 border border-gray-200 dark:border-white/5 shadow-sm">{stat.icon}</div>
                         <div>
-                          <p className="text-sm font-bold text-amber-800 dark:text-amber-400">Contrato Pendiente</p>
-                          <p className="text-[10px] text-amber-600/80 dark:text-amber-500/80 font-medium">El administrador no ha firmado la última versión.</p>
+                          <p className="font-black text-lg dark:text-white leading-none">{stat.value}</p>
+                          <p className="text-[10px] text-gray-500 uppercase tracking-widest mt-1 font-bold">{stat.label}</p>
                         </div>
                       </div>
-                    )}
+                    ))}
+                  </div>
+                )}
 
-                    <div className="flex flex-col gap-6">
-
-                      {/* Mangas */}
-                      <div>
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                          <BookOpen size={12}/> Obras ({det.mangas.length})
-                        </h4>
-                        {det.mangas.length === 0 ? (
-                          <p className="text-xs text-gray-400 italic">Sin obras asignadas</p>
-                        ) : (
-                          <div className="flex flex-col gap-2">
-                            {det.mangas.map((m: any) => (
-                              <div key={m.id} className="flex items-center gap-3 bg-white dark:bg-[#111114] rounded-xl px-3 py-2.5 border border-gray-100 dark:border-white/5">
-                                <div className="flex-1 min-w-0">
-                                  <p className="text-sm font-bold dark:text-white truncate">{m.titulo}</p>
-                                  <div className="flex items-center gap-2 mt-0.5">
-                                    <span className="text-[9px] font-bold uppercase tracking-wider text-gray-400">{m.tipo}</span>
-                                    <span className="text-[10px] text-gray-500 font-medium">{m.caps_publicados} cap{m.caps_publicados !== 1 ? 's' : ''}</span>
-                                  </div>
-                                </div>
-                                <div className="flex flex-col items-end shrink-0 gap-1">
-                                  <Badge estado={m.estado}/>
-                                  <span className="text-[10px] font-bold text-gray-400 flex items-center gap-1"><Eye size={10}/> {(m.views_total || 0).toLocaleString()}</span>
-                                </div>
-                              </div>
-                            ))}
-                          </div>
-                        )}
+                {/* Sección Inferior: 2 Columnas (Obras / Miembros) */}
+                {activeDet && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    
+                    {/* Obras */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <BookOpen size={16} className="text-gray-400"/>
+                          <h4 className="text-sm font-bold dark:text-gray-300 uppercase tracking-widest">Obras Asignadas</h4>
+                        </div>
+                        <span className="text-xs font-bold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">{activeDet.mangas.length}</span>
                       </div>
-
-                      {/* Miembros */}
-                      <div>
-                        <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                          <Users size={12}/> Miembros ({det.miembros.length})
-                        </h4>
-                        {det.miembros.length === 0 ? (
-                          <p className="text-xs text-gray-400 italic">Sin miembros asignados</p>
-                        ) : (
-                          <div className="flex flex-col gap-2">
-                            {det.miembros.map((m: any) => (
-                              <div key={m.id} className="flex items-center justify-between bg-white dark:bg-[#111114] rounded-xl px-3 py-2.5 border border-gray-100 dark:border-white/5">
-                                <div className="flex items-center gap-2">
-                                  <div className="w-7 h-7 rounded-full bg-gradient-to-br from-rose-500 to-orange-500 flex items-center justify-center text-white text-xs font-bold">
-                                    {m.username.charAt(0).toUpperCase()}
-                                  </div>
-                                  <p className="text-sm font-semibold dark:text-white">{m.username}</p>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <Badge estado={m.rol}/>
-                                  <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${m.activo ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-gray-100 text-gray-500'}`}>
-                                    {m.activo ? 'Activo' : 'Inactivo'}
-                                  </span>
-                                </div>
+                      
+                      {activeDet.mangas.length === 0 ? (
+                        <div className="bg-gray-50 dark:bg-[#151518] rounded-xl p-6 border border-dashed border-gray-200 dark:border-white/10 text-center">
+                          <p className="text-xs font-medium text-gray-400">Sin obras en curso.</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {activeDet.mangas.map((m: any) => (
+                            <div key={m.id} className="flex flex-col gap-2 bg-gray-50 dark:bg-white/2 rounded-xl p-3 border border-gray-100 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/20 transition-colors">
+                              <div className="flex items-start justify-between min-w-0 gap-2">
+                                <p className="text-sm font-bold dark:text-white leading-tight">{m.titulo}</p>
+                                <Badge estado={m.estado}/>
                               </div>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Métricas totales */}
-                        <div className="mt-4 grid grid-cols-3 gap-2">
-                          {[
-                            { label: 'Obras', value: det.mangas.length, icon: <BookOpen size={14}/> },
-                            { label: 'Vistas', value: det.totalViews.toLocaleString(), icon: <Eye size={14}/> },
-                            { label: 'Caps', value: det.mangas.reduce((s: number, m: any) => s + (m.caps_publicados || 0), 0), icon: <BookMarked size={14}/> },
-                          ].map(stat => (
-                            <div key={stat.label} className="bg-white dark:bg-[#111114] rounded-xl p-3 border border-gray-100 dark:border-white/5 text-center">
-                              <div className="text-violet-500 flex justify-center mb-1">{stat.icon}</div>
-                              <p className="font-extrabold text-sm dark:text-white">{stat.value}</p>
-                              <p className="text-[10px] text-gray-400 uppercase tracking-wider">{stat.label}</p>
+                              <div className="flex items-center justify-between">
+                                <span className="text-[10px] text-gray-500 font-black uppercase tracking-wider">{m.tipo}</span>
+                                <span className="text-[11px] font-bold text-gray-400 flex items-center gap-1"><Eye size={12}/> {(m.views_total || 0).toLocaleString()} vis</span>
+                              </div>
                             </div>
                           ))}
                         </div>
+                      )}
+                    </div>
+
+                    {/* Miembros */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <div className="flex items-center gap-2">
+                          <Users size={16} className="text-gray-400"/>
+                          <h4 className="text-sm font-bold dark:text-gray-300 uppercase tracking-widest">Miembros del Scan</h4>
+                        </div>
+                        <span className="text-xs font-bold bg-gray-100 dark:bg-white/10 text-gray-600 dark:text-gray-300 px-2 py-0.5 rounded-full">{activeDet.miembros.length}</span>
                       </div>
+
+                      {activeDet.miembros.length === 0 ? (
+                        <div className="bg-gray-50 dark:bg-[#151518] rounded-xl p-6 border border-dashed border-gray-200 dark:border-white/10 text-center">
+                          <p className="text-xs font-medium text-gray-400">Sin miembros registrados.</p>
+                        </div>
+                      ) : (
+                        <div className="flex flex-col gap-2">
+                          {activeDet.miembros.map((m: any) => (
+                            <div key={m.id} className="flex items-center justify-between bg-gray-50 dark:bg-white/2 rounded-xl p-2.5 border border-gray-100 dark:border-white/5 hover:border-gray-300 dark:hover:border-white/20 transition-colors">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 rounded-full bg-gray-200 dark:bg-white/10 flex items-center justify-center text-xs font-bold dark:text-gray-300 shrink-0">
+                                  {m.username.charAt(0).toUpperCase()}
+                                </div>
+                                <div>
+                                  <p className="text-xs font-bold dark:text-white leading-none">{m.username}</p>
+                                  <span className={`text-[9px] font-black uppercase tracking-wider ${m.activo ? 'text-emerald-500' : 'text-gray-500'}`}>
+                                    {m.activo ? 'Cuenta Activa' : 'Desactivado'}
+                                  </span>
+                                </div>
+                              </div>
+                              <Badge estado={m.rol}/>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
               </div>
-            );
-          })}
+            )}
+          </div>
         </div>
       )}
     </div>
