@@ -34,6 +34,6 @@ body {
 }
 
 .file__img--live {
-  clip-path: inset(0 0 calc((1 - var(--p)) * 100%) 0);
-  transition: --p 0.1s linear;
+  clip-path: inset(calc((1 - var(--p)) * 100%) 0 0 0);
+  transition: --p 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
