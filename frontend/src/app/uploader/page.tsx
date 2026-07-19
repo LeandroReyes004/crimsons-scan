@@ -37,9 +37,29 @@ interface BatchChapter {
 }
 
 
-function SortablePageItem({ page, index, selectedManga, removePage }: { page: PageFile, index: number, selectedManga: Manga, removePage: (id: string) => void }) {
+function SortablePageItem({ page, index, selectedManga, removePage, dropOrigin }: { page: PageFile, index: number, selectedManga: Manga, removePage: (id: string) => void, dropOrigin: {x: number, y: number} | null }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: page.id });
+  const elRef = useRef<HTMLDivElement>(null);
   
+  useEffect(() => {
+    if (dropOrigin && elRef.current && page.status === 'pending' && page.progress === 0) {
+      const rect = elRef.current.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      try {
+        elRef.current.animate([
+          { transform: `translate(${dropOrigin.x - cx}px, ${dropOrigin.y - cy}px) scale(0.2)`, opacity: 0 },
+          { transform: 'none', opacity: 1 }
+        ], { duration: 500, easing: 'cubic-bezier(0.175, 0.885, 0.32, 1.275)' });
+      } catch(e) {}
+    }
+  }, []);
+
+  const setRefs = useCallback((node: HTMLDivElement) => {
+    setNodeRef(node);
+    elRef.current = node;
+  }, [setNodeRef]);
+
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -48,7 +68,7 @@ function SortablePageItem({ page, index, selectedManga, removePage }: { page: Pa
   } as React.CSSProperties;
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center gap-2 bg-gray-50 dark:bg-black/20 rounded-xl px-3 py-2">
+    <div ref={setRefs} style={style} className="flex items-center gap-2 bg-gray-50 dark:bg-black/20 rounded-xl px-3 py-2">
       {selectedManga.tipo === 'novela' ? (
         <div {...attributes} {...listeners} className="w-9 h-12 bg-gray-200 dark:bg-white/10 rounded-lg flex items-center justify-center shrink-0 text-gray-500 font-bold text-[10px] cursor-grab active:cursor-grabbing outline-none">TXT</div>
       ) : (
@@ -110,6 +130,8 @@ export default function UploaderPage() {
   const [deletingCapId, setDeletingCapId] = useState<string | null>(null);
   const [addingPages, setAddingPages] = useState(false);
   const [addProgress, setAddProgress] = useState(0);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
+  const [dropOrigin, setDropOrigin] = useState<{x: number, y: number} | null>(null);
   const editFileRef = useRef<HTMLInputElement>(null);
 
   // Upload individual
@@ -828,7 +850,18 @@ export default function UploaderPage() {
                   </button>
                 </div>
 
-                <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4">
+                <div 
+                  onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
+                  onDragLeave={(e) => { e.preventDefault(); setIsDraggingOver(false); }}
+                  onDrop={(e) => { 
+                    e.preventDefault(); 
+                    setIsDraggingOver(false); 
+                    setDropOrigin({ x: e.clientX, y: e.clientY });
+                    handleFiles(e.dataTransfer.files); 
+                    setTimeout(() => setDropOrigin(null), 50);
+                  }}
+                  className={`bg-white dark:bg-[#111114] rounded-2xl border p-4 transition-colors ${isDraggingOver ? 'border-rose-500/50 bg-rose-50 dark:bg-rose-500/10' : 'border-gray-100 dark:border-white/5'} `}
+                >
                   <div className="flex items-center justify-between mb-3">
                     <p className="text-xs font-bold text-gray-400 uppercase tracking-wide">{selectedManga.tipo === 'novela' ? 'Archivo (.txt)' : 'Páginas'} ({pages.length})</p>
                     {pages.length > 0 && <button onClick={() => fileInputRef.current?.click()} className="text-xs text-rose-500 font-bold flex items-center gap-1"><Plus size={12}/> Agregar más</button>}
@@ -849,7 +882,7 @@ export default function UploaderPage() {
                       <SortableContext items={pages.map(p => p.id)} strategy={verticalListSortingStrategy}>
                         <div className="flex flex-col gap-2">
                           {pages.map((page, i) => (
-                            <SortablePageItem key={page.id} page={page} index={i} selectedManga={selectedManga} removePage={removePage} />
+                            <SortablePageItem key={page.id} page={page} index={i} selectedManga={selectedManga} removePage={removePage} dropOrigin={dropOrigin} />
                           ))}
                         </div>
                       </SortableContext>
