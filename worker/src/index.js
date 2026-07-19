@@ -420,7 +420,7 @@ export default {
 
     const CORS = makeCORS(request.headers.get('Origin') || '');
     const json = (data, status = 200) =>
-      new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', ...CORS } });
+      new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache, no-store, must-revalidate', ...CORS } });
     const err = (msg, status = 400) => json({ error: msg }, status);
 
     if (method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });

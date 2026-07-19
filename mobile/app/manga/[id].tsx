@@ -295,6 +295,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     borderBottomWidth: 1,
     borderBottomColor: 'rgba(255,255,255,0.05)',
+    backgroundColor: '#0a0a0c', // Forza el repintado (Hardware Acceleration fix para Android)
   },
   chapterInfo: { flex: 1 },
   chapterNumber: { color: '#fff', fontSize: 15, fontWeight: 'bold' },
