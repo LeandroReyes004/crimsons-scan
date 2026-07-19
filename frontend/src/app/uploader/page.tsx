@@ -54,7 +54,7 @@ function SortablePageItem({ page, index, selectedManga, removePage }: { page: Pa
       ) : (
         <div {...attributes} {...listeners} className="relative w-9 h-12 shrink-0 rounded-lg overflow-hidden cursor-grab active:cursor-grabbing outline-none">
           <img src={page.preview} alt="" className="w-full h-full object-cover file__img--ghost" />
-          <img src={page.preview} alt="" className="w-full h-full object-cover file__img--live" />
+          <img src={page.preview} alt="" className="absolute inset-0 w-full h-full object-cover file__img--live" />
         </div>
       )}
       <div className="flex-1 min-w-0" {...attributes} {...listeners}>
