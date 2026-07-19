@@ -230,9 +230,7 @@ export default function UploaderPage() {
       const final = (!isNovela && convertWebP) ? await toWebP(file) : file;
       valid.push({ id: crypto.randomUUID(), file: final, preview: isNovela ? '' : URL.createObjectURL(final as File), order: pages.length + valid.length + 1, status: 'pending', progress: 0 });
     }
-    if (rejected.length > 0) alert(`Archivos rechazados:
-${rejected.join('
-')}`);
+    if (rejected.length > 0) alert(`Archivos rechazados:\\n${rejected.join('\\n')}`);
     setPages(prev => [...prev, ...valid.map((p, i) => ({ ...p, order: prev.length + i + 1 }))]);
   };
 
