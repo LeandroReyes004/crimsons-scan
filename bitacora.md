@@ -62,3 +62,24 @@ eedsContract en dmin/page.tsx que forzaba el modal de contrato de alianza.
 
 **Archivos modificados:**
 - `frontend/src/app/uploader/page.tsx`
+## [14/07/2026] - UX: Panel Financiero de Ingresos para Scans
+**Qué se hizo:**
+1. **Rediseño Completo de Vista de Ingresos (Partner Portal):** La vista que ven los administradores de scans ha sido transformada en un Dashboard Financiero B2B.
+2. **Tarjeta de Resumen Financiero (Hero):** Se agregó una tarjeta gigante con cálculo estimado de USD (usando un CPM simulado de .50 para la UI) y una píldora de estado (Pendiente de Liquidación).
+3. **Tabla Estructurada:** Se reemplazaron los bloques expansibles por una tabla analítica detallada con desglose por obra (Vistas, CPM, Total Parcial) y un footer totalizador.
+4. **Seguridad (Bloque de Pago):** Se añadió una tarjeta en el fondo confirmando el método de pago registrado (Binance Pay) y reglas de liquidación.
+
+**Archivos modificados:**
+- frontend/src/app/admin/page.tsx (SectionRevenue)
+## [14/07/2026] - Fix UX: Aplicando Panel Financiero a la vista del Superadmin
+**Qué se hizo:**
+1. Se aplicó el mismo diseño de Dashboard Financiero B2B (con Tarjeta de Resumen y Tabla de Desglose por obra) a la vista de detalles expansibles que utiliza el Superadmin (cuando hace click en " Ver detalle\).
+
+**Archivos modificados:**
+- frontend/src/app/admin/page.tsx (SectionRevenue - Vista Superadmin)
+2. Se aplicó el mismo diseño premium de Panel Financiero B2B a la vista GLOBAL del Superadmin. Se rediseñó la cabecera, la tarjeta de Pool de Ingresos (con el input de ganancias integrado), y se transformó la lista de scans en una tabla limpia con columnas de tráfico válido y liquidación estimada.
+
+
+### 2026-07-18 - CorrecciÃ³n de CORS (Cache-Control)
+- **Problema**: El navegador bloqueaba las peticiones de autenticaciÃ³n por un error de CORS porque la cabecera `cache-control` no estaba permitida en `Access-Control-Allow-Headers`.
+- **SoluciÃ³n**: Se agregÃ³ `Cache-Control` a la lista de cabeceras permitidas en `worker/src/index.js` (bloque `BASE_CORS`).

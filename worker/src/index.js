@@ -7,7 +7,7 @@ const ALLOWED_ORIGINS = ['https://scancrimson.com', 'https://www.scancrimson.com
 
 const BASE_CORS = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Fingerprint, X-Crimson-Reader',
+  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Fingerprint, X-Crimson-Reader, Cache-Control',
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'strict-origin-when-cross-origin',
   'Vary': 'Origin',
