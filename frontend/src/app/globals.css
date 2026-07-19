@@ -22,3 +22,18 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+@property --p {
+  syntax: '<number>';
+  initial-value: 0;
+  inherits: true;
+}
+
+.file__img--ghost {
+  filter: grayscale(1) brightness(0.32);
+}
+
+.file__img--live {
+  clip-path: inset(0 0 calc((1 - var(--p)) * 100%) 0);
+  transition: --p 0.1s linear;
+}
