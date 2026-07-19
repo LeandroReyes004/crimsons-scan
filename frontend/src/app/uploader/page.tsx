@@ -138,7 +138,7 @@ export default function UploaderPage() {
   const [capNumero, setCapNumero]   = useState('');
   const [capTitulo, setCapTitulo]   = useState('');
   const [fechaPub, setFechaPub]     = useState('');
-  const [convertWebP, setConvertWebP] = useState(true);
+  const [convertWebP, setConvertWebP] = useState(false);
   const [notifyDiscord, setNotifyDiscord] = useState(true);
   const [pages, setPages]           = useState<PageFile[]>([]);
   const [uploading, setUploading]   = useState(false);
