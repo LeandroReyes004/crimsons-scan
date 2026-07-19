@@ -1506,6 +1506,10 @@ export default {
                  FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
               ).bind(manga_id).first();
               
+              const globalSettings = await env.DB.prepare('SELECT discord_webhook_url, telegram_chat_id FROM ajustes_globales WHERE id = 1').first();
+              const globalDiscord = globalSettings?.discord_webhook_url || env.DISCORD_WEBHOOK_URL;
+              const globalTelegram = globalSettings?.telegram_chat_id || env.TELEGRAM_GLOBAL_CHAT_ID;
+              
               const coverUrl = `https://crimson-api.leandro-reyes1025.workers.dev/api/cover/${manga_id}`;
               const secretLink = `${env.FRONTEND_URL}/leer/${secret_token}`;
               
@@ -1518,15 +1522,15 @@ export default {
               };
 
               // -- Discord Global --
-              if (env.DISCORD_WEBHOOK_URL) {
-                await fetch(env.DISCORD_WEBHOOK_URL, {
+              if (globalDiscord) {
+                await fetch(globalDiscord, {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: buildDiscordBody(null, vars)
                 }).catch(()=>{});
               }
 
               // -- Discord Scan --
-              if (scanData?.webhook_discord && scanData.webhook_discord !== env.DISCORD_WEBHOOK_URL) {
+              if (scanData?.webhook_discord && scanData.webhook_discord !== globalDiscord) {
                 await fetch(scanData.webhook_discord, {
                   method: 'POST', headers: { 'Content-Type': 'application/json' },
                   body: buildDiscordBody(scanData.discord_template, vars)
@@ -1538,15 +1542,15 @@ export default {
                 const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`;
                 
                 // Global Telegram
-                if (env.TELEGRAM_GLOBAL_CHAT_ID) {
+                if (globalTelegram) {
                   await fetch(telegramUrl, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ chat_id: env.TELEGRAM_GLOBAL_CHAT_ID, photo: coverUrl, caption: buildTelegramCaption(null, vars), parse_mode: 'Markdown' })
+                    body: JSON.stringify({ chat_id: globalTelegram, photo: coverUrl, caption: buildTelegramCaption(null, vars), parse_mode: 'Markdown' })
                   }).catch(()=>{});
                 }
                 
                 // Scan Telegram
-                if (scanData?.telegram_chat_id && scanData.telegram_chat_id !== env.TELEGRAM_GLOBAL_CHAT_ID) {
+                if (scanData?.telegram_chat_id && scanData.telegram_chat_id !== globalTelegram) {
                   await fetch(telegramUrl, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ chat_id: scanData.telegram_chat_id, photo: coverUrl, caption: buildTelegramCaption(scanData.telegram_template, vars), parse_mode: 'Markdown' })
@@ -1595,6 +1599,10 @@ export default {
                    FROM mangas m LEFT JOIN scans s ON m.scan_id = s.id WHERE m.id = ?`
                 ).bind(capForWh.manga_id).first();
                 
+                const globalSettings = await env.DB.prepare('SELECT discord_webhook_url, telegram_chat_id FROM ajustes_globales WHERE id = 1').first();
+                const globalDiscord = globalSettings?.discord_webhook_url || env.DISCORD_WEBHOOK_URL;
+                const globalTelegram = globalSettings?.telegram_chat_id || env.TELEGRAM_GLOBAL_CHAT_ID;
+                
                 const capSecret = await env.DB.prepare('SELECT secret_token FROM capitulos WHERE id = ?').bind(publishCap[1]).first();
                 const secretLink = `${env.FRONTEND_URL}/leer/${capSecret?.secret_token}`;
                 const coverUrl = `https://crimson-api.leandro-reyes1025.workers.dev/api/cover/${capForWh.manga_id}`;
@@ -1608,15 +1616,15 @@ export default {
                 };
 
                 // -- Discord Global --
-                if (env.DISCORD_WEBHOOK_URL) {
-                  await fetch(env.DISCORD_WEBHOOK_URL, {
+                if (globalDiscord) {
+                  await fetch(globalDiscord, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: buildDiscordBody(null, vars)
                   }).catch(()=>{});
                 }
 
                 // -- Discord Scan --
-                if (scanData?.webhook_discord && scanData.webhook_discord !== env.DISCORD_WEBHOOK_URL) {
+                if (scanData?.webhook_discord && scanData.webhook_discord !== globalDiscord) {
                   await fetch(scanData.webhook_discord, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: buildDiscordBody(scanData.discord_template, vars)
@@ -1628,15 +1636,15 @@ export default {
                   const telegramUrl = `https://api.telegram.org/bot${env.TELEGRAM_BOT_TOKEN}/sendPhoto`;
                   
                   // Global Telegram
-                  if (env.TELEGRAM_GLOBAL_CHAT_ID) {
+                  if (globalTelegram) {
                     await fetch(telegramUrl, {
                       method: 'POST', headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({ chat_id: env.TELEGRAM_GLOBAL_CHAT_ID, photo: coverUrl, caption: buildTelegramCaption(null, vars), parse_mode: 'Markdown' })
+                      body: JSON.stringify({ chat_id: globalTelegram, photo: coverUrl, caption: buildTelegramCaption(null, vars), parse_mode: 'Markdown' })
                     }).catch(()=>{});
                   }
                   
                   // Scan Telegram
-                  if (scanData?.telegram_chat_id && scanData.telegram_chat_id !== env.TELEGRAM_GLOBAL_CHAT_ID) {
+                  if (scanData?.telegram_chat_id && scanData.telegram_chat_id !== globalTelegram) {
                     await fetch(telegramUrl, {
                       method: 'POST', headers: { 'Content-Type': 'application/json' },
                       body: JSON.stringify({ chat_id: scanData.telegram_chat_id, photo: coverUrl, caption: buildTelegramCaption(scanData.telegram_template, vars), parse_mode: 'Markdown' })
@@ -2567,6 +2575,28 @@ export default {
         const { results } = await env.DB.prepare('SELECT * FROM system_logs ORDER BY fecha DESC LIMIT 100').all();
         return json({ logs: results || [] });
       }
+
+      // ⚙️ GET /api/admin/settings
+      if (pathname === '/api/admin/settings' && method === 'GET') {
+        const admin = await getSuperAdmin(request, env);
+        if (!admin) return err('No autorizado', 403);
+        const st = await env.DB.prepare('SELECT discord_webhook_url, telegram_chat_id FROM ajustes_globales WHERE id = 1').first();
+        return json({
+          discord_webhook_url: st?.discord_webhook_url || '',
+          telegram_chat_id: st?.telegram_chat_id || ''
+        });
+      }
+
+      // ⚙️ PUT /api/admin/settings
+      if (pathname === '/api/admin/settings' && method === 'PUT') {
+        const admin = await getSuperAdmin(request, env);
+        if (!admin) return err('No autorizado', 403);
+        const { discord_webhook_url, telegram_chat_id } = await request.json();
+        await env.DB.prepare('UPDATE ajustes_globales SET discord_webhook_url = ?, telegram_chat_id = ? WHERE id = 1')
+          .bind(discord_webhook_url || null, telegram_chat_id || null).run();
+        return json({ message: 'Ajustes globales actualizados' });
+      }
+
 
       // 📖 GET /api/drive/list
       if (pathname === '/api/drive/list' && method === 'GET') {

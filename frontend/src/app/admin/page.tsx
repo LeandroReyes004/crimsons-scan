@@ -1,6 +1,6 @@
 'use client';
 import ContractModal from './components/ContractModal';
-
+import GlobalSettings from './components/GlobalSettings';
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -379,6 +379,8 @@ function SectionDashboard() {
           )) ?? <p className="text-gray-400 text-sm p-5">No hay proyectos aún.</p>}
         </div>
       </div>
+
+      {user?.is_superadmin && <GlobalSettings />}
     </div>
   );
 }
