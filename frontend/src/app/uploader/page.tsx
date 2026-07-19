@@ -853,12 +853,12 @@ export default function UploaderPage() {
                 <div 
                   onDragOver={(e) => { e.preventDefault(); setIsDraggingOver(true); }}
                   onDragLeave={(e) => { e.preventDefault(); setIsDraggingOver(false); }}
-                  onDrop={(e) => { 
+                  onDrop={async (e) => { 
                     e.preventDefault(); 
                     setIsDraggingOver(false); 
                     setDropOrigin({ x: e.clientX, y: e.clientY });
-                    handleFiles(e.dataTransfer.files); 
-                    setTimeout(() => setDropOrigin(null), 50);
+                    await handleFiles(e.dataTransfer.files); 
+                    setDropOrigin(null);
                   }}
                   className={`bg-white dark:bg-[#111114] rounded-2xl border p-4 transition-colors ${isDraggingOver ? 'border-rose-500/50 bg-rose-50 dark:bg-rose-500/10' : 'border-gray-100 dark:border-white/5'} `}
                 >
@@ -871,7 +871,7 @@ export default function UploaderPage() {
                       className="w-full border-2 border-dashed border-gray-200 dark:border-white/10 rounded-xl py-10 flex flex-col items-center gap-3 hover:border-rose-400 dark:hover:border-rose-500/50 active:scale-[0.98] transition-all">
                       <div className="w-14 h-14 bg-rose-50 dark:bg-rose-500/10 rounded-full flex items-center justify-center text-rose-500"><ImageIcon size={26}/></div>
                       <div className="text-center px-4">
-                        <p className="font-bold text-sm dark:text-white">Tocá para seleccionar {selectedManga.tipo === 'novela' ? 'archivo .txt' : 'imágenes'}</p>
+                        <p className="font-bold text-sm dark:text-white">Arrastrá {selectedManga.tipo === 'novela' ? 'tu archivo .txt' : 'tus imágenes'} aquí o tocá para seleccionar</p>
                         <p className="text-xs text-gray-400 mt-1">{selectedManga.tipo === 'novela' ? 'Solo formato .TXT' : 'JPG, PNG o WebP'} · máx. 10MB</p>
                       </div>
                     </button>
