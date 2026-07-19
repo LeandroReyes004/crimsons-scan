@@ -1937,24 +1937,14 @@ function SectionRevenue() {
               
               <div className="relative z-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
                 <div>
-                  <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-2">Total Generado (Estimado)</p>
+                  <p className="text-gray-400 font-bold uppercase tracking-widest text-xs mb-2">Tráfico Válido Generado</p>
                   <div className="flex items-center gap-4">
                     <h3 className="text-5xl font-black text-white tabular-nums tracking-tight">
-                      ${totalGenerado.toFixed(2)} <span className="text-2xl text-gray-500 font-bold">USD</span>
+                      {(det.scan_total_mes ?? 0).toLocaleString()} <span className="text-2xl text-gray-500 font-bold">VISTAS</span>
                     </h3>
-                    <span className="bg-yellow-500/10 text-yellow-500 border border-yellow-500/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
-                      <Clock size={12}/> Pendiente de Liquidación
+                    <span className="bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1.5">
+                      <Eye size={12}/> Ciclo {mes || 'Actual'}
                     </span>
-                  </div>
-                </div>
-                <div className="flex gap-4">
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/5 backdrop-blur-sm min-w-[140px]">
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1 flex items-center gap-1"><Eye size={12}/> Vistas del mes</p>
-                    <p className="text-xl font-bold text-white tabular-nums">{(det.scan_total_mes ?? 0).toLocaleString()}</p>
-                  </div>
-                  <div className="bg-white/5 rounded-2xl p-4 border border-white/5 backdrop-blur-sm min-w-[140px]">
-                    <p className="text-gray-500 text-[10px] font-bold uppercase tracking-widest mb-1 flex items-center gap-1"><TrendingUp size={12}/> CPM Acordado</p>
-                    <p className="text-xl font-bold text-emerald-400 tabular-nums">${cpm.toFixed(2)}</p>
                   </div>
                 </div>
               </div>
@@ -1972,8 +1962,6 @@ function SectionRevenue() {
                       <tr className="bg-gray-50 dark:bg-white/2 border-b border-gray-200 dark:border-white/5 text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
                         <th className="px-6 py-4 font-bold">Obra</th>
                         <th className="px-6 py-4 font-bold text-right">Vistas Válidas</th>
-                        <th className="px-6 py-4 font-bold text-right">Tarifa / CPM</th>
-                        <th className="px-6 py-4 font-bold text-right">Total Parcial</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100 dark:divide-white/5">
@@ -1996,18 +1984,12 @@ function SectionRevenue() {
                             <td className="px-6 py-4 text-right">
                               <p className="text-sm font-bold dark:text-white tabular-nums">{mangaViews.toLocaleString()}</p>
                             </td>
-                            <td className="px-6 py-4 text-right">
-                              <p className="text-sm text-gray-500 tabular-nums">${cpm.toFixed(2)}</p>
-                            </td>
-                            <td className="px-6 py-4 text-right">
-                              <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 tabular-nums">${mangaRev.toFixed(2)}</p>
-                            </td>
                           </tr>
                         );
                       })}
                       {det.mangas.length === 0 && (
                         <tr>
-                          <td colSpan={4} className="px-6 py-8 text-center text-sm text-gray-500 italic">No hay obras registradas en este periodo.</td>
+                          <td colSpan={2} className="px-6 py-8 text-center text-sm text-gray-500 italic">No hay obras registradas en este periodo.</td>
                         </tr>
                       )}
                     </tbody>
@@ -2015,8 +1997,6 @@ function SectionRevenue() {
                       <tr>
                         <td className="px-6 py-4 text-xs font-black uppercase tracking-widest text-gray-500 dark:text-gray-400">Total Acumulado</td>
                         <td className="px-6 py-4 text-right text-sm font-black dark:text-white tabular-nums">{(det.scan_total_mes ?? 0).toLocaleString()}</td>
-                        <td className="px-6 py-4"></td>
-                        <td className="px-6 py-4 text-right text-base font-black text-emerald-500 tabular-nums">${totalGenerado.toFixed(2)} USD</td>
                       </tr>
                     </tfoot>
                   </table>

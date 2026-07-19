@@ -89,3 +89,8 @@ eedsContract en dmin/page.tsx que forzaba el modal de contrato de alianza.
 - **Mobile (Ghosting)**: Se corrigió un error visual en React Native (Android) donde el texto de la lista de Capítulos se superponía al hacer scroll. Se añadió `backgroundColor: '#0a0a0c'` al estilo `chapterRow` en `mobile/app/manga/[id].tsx` para forzar el repintado (hardware acceleration).
 - **Firma de Contrato DB**: Se actualizó manualmente en la base de datos D1 de producción el estado del contrato del scan 'The grimorio de la witch' (`contrato_firmado = 1`, `contrato_version = 1`, con datos de representante) mediante una query SQL directa.
 - **Caché (Worker)**: Se añadió `Cache-Control: no-cache, no-store, must-revalidate` a la respuesta JSON global en el handler `fetch` de `worker/src/index.js` para evitar que el navegador guarde en caché respuestas críticas como la de `/api/auth/me`.
+
+
+### 2026-07-18 - Implementación de RBAC en Panel Financiero
+- **Frontend**: Se modificó `SectionRevenue` en `page.tsx` para ocultar la información financiera (Total Generado, CPM Acordado) a los roles afiliados (`admin_scan`, `admin`). Solo pueden visualizar sus vistas válidas generadas, mientras que los datos monetarios quedaron exclusivos para la vista global del `superadmin`.
+- **Backend**: Se verificó que los endpoints de ingresos (`/api/admin/revenue` y `/api/admin/revenue/:scanId`) ya se encontraban saneados, puesto que solo despachan la métrica de vistas sin exponer los montos calculados (el cálculo del revenue rate se procesa en el front).
