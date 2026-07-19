@@ -301,7 +301,7 @@ export default function MangaDetailPage() {
                         )}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {(() => { try { return new Date(cap.fecha_subida).toLocaleDateString('es', { day:'2-digit', month:'short', year:'numeric' }); } catch { return cap.fecha_subida?.slice(0, 10) ?? ''; } })()}
+                        {(() => { try { const d = cap.fecha_subida.includes('Z') ? cap.fecha_subida : cap.fecha_subida.replace(' ', 'T') + 'Z'; return new Date(d).toLocaleDateString('es', { timeZone: 'UTC', day:'2-digit', month:'short', year:'numeric' }); } catch { return cap.fecha_subida?.slice(0, 10) ?? ''; } })()}
                       </p>
                     </div>
                   </div>

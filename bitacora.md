@@ -98,3 +98,7 @@ eedsContract en dmin/page.tsx que forzaba el modal de contrato de alianza.
 
 ### 2026-07-18 - Refactorización UI del Dashboard de Revenue
 - **Frontend**: Se refactorizó la tabla global del panel financiero (vista del superadmin) usando un diseño `flex` con anchos fijos para alinear perfectamente las columnas de tráfico y liquidación. Se añadió jerarquía visual, bordes estilo premium en el logo de scans y una barra de desplazamiento adaptada al tema oscuro (`scrollbar-thin`).
+
+
+### 2026-07-18 - Corrección de Bug de Timezones (Fechas de Publicación)
+- **Frontend**: Se corrigió el renderizado de fechas en `MangaCard.tsx` y en el lector (`manga/reader/[id]/page.tsx`). Antes, al usar `new Date().toLocaleDateString()` el navegador convertía automáticamente la fecha UTC a la zona horaria local del lector, causando que en otros países se viera el capítulo publicado un día antes o después. Se estandarizó para que la fecha (que se guarda en UTC) se formatee forzosamente usando `{ timeZone: 'UTC' }`. De esta manera, si un admin programa un capítulo para el 20 de Julio, *todos los usuarios del mundo* verán '20 Jul' independientemente de su país.
