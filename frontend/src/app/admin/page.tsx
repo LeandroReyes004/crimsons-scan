@@ -324,6 +324,7 @@ export default function AdminPage() {
 function SectionDashboard() {
   const { data, loading, refetch } = useAPI<Stats>('/api/admin/stats');
   const { data: manga_data } = useAPI<{ mangas: Manga[] }>('/api/mangas?admin=1');
+  const user = getUser();
 
   return (
     <div className="flex flex-col gap-8 animate-in fade-in duration-300">
