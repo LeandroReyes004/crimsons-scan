@@ -2098,16 +2098,18 @@ function SectionRevenue() {
       {loading ? (
         <div className="flex justify-center py-20"><Loader2 className="animate-spin text-emerald-500" size={40}/></div>
       ) : (
-        <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-sm">
+        <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/5 rounded-3xl overflow-hidden shadow-sm flex flex-col">
           {/* Fake Table Header */}
-          <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-4 bg-gray-50 dark:bg-white/2 border-b border-gray-200 dark:border-white/5 text-xs font-bold uppercase tracking-widest text-gray-500 dark:text-gray-400">
-             <div className="col-span-5">Scan / Grupo Aliado</div>
-             <div className="col-span-3 text-right">Tráfico Válido</div>
-             <div className="col-span-3 text-right">Liquidación Estimada</div>
-             <div className="col-span-1 text-right"></div>
+          <div className="hidden md:flex items-center justify-between gap-4 px-6 py-4 bg-gray-50 dark:bg-white/2 border-b border-gray-200 dark:border-white/5 text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-500">
+             <div className="flex-1">Scan / Grupo Aliado</div>
+             <div className="flex items-center gap-8 shrink-0">
+               <div className="w-32 text-right">Tráfico Válido</div>
+               <div className="w-28 text-right">Liquidación Estimada</div>
+               <div className="w-24 text-right"></div>
+             </div>
           </div>
           
-          <div className="flex flex-col">
+          <div className="flex flex-col overflow-y-auto max-h-[600px] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full hover:[&::-webkit-scrollbar-thumb]:bg-white/20 transition-colors pr-0.5">
             {(data?.scans ?? []).map(scan => {
               const det = scanDetail[scan.id];
               const isExpanded = expandedScan === scan.id;
@@ -2128,50 +2130,69 @@ function SectionRevenue() {
               return (
                 <div key={scan.id} className={`border-b border-gray-100 dark:border-white/5 last:border-0 transition-colors ${isSelected ? 'bg-transparent' : 'bg-gray-50/50 dark:bg-black/20 opacity-75'}`}>
                   {/* Table Row */}
-                  <div className="grid grid-cols-1 md:grid-cols-12 gap-4 px-6 py-4 items-center group hover:bg-gray-50 dark:hover:bg-white/2 transition-colors cursor-pointer" onClick={() => loadScanDetail(scan.id)}>
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 px-6 py-4 group hover:bg-gray-50 dark:hover:bg-white/2 transition-colors cursor-pointer" onClick={() => loadScanDetail(scan.id)}>
                     {/* Col 1: Scan Info */}
-                    <div className="col-span-1 md:col-span-5 flex items-center gap-4" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-4 flex-1 min-w-0" onClick={(e) => e.stopPropagation()}>
                       {isSuperAdmin && (
                         <input 
                           type="checkbox" 
                           checked={isSelected} 
                           onChange={toggleSelection} 
-                          className="w-4 h-4 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 bg-gray-100 dark:bg-white/5 cursor-pointer shrink-0"
+                          className="w-4.5 h-4.5 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 bg-gray-100 dark:bg-white/5 cursor-pointer shrink-0"
                         />
                       )}
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/20 flex items-center justify-center text-emerald-500 shrink-0 font-black">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 shrink-0 font-black text-lg shadow-inner">
                         {scan.nombre.charAt(0)}
                       </div>
-                      <div className="min-w-0">
-                        <p className="text-sm font-bold dark:text-white truncate group-hover:text-emerald-500 transition-colors">{scan.nombre}</p>
-                        <p className="text-[10px] text-gray-400 truncate">{scan.total_mangas} obras activas · {scan.total_capitulos} caps</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-bold dark:text-gray-200 truncate group-hover:text-emerald-500 transition-colors">{scan.nombre}</p>
+                        <p className="text-[11px] text-gray-500 truncate mt-0.5 font-medium">{scan.total_mangas} obras activas <span className="opacity-50 mx-1">•</span> {scan.total_capitulos} caps</p>
                       </div>
                     </div>
                     
-                    {/* Col 2: Views */}
-                    <div className="col-span-1 md:col-span-3 flex flex-col md:items-end justify-center">
-                      <p className="text-sm font-bold dark:text-white tabular-nums">{(scan.views_mes ?? 0).toLocaleString()} <span className="text-[10px] text-emerald-500 uppercase tracking-widest font-bold">Mes</span></p>
-                      <div className="w-24 mt-1 h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden hidden md:block">
-                        <div className="h-full bg-emerald-500/50 rounded-full" style={{ width: `${pctGlobal}%` }}/>
+                    {/* Desktop Layout for Stats */}
+                    <div className="hidden md:flex items-center gap-8 shrink-0">
+                      {/* Col 2: Views */}
+                      <div className="w-32 flex flex-col items-end justify-center">
+                        <p className="text-sm font-black dark:text-gray-200 tabular-nums">{(scan.views_mes ?? 0).toLocaleString()} <span className="text-[9px] text-emerald-500/80 uppercase tracking-widest font-bold ml-1">Mes</span></p>
+                        <div className="w-full mt-1.5 h-1 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                          <div className="h-full bg-emerald-500/50 rounded-full" style={{ width: `${pctGlobal}%` }}/>
+                        </div>
+                      </div>
+
+                      {/* Col 3: Pago */}
+                      <div className="w-28 flex flex-col items-end justify-center">
+                        {isSelected ? (
+                           <p className="text-sm font-black text-emerald-500 tabular-nums">${scanPago.toFixed(2)}</p>
+                        ) : (
+                           <p className="text-sm font-bold text-gray-500/40 tabular-nums line-through">$0.00</p>
+                        )}
+                        {isSelected && totalIngresos !== '' && <p className="text-[9px] text-gray-500 uppercase tracking-widest font-bold mt-0.5">Liquidación</p>}
+                      </div>
+
+                      {/* Col 4: Action */}
+                      <div className="w-24 flex justify-end">
+                        <button onClick={(e) => { e.stopPropagation(); loadScanDetail(scan.id); }} disabled={isLoading}
+                          className="flex items-center justify-center gap-1.5 text-xs font-bold px-4 py-2.5 rounded-xl bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-emerald-500/10 hover:text-emerald-400 transition-all border border-transparent dark:hover:border-emerald-500/20 w-full shadow-sm">
+                          {isLoading ? <Loader2 size={14} className="animate-spin"/> : (isExpanded ? "Cerrar" : "Detalle")}
+                        </button>
                       </div>
                     </div>
-
-                    {/* Col 3: Pago */}
-                    <div className="col-span-1 md:col-span-3 flex flex-col md:items-end justify-center">
-                      {isSelected ? (
-                         <p className="text-sm font-black text-emerald-600 dark:text-emerald-400 tabular-nums">${scanPago.toFixed(2)}</p>
-                      ) : (
-                         <p className="text-sm font-bold text-gray-400 tabular-nums line-through">$0.00</p>
-                      )}
-                      {isSelected && totalIngresos !== '' && <p className="text-[10px] text-gray-500 font-bold uppercase tracking-widest">Liquidación</p>}
-                    </div>
-
-                    {/* Col 4: Action */}
-                    <div className="col-span-1 text-right flex justify-end">
-                      <button onClick={(e) => { e.stopPropagation(); loadScanDetail(scan.id); }} disabled={isLoading}
-                        className="flex items-center justify-center gap-1.5 text-xs font-bold px-3 py-2 rounded-lg bg-gray-100 dark:bg-white/5 text-gray-600 dark:text-gray-300 hover:bg-emerald-100 dark:hover:bg-emerald-500/10 hover:text-emerald-500 transition w-full md:w-auto">
-                        {isLoading ? <Loader2 size={14} className="animate-spin"/> : (isExpanded ? "Cerrar" : "Detalle")}
-                      </button>
+                    
+                    {/* Mobile Layout for Stats */}
+                    <div className="flex md:hidden items-center justify-between mt-2 pt-4 border-t border-gray-100 dark:border-white/5">
+                      <div className="flex flex-col">
+                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Tráfico</p>
+                        <p className="text-sm font-black dark:text-gray-200 tabular-nums">{(scan.views_mes ?? 0).toLocaleString()}</p>
+                      </div>
+                      <div className="flex flex-col items-end">
+                        <p className="text-[10px] text-gray-500 uppercase font-bold tracking-widest">Liquidación</p>
+                        {isSelected ? (
+                           <p className="text-sm font-black text-emerald-500 tabular-nums">${scanPago.toFixed(2)}</p>
+                        ) : (
+                           <p className="text-sm font-bold text-gray-500/40 tabular-nums line-through">$0.00</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 {/* Detalle expandido */}

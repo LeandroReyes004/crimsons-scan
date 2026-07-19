@@ -94,3 +94,7 @@ eedsContract en dmin/page.tsx que forzaba el modal de contrato de alianza.
 ### 2026-07-18 - Implementación de RBAC en Panel Financiero
 - **Frontend**: Se modificó `SectionRevenue` en `page.tsx` para ocultar la información financiera (Total Generado, CPM Acordado) a los roles afiliados (`admin_scan`, `admin`). Solo pueden visualizar sus vistas válidas generadas, mientras que los datos monetarios quedaron exclusivos para la vista global del `superadmin`.
 - **Backend**: Se verificó que los endpoints de ingresos (`/api/admin/revenue` y `/api/admin/revenue/:scanId`) ya se encontraban saneados, puesto que solo despachan la métrica de vistas sin exponer los montos calculados (el cálculo del revenue rate se procesa en el front).
+
+
+### 2026-07-18 - Refactorización UI del Dashboard de Revenue
+- **Frontend**: Se refactorizó la tabla global del panel financiero (vista del superadmin) usando un diseño `flex` con anchos fijos para alinear perfectamente las columnas de tráfico y liquidación. Se añadió jerarquía visual, bordes estilo premium en el logo de scans y una barra de desplazamiento adaptada al tema oscuro (`scrollbar-thin`).
