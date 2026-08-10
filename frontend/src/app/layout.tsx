@@ -6,6 +6,8 @@ import LateralAds from '@/components/LateralAds';
 import AdBlockDetector from '@/components/AdBlockDetector';
 import Footer from '@/components/Footer';
 import GlobalPopunders from '@/components/GlobalPopunders';
+import Sidebar from '@/components/Sidebar';
+import TopNav from '@/components/TopNav';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -54,8 +56,23 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AdBlockDetector />
-          {children}
-          <Footer />
+          
+          <div className="flex min-h-screen">
+            {/* Sidebar Oculto en móviles temporalmente */}
+            <div className="hidden md:block w-64 shrink-0">
+              <Sidebar />
+            </div>
+            
+            {/* Contenido Principal */}
+            <div className="flex-1 flex flex-col min-w-0">
+              <TopNav />
+              <main className="flex-1">
+                {children}
+              </main>
+              <Footer />
+            </div>
+          </div>
+          
           <LateralAds />
           <GlobalPopunders />
         </ThemeProvider>

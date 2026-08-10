@@ -1,0 +1,454 @@
+﻿
+> function SectionConfig({ scanId }: { scanId: string }) {
+    const [webhook, setWebhook]               = useState('');
+    const [discordTemplate, setDiscordTemplate] = useState('');
+    const [telegramChatId, setTelegramChatId] = useState('');
+    const [telegramTemplate, setTelegramTemplate] = useState('');
+    const [saved, setSaved]                   = useState<string | null>(null);
+    const [saving, setSaving]                 = useState(false);
+    const [testing, setTesting]               = useState(false);
+    const [testMsg, setTestMsg]               = useState<string | null>(null);
+    const [imgKey, setImgKey]   = useState(() => Date.now());
+    const [imgUploading, setImgUploading] = useState(false);
+    const [imgMsg, setImgMsg]   = useState<string | null>(null);
+    const imgRef = useRef<HTMLInputElement>(null);
+    const { data: scanData, loading, refetch } = useAPI<any>(`/api/scans/${scanId}/details`);
+  
+    // Redes Sociales
+    const [redes, setRedes] = useState({
+      discord: '',
+      facebook: '',
+      twitter: '',
+      instagram: '',
+      patreon: '',
+      donations: '',
+      telegram: '',
+      whatsapp: '',
+    });
+    const [savingRedes, setSavingRedes] = useState(false);
+    const [savedRedes, setSavedRedes] = useState<string | null>(null);
+  
+    // Nuevo miembro
+    const [showForm, setShowForm]   = useState(false);
+    const [newUser, setNewUser]     = useState('');
+    const [newEmail, setNewEmail]   = useState('');
+    const [newPwd, setNewPwd]       = useState('');
+    const [newRol, setNewRol]       = useState('uploader');
+    const [creating, setCreating]   = useState(false);
+    const [createMsg, setCreateMsg] = useState<string | null>(null);
+  
+    useEffect(() => {
+      if (scanData?.scan?.webhook_discord) setWebhook(scanData.scan.webhook_discord);
+      if (scanData?.scan?.telegram_chat_id) setTelegramChatId(scanData.scan.telegram_chat_id);
+      if (scanData?.scan?.telegram_template) setTelegramTemplate(scanData.scan.telegram_template);
+      if (scanData?.scan?.discord_template) setDiscordTemplate(scanData.scan.discord_template);
+      if (scanData?.scan?.redes) {
+        try {
+          const parsed = JSON.parse(scanData.scan.redes);
+          setRedes(prev => ({
+            ...prev,
+            ...parsed
+          }));
+        } catch {}
+      }
+    }, [scanData]);
+  
+    const handleSave = async () => {
+      setSaving(true); setSaved(null);
+      try {
+        const res = await fetch(`${API}/api/admin/scans/${scanId}/webhook`, {
+          method: 'PUT',
+          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ webhook_discord: webhook || null, discord_template: discordTemplate || null, 
+telegram_chat_id: telegramChatId || null, telegram_template: telegramTemplate || null }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error);
+        setSaved('Ã¢Å“â€¦ Webhook guardado');
+      } catch (e: any) { setSaved(`Ã¢ÂÅ’ ${e.message}`); }
+      finally { setSaving(false); }
+    };
+  
+    const handleSaveRedes = async () => {
+      setSavingRedes(true); setSavedRedes(null);
+      try {
+        const res = await fetch(`${API}/api/admin/scans/${scanId}/redes`, {
+          method: 'PUT',
+          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ redes }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error);
+        setSavedRedes('Ã¢Å“â€¦ Redes sociales guardadas');
+      } catch (e: any) { setSavedRedes(`Ã¢ÂÅ’ ${e.message}`); }
+      finally { setSavingRedes(false); }
+    };
+  
+    const handleTest = async () => {
+      if (!webhook) return;
+      setTesting(true); setTestMsg(null);
+      try {
+        const res = await fetch(webhook, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            embeds: [{
+              title: 'Ã¢Å“â€¦ Webhook configurado correctamente',
+              description: `El bot de **${scanData?.scan?.nombre || 'tu scan'}** estÃ¡ listo para notificaciones.`,
+              color: 0xe11d48,
+              footer: { text: "Crimson's Scan" },
+              timestamp: new Date().toISOString(),
+            }]
+          }),
+        });
+        setTestMsg(res.ok ? 'Ã¢Å“â€¦ Mensaje enviado al Discord' : 'Ã¢ÂÅ’ URL invÃ¡lida o sin permisos');
+      } catch { setTestMsg('Ã¢ÂÅ’ No se pudo conectar con Discord'); }
+      finally { setTesting(false); }
+    };
+  
+    const handleCreateMember = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setCreating(true); setCreateMsg(null);
+      try {
+        const res = await fetch(`${API}/api/auth/register`, {
+          method: 'POST',
+          headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+          body: JSON.stringify({ username: newUser, email: newEmail, password: newPwd, rol: newRol, scan_id: scanId }),
+        });
+        const d = await res.json();
+        if (!res.ok) throw new Error(d.error);
+        setCreateMsg(`Ã¢Å“â€¦ Usuario "${newUser}" creado`);
+        setNewUser(''); setNewEmail(''); setNewPwd(''); setNewRol('uploader');
+        refetch();
+        setTimeout(() => { setShowForm(false); setCreateMsg(null); }, 1500);
+      } catch (e: any) { setCreateMsg(`Ã¢ÂÅ’ ${e.message}`); }
+      finally { setCreating(false); }
+    };
+  
+    const handleImgUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const raw = e.target.files?.[0];
+      if (imgRef.current) imgRef.current.value = '';
+      if (!raw) return;
+      if (raw.size > 5 * 1024 * 1024) { setImgMsg('Ã¢ÂÅ’ MÃ¡ximo 5MB'); return; }
+      setImgUploading(true); setImgMsg(null);
+      const file = await toWebP(raw, 1200);
+      const fd = new FormData();
+      fd.append('imagen', file);
+      try {
+        const res = await fetch(`${API}/api/upload/scan-image`, { method: 'POST', headers: authHeaders(), body: fd });
+        const d   = await res.json();
+        if (!res.ok) throw new Error(d.error);
+        setImgKey(Date.now());
+        setImgMsg('Ã¢Å“â€¦ Imagen actualizada');
+      } catch (err: any) { setImgMsg(`Ã¢ÂÅ’ ${err.message}`); }
+      finally { setImgUploading(false); }
+    };
+  
+    return (
+      <div className="flex flex-col gap-6 animate-in fade-in duration-300 max-w-xl">
+        <div>
+          <h2 className="text-2xl font-extrabold dark:text-white">Mi Scan</h2>
+          <p className="text-gray-500 text-sm mt-1">Miembros y notificaciones</p>
+        </div>
+  
+        {/* Imagen del scan */}
+        <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 flex 
+flex-col gap-4">
+          <h3 className="font-bold dark:text-white flex items-center gap-2"><ImageIcon size={16} 
+className="text-rose-500"/> Imagen del Scan</h3>
+          <div className="flex items-center gap-4">
+            <div className="w-24 h-24 rounded-xl overflow-hidden bg-gray-100 dark:bg-white/5 border border-gray-200 
+dark:border-white/10 shrink-0 relative">
+              <img
+                key={imgKey}
+                src={`${API}/api/scan-image/${scanId}?v=${imgKey}`}
+                alt=""
+                className="w-full h-full object-cover"
+                onError={e => { e.currentTarget.style.display = 'none'; }}
+              />
+            </div>
+            <div className="flex flex-col gap-2 flex-1">
+              <p className="text-sm text-gray-500">Sube una imagen de portada para tu scan (PNG, JPG â€” mÃ¡x 5MB). Se 
+mostrarÃ¡ en la pÃ¡gina de comunidad.</p>
+              <button onClick={() => imgRef.current?.click()} disabled={imgUploading}
+                className="flex items-center gap-2 text-sm font-bold text-white bg-rose-600 hover:bg-rose-500 
+disabled:opacity-50 px-4 py-2 rounded-xl transition w-fit">
+                {imgUploading ? <><Loader2 size={14} className="animate-spin"/> Subiendo...</> : <><Upload size={14}/> 
+Cambiar imagen</>}
+              </button>
+              <input ref={imgRef} type="file" accept="image/*" className="hidden" onChange={handleImgUpload}/>
+              {imgMsg && <p className={`text-xs font-medium ${imgMsg.startsWith('Ã¢Å“â€¦') ? 'text-emerald-400' : 
+'text-red-400'}`}>{imgMsg}</p>}
+            </div>
+          </div>
+        </div>
+        {loading ? (
+          <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
+        ) : (
+          <>
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Tu scan</p>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500/20 to-rose-500/20 flex 
+items-center justify-center text-violet-500 text-xl font-black">
+                  {scanData?.scan?.nombre?.charAt(0) || '?'}
+                </div>
+                <div>
+                  <p className="font-bold dark:text-white">{scanData?.scan?.nombre}</p>
+                  <p className="text-xs text-gray-400">{scanData?.scan?.descripcion || 'Sin descripciÃ³n'}</p>
+                </div>
+              </div>
+              
+              <div className="mb-6 flex gap-3">
+                <button 
+                  onClick={() => {
+                     // Truco para abrir el modal voluntariamente
+                     const evt = new CustomEvent('open-contract');
+                     window.dispatchEvent(evt);
+                  }}
+                  className="flex items-center gap-2 text-xs font-bold text-gray-400 hover:text-white bg-gray-100 
+dark:bg-white/5 hover:bg-rose-600 transition px-4 py-2 rounded-xl"
+                >
+                  <Edit3 size={14} /> Ver Contrato de Alianza
+                </button>
+              </div>
+  
+              <div className="grid grid-cols-3 gap-3 mb-5">
+                {[
+                  { label: 'Obras',    value: scanData?.mangas?.length ?? 0 },
+                  { label: 'Miembros', value: scanData?.miembros?.length ?? 0 },
+                  { label: 'Vistas',   value: (scanData?.totalViews ?? 0).toLocaleString() },
+                ].map(s => (
+                  <div key={s.label} className="bg-gray-50 dark:bg-white/5 rounded-xl p-3 text-center">
+                    <p className="font-extrabold text-lg dark:text-white">{s.value}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wider">{s.label}</p>
+                  </div>
+                ))}
+              </div>
+  
+              {/* Miembros del scan */}
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">
+                    Miembros del scan ({scanData?.miembros?.length ?? 0})
+                  </p>
+                  <button onClick={() => { setShowForm(f => !f); setCreateMsg(null); }}
+                    className="flex items-center gap-1.5 text-xs font-bold text-rose-500 hover:text-rose-400 
+transition">
+                    <Plus size={13}/> Agregar miembro
+                  </button>
+                </div>
+  
+                {/* Formulario nuevo miembro */}
+                {showForm && (
+                  <form onSubmit={handleCreateMember} className="bg-gray-50 dark:bg-black/20 rounded-xl p-4 mb-3 flex 
+flex-col gap-3 border border-gray-200 dark:border-white/10 animate-in slide-in-from-top-1 duration-200">
+                    <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Nuevo miembro</p>
+                    {createMsg && (
+                      <div className={`p-2 rounded-lg text-xs font-medium ${createMsg.startsWith('Ã¢Å“â€¦') ? 
+'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 
+dark:bg-red-500/10 dark:text-red-400'}`}>
+                        {createMsg}
+                      </div>
+                    )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <input value={newUser} onChange={e => setNewUser(e.target.value)} required 
+placeholder="Username" className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 
+rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none"/>
+                      <input value={newEmail} onChange={e => setNewEmail(e.target.value)} required type="email" 
+placeholder="Email" className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 
+rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none"/>
+                      <input value={newPwd} onChange={e => setNewPwd(e.target.value)} required type="password" 
+placeholder="ContraseÃ±a" className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 
+rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none"/>
+                      <select value={newRol} onChange={e => setNewRol(e.target.value)} className="bg-white 
+dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-sm dark:text-white 
+focus:border-rose-500 outline-none">
+                        <option value="uploader">Uploader</option>
+                        <option value="admin_scan">Admin Scan</option>
+                      </select>
+                    </div>
+                    <div className="flex gap-2">
+                      <button type="submit" disabled={creating}
+                        className="flex items-center gap-1.5 bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 
+rounded-lg text-sm font-bold disabled:opacity-50 transition">
+                        {creating ? <Loader2 size={14} className="animate-spin"/> : <UserPlus size={14}/>}
+                        {creating ? 'Creando...' : 'Crear'}
+                      </button>
+                      <button type="button" onClick={() => setShowForm(false)} className="px-4 py-2 rounded-lg text-sm 
+font-bold text-gray-500 hover:bg-gray-100 dark:hover:bg-white/5 transition">
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                )}
+  
+                {scanData?.miembros?.length === 0 ? (
+                  <p className="text-xs text-gray-400 italic py-2">Sin miembros aÃºn â€” agregÃ¡ el primero</p>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    {scanData?.miembros?.map((m: any) => (
+                      <div key={m.id} className="flex items-center gap-3 bg-gray-50 dark:bg-white/5 rounded-xl px-3 
+py-2.5">
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-rose-500 to-orange-500 flex 
+items-center justify-center text-white font-bold text-sm shrink-0">
+                          {m.username.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold dark:text-white truncate">{m.username}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <Badge estado={m.rol}/>
+                          <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${m.activo ? 
+'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : 'bg-gray-100 text-gray-500'}`}>
+                            {m.activo ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Bot de Telegram</p>
+              <p className="text-xs text-gray-500 mb-4">
+                Cuando se publique un capÃ­tulo, el bot notificarÃ¡ automÃ¡ticamente a tu canal de Telegram.
+                Agrega tu bot como administrador en el canal y pega aquÃ­ el Chat ID (ej. -10012345678).
+              </p>
+              {saved   && <div className={`mb-3 p-3 rounded-xl text-sm font-medium ${saved.startsWith('âœ…')   ? 
+'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 
+dark:bg-red-500/10 dark:text-red-400'}`}>{saved}</div>}
+              <div className="flex flex-col gap-1.5 mb-4">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Chat ID del Canal</label>
+                <input
+                  value={telegramChatId}
+                  onChange={e => { setTelegramChatId(e.target.value); setSaved(null); }}
+                  placeholder="-100..."
+                  className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 
+rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition font-mono"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 mb-4">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Mensaje de Telegram</label>
+                <p className="text-xs text-gray-400">UsÃ¡ las variables de abajo. Si lo dejÃ¡s vacÃo se usa el mensaje 
+por defecto. Soporta Markdown.</p>
+                <div className="flex flex-wrap gap-1.5 mb-1">
+                  {['{{manga}}', '{{capitulo}}', '{{titulo}}', '{{url}}'].map(v => (
+                    <button key={`tel-${v}`} type="button"
+                      onClick={() => setTelegramTemplate(t => (t || DEFAULT_TELEGRAM_TEMPLATE) + v)}
+                      className="text-[11px] font-mono bg-sky-100 dark:bg-sky-500/15 text-sky-700 dark:text-sky-300 
+px-2 py-0.5 rounded-md hover:bg-sky-200 dark:hover:bg-sky-500/25 transition">
+                      {v}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  rows={4}
+                  value={telegramTemplate}
+                  onChange={e => { setTelegramTemplate(e.target.value); setSaved(null); }}
+                  placeholder={DEFAULT_TELEGRAM_TEMPLATE}
+                  className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 
+rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition font-mono resize-none"
+                />
+                <div className="bg-[#1e1f22] rounded-xl p-3 mt-1">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 font-bold">Vista previa</p>
+                  <p className="text-sm text-gray-200 
+whitespace-pre-wrap">{previewTelegramTemplate(telegramTemplate)}</p>
+                </div>
+              </div>
+              <div className="flex gap-3 flex-wrap">
+                <button onClick={handleSave} disabled={saving}
+                  className="flex items-center gap-2 bg-sky-600 hover:bg-sky-500 text-white px-5 py-2.5 rounded-xl 
+text-sm font-bold disabled:opacity-50 transition">
+                  {saving ? 'Guardando...' : 'Guardar Telegram'}
+                </button>
+              </div>
+            </div>
+  
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5">
+              <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Webhook de Discord</p>
+              <p className="text-xs text-gray-500 mb-4">
+                Cuando se publique un capÃ­tulo de tu scan, el bot notifica automÃ¡ticamente al canal.
+                En Discord: Canal Ã¢â€ â€™ Editar Ã¢â€ â€™ Integraciones Ã¢â€ â€™ Webhooks Ã¢â€ â€™ Nuevo webhook.
+              </p>
+              {saved   && <div className={`mb-3 p-3 rounded-xl text-sm font-medium ${saved.startsWith('Ã¢Å“â€¦')   ? 
+'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 
+dark:bg-red-500/10 dark:text-red-400'}`}>{saved}</div>}
+              {testMsg && <div className={`mb-3 p-3 rounded-xl text-sm font-medium ${testMsg.startsWith('Ã¢Å“â€¦') ? 
+'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 
+dark:bg-red-500/10 dark:text-red-400'}`}>{testMsg}</div>}
+              <div className="flex flex-col gap-1.5 mb-4">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">URL del Webhook</label>
+                <input
+                  value={webhook}
+                  onChange={e => { setWebhook(e.target.value); setSaved(null); }}
+                  placeholder="https://discord.com/api/webhooks/..."
+                  className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 
+rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition font-mono"
+                />
+              </div>
+              <div className="flex flex-col gap-1.5 mb-4">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Mensaje del Discord</label>
+                <p className="text-xs text-gray-400">UsÃ¡ las variables de abajo. Si lo dejÃ¡s vacÃo se usa el mensaje 
+por defecto. Soporta Markdown de Discord.</p>
+                <div className="flex flex-wrap gap-1.5 mb-1">
+                  {['{{manga}}', '{{capitulo}}', '{{titulo}}', '{{url}}'].map(v => (
+                    <button key={v} type="button"
+                      onClick={() => setDiscordTemplate(t => (t || DEFAULT_DISCORD_TEMPLATE) + v)}
+                      className="text-[11px] font-mono bg-indigo-100 dark:bg-indigo-500/15 text-indigo-700 
+dark:text-indigo-300 px-2 py-0.5 rounded-md hover:bg-indigo-200 dark:hover:bg-indigo-500/25 transition">
+                      {v}
+                    </button>
+                  ))}
+                </div>
+                <textarea
+                  rows={4}
+                  value={discordTemplate}
+                  onChange={e => { setDiscordTemplate(e.target.value); setSaved(null); }}
+                  placeholder={DEFAULT_DISCORD_TEMPLATE}
+                  className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-3 
+rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition font-mono resize-none"
+                />
+                <div className="bg-[#1e1f22] rounded-xl p-3 mt-1">
+                  <p className="text-[10px] text-gray-500 uppercase tracking-wide mb-1.5 font-bold">Vista previa</p>
+                  <p className="text-sm text-gray-200 whitespace-pre-wrap">{previewTemplate(discordTemplate)}</p>
+                </div>
+              </div>
+              <div className="flex gap-3 flex-wrap">
+                <button onClick={handleSave} disabled={saving}
+                  className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl 
+text-sm font-bold disabled:opacity-50 transition">
+                  {saving ? <Loader2 size={16} className="animate-spin"/> : <Check size={16}/>}
+                  {saving ? 'Guardando...' : 'Guardar'}
+                </button>
+                {webhook && (
+                  <button onClick={handleTest} disabled={testing}
+                    className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 
+rounded-xl text-sm font-bold disabled:opacity-50 transition">
+                    {testing ? <Loader2 size={16} className="animate-spin"/> : null}
+                    {testing ? 'Enviando...' : 'Ã°Å¸Â§Âª Probar'}
+                  </button>
+                )}
+              </div>
+            </div>
+  
+            <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-5 flex 
+flex-col gap-4">
+              <div>
+                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-1">Redes Sociales del 
+Scan</p>
+                <p className="text-xs text-gray-500">
+                  IngresÃ¡ las URLs de las redes sociales de tu grupo. Se mostrarÃ¡n y enlazarÃ¡n en tu pÃ¡gina 
+pÃºblica.
+                </p>
+              </div>
+              
+              {savedRedes && (
+                <div className={`p-3 rounded-xl text-sm font-medium ${savedRedes.startsWith('Ã¢Å“â€¦') ? 
+'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 
+dark:bg-red-500/10 dark:text-red-400'}`}>
+                  {savedRedes}
+                </div>
+
+

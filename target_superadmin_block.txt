@@ -1,0 +1,67 @@
+                {/* Detalle expandido */}
+                {isExpanded && det && (
+                  <div className="border-t border-gray-100 dark:border-white/5 px-5 py-5 bg-gray-50/50 dark:bg-white/2 animate-in slide-in-from-top-2 duration-200">
+                    <div className="flex items-center justify-between mb-4">
+                      <p className="text-xs font-bold text-gray-500 uppercase tracking-wider flex items-center gap-1.5">
+                        <BookOpen size={12}/> Desglose por obra
+                      </p>
+                      <p className="text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                        Este mes: {(det.scan_total_mes ?? 0).toLocaleString()} · Histórico: {det.scan_total.toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      {det.mangas.map(manga => {
+                        const isMangaExpanded = expandedManga === manga.id;
+                        const mangaPct = pct(manga.views_total, det.scan_total);
+                        return (
+                          <div key={manga.id} className="bg-white dark:bg-[#111114] rounded-xl border border-gray-100 dark:border-white/5 overflow-hidden">
+                            {/* Fila manga */}
+                            <button onClick={() => setExpandedManga(isMangaExpanded ? null : manga.id)}
+                              className="w-full flex items-center gap-3 px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/2 transition text-left">
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm font-bold dark:text-white truncate">{manga.titulo}</p>
+                                <p className="text-[10px] text-gray-400">{manga.tipo} · {manga.capitulos.length} caps</p>
+                              </div>
+                              <div className="flex items-center gap-3 shrink-0">
+                                <div className="hidden sm:block w-20">
+                                  <div className="h-1.5 bg-gray-100 dark:bg-white/5 rounded-full overflow-hidden">
+                                    <div className="h-full bg-emerald-500/60 rounded-full"
+                                      style={{ width: `${mangaPct}%` }}/>
+                                  </div>
+                                </div>
+                                <span className="text-sm font-bold dark:text-white tabular-nums">
+                                  {manga.views_total.toLocaleString()}
+                                </span>
+                                <span className="text-xs text-gray-400">{mangaPct}%</span>
+                                <ChevronRight size={12} className={`text-gray-400 transition-transform ${isMangaExpanded ? 'rotate-90' : ''}`}/>
+                              </div>
+                            </button>
+                            {/* Detalle capítulos */}
+                            {isMangaExpanded && (
+                              <div className="border-t border-gray-100 dark:border-white/5 bg-gray-50/50 dark:bg-black/20 px-4 py-3 animate-in slide-in-from-top-1 duration-150">
+                                <div className="flex flex-col gap-1">
+                                  {manga.capitulos.map(cap => (
+                                    <div key={cap.id} className="flex items-center justify-between py-1.5 border-b border-gray-100 dark:border-white/5 last:border-0">
+                                      <span className="text-xs text-gray-600 dark:text-gray-300">
+                                        Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}
+                                      </span>
+                                      <span className="text-xs font-bold tabular-nums dark:text-white flex items-center gap-1">
+                                        <Eye size={10} className="text-gray-400"/>
+                                        {cap.views.toLocaleString()}
+                                      </span>
+                                    </div>
+                                  ))}
+                                  {manga.capitulos.length === 0 && (
+                                    <p className="text-xs text-gray-400 italic py-1">Sin capítulos publicados</p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                      {det.mangas.length === 0 && (
+                        <p className="text-sm text-gray-400 italic text-center py-4">Sin obras en este scan</p>
+                      )}
+                    </div>
+                  </div>
