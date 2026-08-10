@@ -25,9 +25,9 @@ export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed top-0 left-0 h-screen w-64 bg-white dark:bg-[#0a0a0c] border-r border-gray-200 dark:border-white/5 flex flex-col z-50 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
+    <aside className="fixed inset-y-0 left-0 w-64 bg-white dark:bg-[#0a0a0c] border-r border-gray-200 dark:border-white/5 flex flex-col z-50">
       {/* Logo Area */}
-      <div className="p-6 sticky top-0 bg-white dark:bg-[#0a0a0c] z-10 border-b border-gray-200 dark:border-white/5 mb-4">
+      <div className="p-6 shrink-0 bg-white dark:bg-[#0a0a0c] border-b border-gray-200 dark:border-white/5 mb-4">
         <Link href="/" className="flex items-center gap-3 group">
           <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
           <div className="flex flex-col">
@@ -38,7 +38,7 @@ export default function Sidebar() {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 px-4 pb-8 flex flex-col gap-1.5">
+      <nav className="flex-1 overflow-y-auto min-h-0 px-4 pb-8 flex flex-col gap-1.5 [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
         {MENU_ITEMS.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
@@ -51,7 +51,7 @@ export default function Sidebar() {
                 <Icon size={18} className="text-gray-400 dark:text-gray-500" />
                 <span className="text-sm">{item.name}</span>
                 {item.badge && (
-                  <span className="ml-auto bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400 text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
+                  <span className="ml-auto bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400 text-[9px] font-black uppercase px-2 py-0.5 rounded-full whitespace-nowrap">
                     {item.badge}
                   </span>
                 )}
@@ -74,7 +74,7 @@ export default function Sidebar() {
               <Icon size={18} className={isActive ? 'text-rose-600 dark:text-rose-500' : (item as any).isAdult ? 'text-rose-500' : 'text-gray-400 dark:text-gray-500'} />
               <span className="text-sm">{item.name}</span>
               {item.badge && (
-                <span className="ml-auto bg-rose-600 dark:bg-rose-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
+                <span className="ml-auto bg-rose-600 dark:bg-rose-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full whitespace-nowrap">
                   {item.badge}
                 </span>
               )}
