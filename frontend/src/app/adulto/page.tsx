@@ -105,7 +105,7 @@ export default function AdultoPage() {
 
   const favMangas  = mangas.filter(m => favorites.includes(m.id));
   const featured   = mangas.length > 0
-    ? [...mangas].sort((a, b) => b.views_total - a.views_total)[0]
+    ? [...mangas].sort((a, b) => new Date(b.fecha_actualizacion || 0).getTime() - new Date(a.fecha_actualizacion || 0).getTime())[0]
     : null;
   const masLeidos  = useMemo(() => [...mangas].sort((a, b) => b.views_total - a.views_total).slice(0, 20), [mangas]);
   const recientes  = useMemo(() => [...mangas].slice(0, 20), [mangas]);
@@ -186,9 +186,9 @@ export default function AdultoPage() {
                 </div>
                 
                 <div className="relative z-10 p-8 md:p-10 flex-1 flex flex-col justify-center">
-                  <div className="inline-block bg-rose-500 text-white text-[10px] font-black uppercase px-3 py-1 rounded-full w-max mb-4 tracking-widest">
-                    Estreno
-                  </div>
+                  <span className="bg-rose-500 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-[0_0_15px_rgba(244,63,94,0.5)] w-max mb-4">
+                    NUEVO
+                  </span>
                   <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-4 tracking-tight drop-shadow-md">
                     {featured.titulo}
                   </h2>

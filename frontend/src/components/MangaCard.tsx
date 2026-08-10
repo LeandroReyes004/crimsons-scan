@@ -40,16 +40,26 @@ export default function MangaCard({ id, slug, title, imageUrl, chapter, chapterU
         </div>
       )}
       
-      {status && (
-        <div className={`absolute top-3 ${isHot ? 'left-20' : 'left-3'} z-20 text-white text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg uppercase tracking-wider backdrop-blur-md border ${
-          status.toLowerCase() === 'publicándose' || status.toLowerCase() === 'publicandose' ? 'bg-emerald-500/80 border-emerald-400/50' : 
-          status.toLowerCase() === 'finalizado' ? 'bg-blue-500/80 border-blue-400/50' : 
-          status.toLowerCase() === 'pausado' ? 'bg-amber-500/80 border-amber-400/50' : 
-          'bg-gray-800/80 border-gray-600/50'
-        }`}>
-          {status}
-        </div>
-      )}
+      {status && (() => {
+        const rawStatus = status.toLowerCase().trim();
+        const displayStatus = status.replace(/_/g, ' ').toUpperCase();
+        
+        let colorClasses = 'bg-gray-800/80 border-gray-600/50'; // por defecto
+        
+        if (rawStatus.includes('curso') || rawStatus.includes('public')) {
+          colorClasses = 'bg-emerald-500/90 border-emerald-400/50 shadow-[0_0_10px_rgba(16,185,129,0.3)] text-white';
+        } else if (rawStatus.includes('finalizado')) {
+          colorClasses = 'bg-blue-600/90 border-blue-400/50 shadow-[0_0_10px_rgba(37,99,235,0.3)] text-white';
+        } else if (rawStatus.includes('pausa')) {
+          colorClasses = 'bg-amber-500/90 border-amber-400/50 shadow-[0_0_10px_rgba(245,158,11,0.3)] text-white';
+        }
+
+        return (
+          <div className={`absolute top-3 ${isHot ? 'left-20' : 'left-3'} z-20 text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg uppercase tracking-wider backdrop-blur-md border transition-all ${colorClasses}`}>
+            {displayStatus}
+          </div>
+        );
+      })()}
 
       {/* Botón favorito */}
       {onToggleFav && (
