@@ -9,17 +9,16 @@ import {
 const MENU_ITEMS = [
   { name: 'Inicio', href: '/', icon: Home },
   { name: 'Explorar', href: '/catalogo', icon: Compass },
-  { name: 'Tendencias', href: '/tendencias', icon: Flame },
-  { name: 'Novedades', href: '/novedades', icon: Sparkles },
-  { name: 'Calendario', href: '/calendario', icon: Calendar },
-  { name: 'Ranking', href: '/ranking', icon: Trophy },
+  { name: 'Tendencias', href: '/tendencias', icon: Flame, badge: 'Próximamente', disabled: true },
+  { name: 'Novedades', href: '/novedades', icon: Sparkles, badge: 'Próximamente', disabled: true },
+  { name: 'Calendario', href: '/calendario', icon: Calendar, badge: 'Próximamente', disabled: true },
+  { name: 'Ranking', href: '/ranking', icon: Trophy, badge: 'Próximamente', disabled: true },
   { name: 'Géneros', href: '/generos', icon: LayoutList },
   { name: 'Favoritos', href: '/favoritos', icon: Heart },
   { name: 'Historial', href: '/historial', icon: Clock },
   { name: 'Lectura', href: '/lectura', icon: BookOpen, badge: 'Nuevo' },
-  { name: 'Comunidad', href: '/comunidad', icon: Users },
-  { name: 'Donaciones', href: '/donaciones', icon: Coffee },
-  { name: 'Adulto (+18)', href: '/adulto', icon: Flame, isAdult: true },
+  { name: 'Comunidad', href: '/comunidad', icon: Users, badge: 'Próximamente', disabled: true },
+  { name: 'Donaciones', href: '/donaciones', icon: Coffee, badge: 'Próximamente', disabled: true },
 ];
 
 export default function Sidebar() {
@@ -43,6 +42,23 @@ export default function Sidebar() {
         {MENU_ITEMS.map((item) => {
           const isActive = pathname === item.href;
           const Icon = item.icon;
+          if ((item as any).disabled) {
+            return (
+              <div 
+                key={item.name} 
+                className="flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 opacity-60 cursor-not-allowed text-gray-400 dark:text-gray-500 font-medium"
+              >
+                <Icon size={18} className="text-gray-400 dark:text-gray-500" />
+                <span className="text-sm">{item.name}</span>
+                {item.badge && (
+                  <span className="ml-auto bg-gray-200 dark:bg-white/10 text-gray-500 dark:text-gray-400 text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
+                    {item.badge}
+                  </span>
+                )}
+              </div>
+            );
+          }
+
           return (
             <Link 
               key={item.name} 
@@ -50,12 +66,12 @@ export default function Sidebar() {
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
                 isActive 
                   ? 'bg-rose-50 dark:bg-gradient-to-r dark:from-rose-500/20 dark:to-transparent text-rose-600 dark:text-rose-500 font-bold' 
-                  : item.isAdult
+                  : (item as any).isAdult
                     ? 'text-rose-500 font-bold hover:bg-rose-50 dark:hover:bg-white/5'
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 font-medium'
               }`}
             >
-              <Icon size={18} className={isActive ? 'text-rose-600 dark:text-rose-500' : item.isAdult ? 'text-rose-500' : 'text-gray-400 dark:text-gray-500'} />
+              <Icon size={18} className={isActive ? 'text-rose-600 dark:text-rose-500' : (item as any).isAdult ? 'text-rose-500' : 'text-gray-400 dark:text-gray-500'} />
               <span className="text-sm">{item.name}</span>
               {item.badge && (
                 <span className="ml-auto bg-rose-600 dark:bg-rose-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
