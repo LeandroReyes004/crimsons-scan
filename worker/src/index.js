@@ -786,7 +786,24 @@ export default {
       }
 
       // ── POST /api/mangas ─────────────────────────────────
-      if (pathname === '/api/mangas' && method === 'POST') {
+      
+    // --- TOGGLE HIDDEN MANGA ---
+    if (pathname.match(/^\/api\/admin\/mangas\/[a-zA-Z0-9-]+\/toggle_hidden$/) && method === 'POST') {
+      const u = await auth(req, env);
+      if (!u || (u.rol !== 'admin' && u.rol !== 'superadmin')) return err('No autorizado', 403);
+      const id = pathname.split('/')[4];
+      try {
+        const manga = await env.DB.prepare('SELECT oculto FROM mangas WHERE id = ?').bind(id).first();
+        if (!manga) return err('Manga no encontrado', 404);
+        const new_oculto = manga.oculto === 1 ? 0 : 1;
+        await env.DB.prepare('UPDATE mangas SET oculto = ? WHERE id = ?').bind(new_oculto, id).run();
+        return json({ success: true, oculto: new_oculto });
+      } catch (e) {
+        return err(e.message, 500);
+      }
+    }
+
+    if (pathname === '/api/mangas' && method === 'POST') {
         const tokenUser = await getUser(request, env);
         const caller = await checkActive(tokenUser, env);
         if (!caller || (!caller.is_superadmin && caller.rol !== 'admin' && caller.rol !== 'admin_scan' && caller.rol !== 'uploader')) {

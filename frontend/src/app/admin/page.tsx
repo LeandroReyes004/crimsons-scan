@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
   LayoutDashboard, BookOpen, Clock, Users, LogOut, Plus, Check, X,
-  ChevronRight, ChevronDown, BookMarked, Eye, TrendingUp, RefreshCw, Loader2,
+  ChevronRight, ChevronDown, BookMarked, Eye, EyeOff, TrendingUp, RefreshCw, Loader2,
   AlertCircle, Edit3, UserPlus, ShieldCheck, Ban, Upload, Image as ImageIcon,
   Layers, Trash2, Menu, Settings, Mail, BarChart2, DollarSign, AtSign, Search, MessageSquare,
   ArrowUp, ArrowDown, Save, Download, FileText, AlertTriangle, MousePointerClick, Calendar
@@ -20,7 +20,7 @@ type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'con
 
 // ── Tipos ──────────────────────────────────────────────────
 interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; }
-interface Manga { id: string; titulo: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number; fecha_actualizacion: string; scan_nombre?: string; descripcion?: string | null; es_adulto?: number; scan_id?: string | null; generos?: string; joint_scan_id?: string | null; joint_status?: string | null; joint_scan_nombre?: string | null; }
+interface Manga { id: string; titulo: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number; oculto?: number; fecha_actualizacion: string; scan_nombre?: string; descripcion?: string | null; es_adulto?: number; scan_id?: string | null; generos?: string; joint_scan_id?: string | null; joint_status?: string | null; joint_scan_nombre?: string | null; }
 interface Capitulo { id: string; numero: number; titulo: string; estado: string; manga_titulo: string; manga_id: string; uploader_username: string; notas_admin: string | null; fecha_subida: string; num_paginas?: number; }
 interface Usuario { id: string; username: string; email: string; rol: string; activo: number; fecha_registro: string; ultimo_acceso: string | null; scan_id?: string; scan_nombre?: string; cuenta_pendiente?: number | boolean; }
 interface Scan { id: string; nombre: string; descripcion: string | null; activo: number; miembros: number; contrato_firmado?: number; representante_nombre?: string; representante_discord?: string; binance_pay_id?: string; }
@@ -833,6 +833,25 @@ function SectionMangas() {
     refetch();
   };
 
+
+  const handleToggleHidden = async (m: Manga) => {
+    try {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${API}/api/admin/mangas/${m.id}/toggle_hidden`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      if (res.ok) {
+        refetch();
+      } else {
+        const errorData = await res.json();
+        alert('Error al ocultar manga: ' + (errorData.error || 'Desconocido'));
+      }
+    } catch (e) {
+      alert('Error de red');
+    }
+  };
+
   const handleDelete = async (manga: Manga) => {
     if (!confirm(`¿Eliminar "${manga.titulo}"? Se borrarán todos sus capítulos y páginas. Esta acción no se puede deshacer.`)) return;
     const res = await fetch(`${API}/api/mangas/${manga.id}`, { method: 'DELETE', headers: authHeaders() });
@@ -973,7 +992,7 @@ function SectionMangas() {
                 </div>
                 <div className="flex-1 min-w-0 flex flex-col justify-between">
                   <div>
-                    <p className={`font-bold text-sm dark:text-white ${viewMode === 'list' ? 'truncate' : 'line-clamp-2'}`} title={m.titulo}>{m.titulo}</p>
+                    <p className={`font-bold text-sm dark:text-white ${viewMode === 'list' ? 'truncate' : 'line-clamp-2'} flex items-center gap-1`} title={m.titulo}>{m.titulo} {m.oculto === 1 && <span title="Oculto"><EyeOff size={12} className="text-indigo-500 shrink-0" /></span>}</p>
                     <p className="text-xs text-gray-400 mt-0.5 truncate uppercase tracking-wider">{m.tipo}</p>
                     {(m as any).generos && JSON.parse((m as any).generos || '[]').length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
@@ -1013,6 +1032,16 @@ function SectionMangas() {
                           <Edit3 size={14}/>
                         </button>
                       )}
+                      
+                      {/* Ocultar/Mostrar Obra (solo admin/superadmin, no isReadOnly) */}
+                      {!isReadOnly && isGlobalAdmin && (
+                        <button onClick={() => handleToggleHidden(m)}
+                          className={`p-1.5 rounded-lg transition ${m.oculto === 1 ? 'text-indigo-500 bg-indigo-50 dark:bg-indigo-500/10' : 'text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10'}`}
+                          title={m.oculto === 1 ? 'Mostrar Obra' : 'Ocultar Obra'}>
+                          {m.oculto === 1 ? <EyeOff size={14}/> : <Eye size={14}/>}
+                        </button>
+                      )}
+
                       {/* Deshabilitar obra — solo admin global o superadmin */}
                       {isGlobalAdmin && (
                         m.estado === 'deshabilitado' ? (
@@ -1839,7 +1868,7 @@ interface RevenueScan {
   contrato_firmado?: number; representante_nombre?: string; binance_pay_id?: string;
 }
 interface RevenueManga {
-  id: string; titulo: string; views_total: number; views_mes: number; tipo: string; estado: string;
+  id: string; titulo: string; views_total: number; oculto?: number; views_mes: number; tipo: string; estado: string;
   capitulos: { id: string; numero: number; titulo: string | null; views: number }[];
 }
 

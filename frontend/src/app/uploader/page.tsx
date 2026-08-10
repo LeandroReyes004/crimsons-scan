@@ -20,7 +20,8 @@ import { CSS } from '@dnd-kit/utilities';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
-interface Manga    { id: string; titulo: string; tipo: string; estado: string; }
+interface Manga    { id: string; titulo: string; tipo: string;
+  slug?: string; estado: string; }
 interface Capitulo { id: string; numero: number; titulo: string; estado: string; notas_admin: string | null; fecha_subida: string; num_paginas?: number; }
 interface PageFile { id: string; file: File; preview: string; order: number; status: 'pending' | 'uploading' | 'done' | 'error'; progress?: number; error?: string; }
 
@@ -769,10 +770,19 @@ export default function UploaderPage() {
                   <p className="text-sm text-gray-500 mt-1">{capEstado === 'programado' ? `Se publicará el ${new Date(fechaPub).toLocaleString('es')}` : 'Ya visible para los lectores'}</p>
                 </div>
                 <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto mt-1">
-                  <Link href={`/manga/reader/${selectedManga.id}/chapter/${capId}`} target="_blank"
+                  
+                  <Link href={`/manga/reader/${selectedManga.slug || selectedManga.id}/chapter/${capId}`} target="_blank"
                     className="flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold px-5 py-3 rounded-xl transition active:scale-95">
                     👁 Ver capítulo
                   </Link>
+                  <button onClick={() => {
+                      navigator.clipboard.writeText(`${window.location.origin}/manga/reader/${selectedManga.slug || selectedManga.id}/chapter/${capId}`);
+                      alert('¡Enlace copiado al portapapeles!');
+                    }}
+                    className="flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white text-sm font-bold px-5 py-3 rounded-xl transition active:scale-95">
+                    🔗 Compartir
+                  </button>
+
                   <button onClick={resetUpload} className="text-sm font-bold text-gray-600 dark:text-gray-300 px-5 py-3 rounded-xl border border-gray-200 dark:border-white/10 hover:border-rose-300 transition active:scale-95">
                     + Subir otro
                   </button>
