@@ -1,11 +1,13 @@
 'use client';
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 import TopNav from '@/components/TopNav';
 import Footer from '@/components/Footer';
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const pathname = usePathname();
 
   // Recuperar la preferencia guardada
   useEffect(() => {
@@ -14,6 +16,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
       setSidebarOpen(saved === 'true');
     }
   }, []);
+
+  // Si estamos en el panel de administrador, devolvemos el contenido sin el layout
+  const isNoLayoutRoute = pathname?.startsWith('/admin') || pathname?.startsWith('/uploader');
+  if (isNoLayoutRoute) {
+    return <>{children}</>;
+  }
 
   const toggleSidebar = () => {
     const newState = !sidebarOpen;

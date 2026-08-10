@@ -19,20 +19,21 @@ const MENU_ITEMS = [
   { name: 'Lectura', href: '/lectura', icon: BookOpen, badge: 'Nuevo' },
   { name: 'Comunidad', href: '/comunidad', icon: Users },
   { name: 'Donaciones', href: '/donaciones', icon: Coffee },
+  { name: 'Adulto (+18)', href: '/adulto', icon: Flame, isAdult: true },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="fixed top-0 left-0 h-screen w-64 bg-[#0a0a0c] border-r border-white/5 flex flex-col z-50 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
+    <aside className="fixed top-0 left-0 h-screen w-64 bg-white dark:bg-[#0a0a0c] border-r border-gray-200 dark:border-white/5 flex flex-col z-50 overflow-y-auto [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-200 dark:[&::-webkit-scrollbar-thumb]:bg-white/10 [&::-webkit-scrollbar-thumb]:rounded-full">
       {/* Logo Area */}
-      <div className="p-6 sticky top-0 bg-[#0a0a0c] z-10 border-b border-white/5 mb-4">
+      <div className="p-6 sticky top-0 bg-white dark:bg-[#0a0a0c] z-10 border-b border-gray-200 dark:border-white/5 mb-4">
         <Link href="/" className="flex items-center gap-3 group">
           <img src="/logo.png" alt="Logo" className="w-8 h-8 object-contain" />
           <div className="flex flex-col">
-            <span className="text-rose-500 font-black text-lg tracking-tight uppercase leading-none">Crimson Scan</span>
-            <span className="text-gray-500 text-[10px] uppercase font-bold tracking-widest mt-0.5">Tu mundo, tus historias.</span>
+            <span className="text-rose-600 dark:text-rose-500 font-black text-lg tracking-tight uppercase leading-none">Crimson Scan</span>
+            <span className="text-gray-500 dark:text-gray-500 text-[10px] uppercase font-bold tracking-widest mt-0.5">Tu mundo, tus historias.</span>
           </div>
         </Link>
       </div>
@@ -48,14 +49,16 @@ export default function Sidebar() {
               href={item.href}
               className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
                 isActive 
-                  ? 'bg-gradient-to-r from-rose-500/20 to-transparent text-rose-500 font-bold' 
-                  : 'text-gray-400 hover:text-white hover:bg-white/5 font-medium'
+                  ? 'bg-rose-50 dark:bg-gradient-to-r dark:from-rose-500/20 dark:to-transparent text-rose-600 dark:text-rose-500 font-bold' 
+                  : item.isAdult
+                    ? 'text-rose-500 font-bold hover:bg-rose-50 dark:hover:bg-white/5'
+                    : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white hover:bg-gray-100 dark:hover:bg-white/5 font-medium'
               }`}
             >
-              <Icon size={18} className={isActive ? 'text-rose-500' : 'text-gray-500'} />
+              <Icon size={18} className={isActive ? 'text-rose-600 dark:text-rose-500' : item.isAdult ? 'text-rose-500' : 'text-gray-400 dark:text-gray-500'} />
               <span className="text-sm">{item.name}</span>
               {item.badge && (
-                <span className="ml-auto bg-rose-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
+                <span className="ml-auto bg-rose-600 dark:bg-rose-500 text-white text-[9px] font-black uppercase px-2 py-0.5 rounded-full">
                   {item.badge}
                 </span>
               )}
