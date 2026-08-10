@@ -1,9 +1,10 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
-import { Search, Bell, Moon, Sun, UserCircle, Settings, LogOut, Menu } from 'lucide-react';
+import { Search, Bell, Moon, Sun, UserCircle, Settings, LogOut, Menu, Flame } from 'lucide-react';
 import { getUser, logout } from '@/lib/auth';
 import { useTheme } from 'next-themes';
+import { usePathname, useRouter } from 'next/navigation';
 
 export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }) {
   const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
@@ -11,6 +12,18 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
   const dropdownRef = useRef<HTMLDivElement>(null);
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const isAdultMode = pathname === '/adulto';
+  
+  const toggleAdultMode = () => {
+    if (isAdultMode) {
+      router.push('/');
+    } else {
+      router.push('/adulto');
+    }
+  };
 
   useEffect(() => {
     setMounted(true);
@@ -92,6 +105,21 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
         )}
 
         <div className="flex items-center gap-3 border-l border-gray-200 dark:border-white/10 pl-4 sm:pl-6">
+          {/* Adult Toggle */}
+          {mounted && (
+            <button 
+              onClick={toggleAdultMode}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
+                isAdultMode 
+                  ? 'bg-rose-500 text-white border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.3)]' 
+                  : 'bg-transparent text-gray-500 border-gray-300 dark:border-white/10 hover:border-rose-500/50 hover:text-rose-500'
+              }`}
+            >
+              <Flame size={14} className={isAdultMode ? 'text-white' : 'text-rose-500'} />
+              <span>+18</span>
+            </button>
+          )}
+
           <button className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors relative">
             <Bell size={20} />
             <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-[#0a0a0c]"></span>
