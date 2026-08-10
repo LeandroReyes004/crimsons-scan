@@ -1,0 +1,196 @@
+﻿
+> function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
+    initial?: Partial<Manga>;
+    onSave: (data: any, coverFile: File | null) => Promise<void>;
+    onCancel: () => void;
+    title: string;
+    isSuperAdmin: boolean;
+  }) {
+    const currentUser = getUser();
+    const [titulo, setTitulo]       = useState(initial?.titulo || '');
+    const [tipo, setTipo]           = useState(initial?.tipo || 'manga');
+    const [estado, setEstado]       = useState(initial?.estado || 'en_curso');
+    const [descripcion, setDesc]    = useState(initial?.descripcion || '');
+    const [jointScanId, setJointScanId] = useState(initial?.joint_scan_id || '');
+    // Si no es superadmin, el scan_id se fija al del usuario actual (o al del manga si ya tenÃ­a uno)
+    const [scanId, setScanId]       = useState(
+      isSuperAdmin
+        ? (initial?.scan_id || '')
+        : (initial?.scan_id || currentUser?.scan_id || '')
+    );
+    const [scans, setScans]         = useState<{id:string; nombre:string}[]>([]);
+    const [generos, setGeneros]     = useState<string[]>(() => {
+      try { return initial ? JSON.parse(initial.generos || '[]') : []; } catch { return []; }
+    });
+    const [esAdulto, setEsAdulto]   = useState<boolean>(!!(initial?.es_adulto));
+    const [coverFile, setCoverFile] = useState<File | null>(null);
+    const [saving, setSaving]       = useState(false);
+    const [feedback, setFeedback]   = useState<string | null>(null);
+  
+    useEffect(() => {
+      fetch(`${API}/api/scans`, { headers: authHeaders() })
+        .then(r => r.json())
+        .then(d => setScans(d.scans || []));
+    }, []);
+  
+    const toggleGenre = (g: string) => setGeneros(prev => prev.includes(g) ? prev.filter(x => x !== g) : [...prev, g]);
+  
+    const handleSubmit = async (e: React.FormEvent) => {
+      e.preventDefault();
+      setSaving(true);
+      setFeedback(null);
+      try {
+        await onSave({ titulo, tipo, estado, descripcion, generos, scan_id: scanId || null, joint_scan_id: jointScanId 
+|| null, es_adulto: esAdulto }, coverFile);
+        setFeedback('Ã¢Å“â€¦ Guardado');
+        setTimeout(onCancel, 1200);
+      } catch (err: any) {
+        setFeedback(`Ã¢ÂÅ’ ${err.message}`);
+      } finally {
+        setSaving(false);
+      }
+    };
+  
+    return (
+      <div className="bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 rounded-2xl p-6 shadow-xl 
+animate-in slide-in-from-top-2 duration-300">
+        <h3 className="font-bold dark:text-white mb-5 flex items-center gap-2"><Plus size={16} 
+className="text-rose-500"/> {title}</h3>
+        {feedback && (
+          <div className={`mb-4 p-3 rounded-xl text-sm font-medium ${feedback.startsWith('Ã¢Å“â€¦') ? 'bg-emerald-50 
+text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' : 'bg-red-50 text-red-700 dark:bg-red-500/10 
+dark:text-red-400'}`}>
+            {feedback}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-1 flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">TÃ­tulo *</label>
+              <input value={titulo} onChange={e => setTitulo(e.target.value)} required placeholder="Ej: Solo Leveling 
+Ragnarok"
+                className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 
+rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"/>
+            </div>
+            {isSuperAdmin && (
+              <div className="flex flex-col gap-1.5 md:col-span-2">
+                <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center 
+gap-1"><Layers size={11}/> Scan Responsable</label>
+                <select value={scanId} onChange={e => setScanId(e.target.value)}
+                  className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 
+rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
+                  <option value="">â€” Sin asignar â€”</option>
+                  {scans.map(s => (
+                    <option key={s.id} value={s.id}>{s.nombre}</option>
+                  ))}
+                </select>
+              </div>
+            )}
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Tipo</label>
+              <select value={tipo} onChange={e => setTipo(e.target.value)}
+                className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 
+rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
+                <option value="manga">Manga</option>
+                <option value="manhwa">Manhwa</option>
+                <option value="manhua">Manhua</option>
+                <option value="novela">Novela</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Estado</label>
+              <select value={estado} onChange={e => setEstado(e.target.value)}
+                className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 
+rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
+                <option value="en_curso">En curso</option>
+                <option value="completado">Completado</option>
+                <option value="pausado">Pausado</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-1.5 md:col-span-1">
+               <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center 
+gap-1">Ã°Å¸Â¤Â Joint (Opcional)</label>
+               <select value={jointScanId} onChange={e => setJointScanId(e.target.value)}
+                  className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 
+rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
+                  <option value="">â€” Ninguno â€”</option>
+                  {scans.filter(s => s.id !== scanId && s.id !== currentUser?.scan_id).map(s => (
+                    <option key={s.id} value={s.id}>{s.nombre}</option>
+                  ))}
+               </select>
+            </div>
+            <div className="flex items-center gap-3 mt-1 md:col-span-2">
+              <button type="button" onClick={() => setEsAdulto(v => !v)}
+                className={`w-10 h-6 rounded-full transition-colors shrink-0 ${esAdulto ? 'bg-rose-500' : 'bg-gray-300 
+dark:bg-white/20'}`}>
+                <span className={`block w-4 h-4 bg-white rounded-full shadow transition-transform mx-1 ${esAdulto ? 
+'translate-x-4' : 'translate-x-0'}`}/>
+              </button>
+              <span className="text-sm dark:text-white font-medium">Contenido +18</span>
+            </div>
+          </div>
+  
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Sinopsis</label>
+            <textarea value={descripcion} onChange={e => setDesc(e.target.value)} rows={2} placeholder="DescripciÃ³n 
+de la obra..."
+              className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 
+rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none resize-none transition"/>
+          </div>
+  
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center 
+justify-between">
+              GÃ©neros
+              {generos.length > 0 && <span className="text-rose-500 normal-case text-[10px] bg-rose-500/10 px-2 py-0.5 
+rounded-full">{generos.length} seleccionados</span>}
+            </label>
+            <div className="flex flex-wrap gap-1.5">
+              {GENRES_LIST.map(g => (
+                <button key={g} type="button" onClick={() => toggleGenre(g)}
+                  className={`px-2.5 py-1 rounded-full text-xs font-semibold transition border ${
+                    generos.includes(g)
+                      ? 'bg-rose-500 text-white border-rose-500'
+                      : 'bg-transparent text-gray-500 dark:text-gray-400 border-gray-200 dark:border-white/10 
+hover:border-rose-400 hover:text-rose-500'
+                  }`}>
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+  
+          <div className="flex flex-col gap-1.5">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center 
+gap-1.5"><ImageIcon size={12}/> Portada</label>
+            <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; setCoverFile(f ? 
+await toWebP(f, 800) : null); }}
+              className="text-sm text-gray-500 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 
+file:text-xs file:font-bold file:bg-rose-50 file:text-rose-700 dark:file:bg-rose-500/10 dark:file:text-rose-400 
+cursor-pointer"/>
+          </div>
+  
+          <div className="flex gap-3 pt-2">
+            <button type="submit" disabled={saving || !titulo}
+              className="flex items-center gap-2 bg-rose-600 hover:bg-rose-500 text-white px-5 py-2.5 rounded-xl 
+text-sm font-bold disabled:opacity-50 transition-all">
+              {saving ? <Loader2 size={16} className="animate-spin"/> : <Check size={16}/>}
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+            <button type="button" onClick={onCancel}
+              className="px-5 py-2.5 rounded-xl text-sm font-bold text-gray-500 hover:bg-gray-100 
+dark:hover:bg-white/5 transition">
+              Cancelar
+            </button>
+          </div>
+        </form>
+      </div>
+    );
+  }
+  
+  interface MangaChapter { id: string; numero: number; titulo: string | null; views: number; fecha_subida: string; 
+estado: string; }
+  
+  function SectionMangas() {
+
+

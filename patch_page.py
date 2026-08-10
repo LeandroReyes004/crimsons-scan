@@ -1,136 +1,20 @@
-'use client';
-import { useState, useEffect, useMemo, useRef } from 'react';
-import Link from 'next/link';
-import { ArrowRight, Flame, Sparkles, Settings, Calendar, Trophy, Menu, X, Heart, LogIn, LogOut, User, TrendingUp, Clock, Sword, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
-import MangaCard from '@/components/MangaCard';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { getUser, login, logout, refreshUser, checkVersion } from '@/lib/auth';
-import { useFavorites } from '@/lib/favorites';
+import re
 
-interface Manga { id: string; slug?: string | null; titulo: string; generos: string; estado: string; tipo: string; views_total: number; cover_r2_key: string | null; fecha_actualizacion: string; ultimo_capitulo: number | null; ultimo_capitulo_id: string | null; ultimo_cap_fecha: string | null; scan_id?: string | null; }
+with open('frontend/src/app/page.tsx', 'r', encoding='utf-8') as f:
+    content = f.read()
 
-function MangaRow({ title, icon, mangas, buildCard, viewAllHref }: {
-  title: string; icon: React.ReactNode; mangas: Manga[];
-  buildCard: (m: Manga, i: number) => React.ReactNode; viewAllHref?: string;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  const scroll = (dir: number) => ref.current?.scrollBy({ left: dir * 640, behavior: 'smooth' });
-  if (mangas.length === 0) return null;
-  return (
-    <section className="max-w-7xl mx-auto w-full px-6 md:px-12 flex flex-col gap-4">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 flex-1">
-          {icon}
-          <h3 className="text-xl font-bold text-gray-900 dark:text-white">{title}</h3>
-          <span className="text-xs text-gray-400 font-medium">{mangas.length} proyectos</span>
-        </div>
-        <div className="flex items-center gap-2">
-          {viewAllHref && (
-            <Link href={viewAllHref} className="text-xs font-bold text-rose-500 hover:text-rose-400 transition flex items-center gap-1">
-              Ver todo <ArrowRight size={12}/>
-            </Link>
-          )}
-          <button onClick={() => scroll(-1)} className="p-1.5 rounded-full bg-gray-100 dark:bg-white/10 hover:bg-rose-500/20 text-gray-500 dark:text-gray-300 hover:text-rose-500 transition">
-            <ChevronLeft size={14}/>
-          </button>
-          <button onClick={() => scroll(1)} className="p-1.5 rounded-full bg-gray-100 dark:bg-white/10 hover:bg-rose-500/20 text-gray-500 dark:text-gray-300 hover:text-rose-500 transition">
-            <ChevronRight size={14}/>
-          </button>
-        </div>
-      </div>
-      <div ref={ref} className="flex gap-3 overflow-x-auto pb-2 scroll-smooth [scrollbar-width:none] [&::-webkit-scrollbar]:hidden snap-x snap-mandatory">
-        {mangas.map((m, i) => (
-          <div key={m.id} className="w-[160px] md:w-[180px] shrink-0 snap-start">
-            {buildCard(m, i)}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
+if "import { ArrowRight, Flame, Sparkles, Settings" in content:
+    content = content.replace("import { ArrowRight, Flame, Sparkles, Settings", "import { ArrowRight, Flame, Sparkles, Settings, Calendar, Trophy")
 
-export default function Home() {
-  const [user, setUser]         = useState<ReturnType<typeof getUser>>(null);
-  const [mangas, setMangas]     = useState<Manga[]>([]);
-  const [mobileOpen, setMobileOpen]     = useState(false);
-  const [dropdownOpen, setDropdownOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const [loginOpen, setLoginOpen]   = useState(false);
-  const [loginUser, setLoginUser]   = useState('');
-  const [loginPass, setLoginPass]   = useState('');
-  const [loginErr, setLoginErr]     = useState('');
-  const [loginLoading, setLoginLoading] = useState(false);
-  const { favorites, toggle, isFav } = useFavorites();
+# Find the exact start of the JSX structure of Home
+start_str = '    <div className="min-h-screen pb-20 overflow-x-hidden">'
+start_idx = content.find(start_str)
 
-  const handleLogin = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginErr(''); setLoginLoading(true);
-    try {
-      const u = await login(loginUser, loginPass);
-      setUser(u);
-      setLoginOpen(false);
-      setLoginUser(''); setLoginPass('');
-    } catch (err: any) {
-      setLoginErr(err.message || 'Error al iniciar sesión');
-    } finally { setLoginLoading(false); }
-  };
-
-  const handleLogout = () => { logout(); setUser(null); };
-
-  useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) setDropdownOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, []);
-
-  useEffect(() => {
-    checkVersion();
-    setUser(getUser());
-    refreshUser().then(u => { if (u) setUser(u); });
-    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
-    fetch(`${API}/api/mangas`)
-      .then(r => r.json())
-      .then(d => setMangas(d.mangas || []))
-      .catch(() => {});
-  }, []);
-
-  const favMangas  = mangas.filter(m => favorites.includes(m.id));
-  const featured   = mangas.length > 0
-    ? [...mangas].sort((a, b) => b.views_total - a.views_total)[0]
-    : null;
-  const masLeidos  = useMemo(() => [...mangas].sort((a, b) => b.views_total - a.views_total).slice(0, 20), [mangas]);
-  const recientes  = useMemo(() => [...mangas].slice(0, 20), [mangas]);
-  const delScan    = useMemo(() => mangas.filter(m => m.scan_id === 'scan-001'), [mangas]);
-  const API_URL   = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
-  const featuredCover = featured?.cover_r2_key ? `${API_URL}/api/cover/${featured.id}` : null;
-
-  const buildCard = (m: Manga, i: number) => {
-    let tags: string[] = [];
-    try { tags = JSON.parse(m.generos || '[]').slice(0, 2); } catch {}
-    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
-    return (
-      <MangaCard
-        key={m.id}
-        id={m.id}
-        slug={m.slug}
-        title={m.titulo}
-        imageUrl={m.cover_r2_key ? `${API}/api/cover/${m.id}` : '/portada.jpg'}
-        chapter={m.ultimo_capitulo != null ? String(m.ultimo_capitulo) : null}
-        chapterUrl={m.ultimo_capitulo_id ? `/manga/reader/${m.slug ?? m.id}/chapter/${m.ultimo_capitulo_id}` : null}
-        updatedAt={m.ultimo_cap_fecha}
-        tags={tags}
-        status={m.estado}
-        isHot={m.views_total > 1000}
-        isFav={isFav(m.id)}
-        onToggleFav={toggle}
-      />
-    );
-  };
-
-  return (
-    <div className="pb-20 overflow-x-hidden">
+if start_idx != -1:
+    end_idx = content.rfind('  );\n}')
+    
+    if end_idx != -1:
+        new_return = """    <div className="pb-20 overflow-x-hidden">
       <div className="max-w-[1600px] mx-auto w-full px-4 md:px-8 py-6 flex flex-col lg:flex-row gap-8">
         
         {/* LEFT COLUMN: Main Content */}
@@ -284,5 +168,12 @@ export default function Home() {
           </div>
         </div>
       )}
-    </div>  );
-}
+    </div>"""
+        content = content[:start_idx] + new_return + content[end_idx:]
+        with open('frontend/src/app/page.tsx', 'w', encoding='utf-8') as f:
+            f.write(content)
+        print("Patched successfully")
+    else:
+        print("Could not find end index")
+else:
+    print("Could not find start_str")

@@ -4,8 +4,8 @@ import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import LateralAds from '@/components/LateralAds';
 import AdBlockDetector from '@/components/AdBlockDetector';
-import Footer from '@/components/Footer';
 import GlobalPopunders from '@/components/GlobalPopunders';
+import ClientLayout from '@/components/ClientLayout';
 
 const geistSans = Geist({
   variable: '--font-geist-sans',
@@ -54,8 +54,11 @@ export default function RootLayout({
           disableTransitionOnChange
         >
           <AdBlockDetector />
-          {children}
-          <Footer />
+          
+          <ClientLayout>
+            {children}
+          </ClientLayout>
+          
           <LateralAds />
           <GlobalPopunders />
         </ThemeProvider>
