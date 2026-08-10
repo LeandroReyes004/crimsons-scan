@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { ArrowRight, Flame, Sparkles, Settings, Calendar, Trophy, Menu, X, Heart, LogIn, LogOut, User, TrendingUp, Clock, Sword, ChevronLeft, ChevronRight, UserCircle } from 'lucide-react';
 import MangaCard from '@/components/MangaCard';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import HeroCarousel from '@/components/HeroCarousel';
 import { getUser, login, logout, refreshUser, checkVersion } from '@/lib/auth';
 import { useFavorites } from '@/lib/favorites';
 
@@ -136,44 +137,8 @@ export default function Home() {
         {/* LEFT COLUMN: Main Content */}
         <main className="flex-1 min-w-0 flex flex-col gap-12">
           
-          {/* HERO BANNER */}
-          <section className="relative w-full rounded-3xl overflow-hidden bg-[#111114] border border-white/5 shadow-2xl flex flex-col md:flex-row min-h-[350px]">
-            {featured ? (
-              <>
-                {/* Image Background for Mobile / Overlay */}
-                <div className="absolute inset-0 z-0 overflow-hidden opacity-30 md:opacity-20 blur-xl">
-                  <img src={featuredCover || '/portada.jpg'} alt="" className="w-full h-full object-cover" />
-                </div>
-                
-                <div className="relative z-10 p-8 md:p-10 flex-1 flex flex-col justify-center">
-                  <span className="bg-rose-500 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-[0_0_15px_rgba(244,63,94,0.5)] w-max mb-4">
-                    NUEVO
-                  </span>
-                  <h2 className="text-3xl md:text-5xl font-extrabold text-white leading-tight mb-4 tracking-tight drop-shadow-md">
-                    {featured.titulo}
-                  </h2>
-                  <p className="text-gray-300 text-sm md:text-base max-w-lg mb-8 line-clamp-3 leading-relaxed">
-                    {(featured as any).descripcion || 'El proyecto más esperado ya está aquí. ¡Acompáñanos en esta increíble historia llena de emociones!'}
-                  </p>
-                  
-                  <Link href={featured.ultimo_capitulo_id ? `/manga/reader/${featured.id}/chapter/${featured.ultimo_capitulo_id}` : `/manga/reader/${featured.id}`} 
-                    className="flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 text-white font-bold py-3 px-8 rounded-full shadow-[0_10px_25px_rgba(225,29,72,0.4)] transition-all active:scale-95 w-max">
-                    LEE AHORA <ArrowRight size={18}/>
-                  </Link>
-                </div>
-                
-                {/* Image on Right for Desktop */}
-                <div className="hidden md:block relative z-10 w-1/3 shrink-0">
-                  <div className="absolute inset-0 bg-gradient-to-r from-[#111114] to-transparent z-10" />
-                  <img src={featuredCover || '/portada.jpg'} alt={featured.titulo} className="w-full h-full object-cover object-center" />
-                </div>
-              </>
-            ) : (
-              <div className="w-full h-full flex items-center justify-center min-h-[350px] animate-pulse">
-                <div className="w-12 h-12 rounded-full border-4 border-rose-500/20 border-t-rose-500 animate-spin" />
-              </div>
-            )}
-          </section>
+          {/* HERO BANNER CAROUSEL */}
+          <HeroCarousel mangas={mangas} />
 
           {/* CONTINUAR LEYENDO (Favoritos o Más Leídos) */}
           <MangaRow
