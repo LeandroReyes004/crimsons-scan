@@ -220,7 +220,7 @@ export default function ScanPage() {
                               imageUrl={m.cover_r2_key ? `${API}/api/cover/${m.id}` : '/portada.jpg'}
                               chapter={m.ultimo_capitulo != null ? String(m.ultimo_capitulo) : null}
                               chapterUrl={m.ultimo_capitulo_id ? `/manga/reader/${m.slug ?? m.id}/chapter/${m.ultimo_capitulo_id}` : null}
-                              updatedAt={m.ultimo_cap_fecha} tags={tags} isHot={m.views_total > 1000}
+                              updatedAt={m.ultimo_cap_fecha} tags={tags} status={m.estado} isHot={m.views_total > 1000}
                               isFav={isFav(m.id)} onToggleFav={toggle}
                             />
                           );
@@ -245,7 +245,7 @@ export default function ScanPage() {
                           imageUrl={m.cover_r2_key ? `${API}/api/cover/${m.id}` : '/portada.jpg'}
                           chapter={m.ultimo_capitulo != null ? String(m.ultimo_capitulo) : null}
                           chapterUrl={m.ultimo_capitulo_id ? `/manga/reader/${m.slug ?? m.id}/chapter/${m.ultimo_capitulo_id}` : null}
-                          updatedAt={m.ultimo_cap_fecha} tags={tags} isHot={m.views_total > 1000}
+                          updatedAt={m.ultimo_cap_fecha} tags={tags} status={m.estado} isHot={m.views_total > 1000}
                           isFav={isFav(m.id)} onToggleFav={toggle}
                         />
                       );

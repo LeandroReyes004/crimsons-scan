@@ -121,6 +121,7 @@ export default function Home() {
         chapterUrl={m.ultimo_capitulo_id ? `/manga/reader/${m.slug ?? m.id}/chapter/${m.ultimo_capitulo_id}` : null}
         updatedAt={m.ultimo_cap_fecha}
         tags={tags}
+        status={m.estado}
         isHot={m.views_total > 1000}
         isFav={isFav(m.id)}
         onToggleFav={toggle}

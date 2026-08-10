@@ -1,4 +1,9 @@
 export async function toWebP(file: File, maxWidth = 1000, quality = 0.85): Promise<File> {
+  // Omitir conversión si ya es webp o gif, para conservar imágenes animadas
+  if (file.type === 'image/webp' || file.type === 'image/gif') {
+    return file;
+  }
+
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);

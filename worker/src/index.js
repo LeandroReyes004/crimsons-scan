@@ -361,11 +361,12 @@ export default {
             SELECT lower(hex(randomblob(16))), scan_id, id, ?, views_mes, ?
             FROM mangas WHERE views_mes > 0
           `).bind(pastMes, ts).run();
+          
+          // A petición del usuario: NO se cortan (resetean) las vistas mensuales.
+          // await env.DB.prepare('UPDATE mangas SET views_mes = 0').run();
         } catch (e) {
-          console.error("Error guardando historial de revenue:", e);
+          console.error("Error guardando historial de revenue. Abortando reset:", e);
         }
-
-        await env.DB.prepare('UPDATE mangas SET views_mes = 0').run();
         return;
       }
 

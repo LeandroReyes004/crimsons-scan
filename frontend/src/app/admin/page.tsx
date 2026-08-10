@@ -644,7 +644,7 @@ function MangaForm({ initial, onSave, onCancel, title, isSuperAdmin }: {
           </div>
   
           <div className="flex flex-col gap-2">
-            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5"><ImageIcon size={12}/> Portada</label>
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1.5"><ImageIcon size={12}/> Portada (Soporta WebP Animado)</label>
             <input type="file" accept="image/*" onChange={async e => { const f = e.target.files?.[0]; setCoverFile(f ? await toWebP(f, 800) : null); }}
               className="w-full text-sm text-gray-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-rose-50 file:text-rose-700 dark:file:bg-rose-500/10 dark:file:text-rose-400 cursor-pointer border border-dashed border-gray-200 dark:border-white/10 rounded-xl py-2 px-2 hover:bg-gray-50 dark:hover:bg-white/2 transition"/>
           </div>
@@ -1850,6 +1850,7 @@ function SectionRevenue() {
   const ownScanId    = (!isSuperAdmin && currentUser?.scan_id) ? currentUser.scan_id : null;
 
   const [mes, setMes]                       = useState<string>('');
+  const previousMesRef                      = useRef<string>(mes);
   const [totalIngresos, setTotalIngresos]   = useState<number | ''>('');
   const endpointUrl = isSuperAdmin ? `/api/admin/revenue${mes ? `?mes=${mes}` : ''}` : '/api/admin/revenue/__skip__';
   const { data, loading, refetch } = useAPI<{ scans: RevenueScan[]; grand_total: number; grand_total_mes: number }>(endpointUrl);
@@ -1870,9 +1871,20 @@ function SectionRevenue() {
   }, [data, selectedScans]);
 
   useEffect(() => {
-    setScanDetail({});
-    setExpandedScan(ownScanId);
-  }, [mes, ownScanId]);
+    if (previousMesRef.current !== mes) {
+      previousMesRef.current = mes;
+      setScanDetail({});
+      
+      if (!ownScanId && expandedScan) {
+        // Superadmin: recargar el scan actualmente expandido para el nuevo mes
+        setLoadingDetail(expandedScan);
+        fetch(`${API}/api/admin/revenue/${expandedScan}${mes ? `?mes=${mes}` : ''}`, { headers: authHeaders() })
+          .then(r => r.json())
+          .then(d => { setScanDetail(prev => ({ ...prev, [expandedScan]: d })); })
+          .finally(() => setLoadingDetail(null));
+      }
+    }
+  }, [mes, ownScanId, expandedScan]);
 
   // Para admin_scan: cargar el detalle de su scan directamente al montar
   useEffect(() => {
@@ -2926,7 +2938,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
             />
           </div>
           <div className="flex flex-col gap-2 flex-1">
-            <p className="text-sm text-gray-500">Sube una imagen de portada para tu scan (PNG, JPG — máx 5MB). Se mostrará en la página de comunidad.</p>
+            <p className="text-sm text-gray-500">Sube una imagen de portada para tu scan (PNG, JPG, WebP Animado — máx 5MB). Se mostrará en la página de comunidad.</p>
             <button onClick={() => imgRef.current?.click()} disabled={imgUploading}
               className="flex items-center gap-2 text-sm font-bold text-white bg-rose-600 hover:bg-rose-500 disabled:opacity-50 px-4 py-2 rounded-xl transition w-fit">
               {imgUploading ? <><Loader2 size={14} className="animate-spin"/> Subiendo...</> : <><Upload size={14}/> Cambiar imagen</>}
