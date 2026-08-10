@@ -65,16 +65,11 @@ export default function HeroCarousel({ mangas }: { mangas: Manga[] }) {
               }`}>
                 NUEVO
               </span>
-              <h2 className={`text-3xl md:text-5xl font-extrabold text-white leading-tight mb-4 tracking-tight drop-shadow-md transition-all duration-700 delay-200 ${
+              <h2 className={`text-3xl md:text-5xl font-extrabold text-white leading-tight mb-8 tracking-tight drop-shadow-md transition-all duration-700 delay-200 line-clamp-3 ${
                 isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               }`}>
                 {item.titulo}
               </h2>
-              <p className={`text-gray-300 text-sm md:text-base max-w-lg mb-8 line-clamp-3 leading-relaxed transition-all duration-700 delay-300 ${
-                isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
-              }`}>
-                {item.descripcion || 'El proyecto más esperado ya está aquí. ¡Acompáñanos en esta increíble historia llena de emociones!'}
-              </p>
               
               <Link 
                 href={item.ultimo_capitulo_id ? `/manga/reader/${item.slug ?? item.id}/chapter/${item.ultimo_capitulo_id}` : `/manga/reader/${item.slug ?? item.id}`} 
