@@ -5,7 +5,7 @@ import { Search, Bell, Moon, Sun, UserCircle, Settings, LogOut, Menu } from 'luc
 import { getUser, logout } from '@/lib/auth';
 import { useTheme } from 'next-themes';
 
-export default function TopNav() {
+export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }) {
   const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -33,9 +33,9 @@ export default function TopNav() {
 
   return (
     <header className="sticky top-0 z-40 bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-white/5 py-4 px-6 md:px-10 flex items-center justify-between">
-      {/* Mobile Menu Toggle (Placeholder for future mobile sidebar toggle) */}
-      <div className="md:hidden flex items-center mr-4">
-        <button className="text-white">
+      {/* Menu Toggle */}
+      <div className="flex items-center mr-4">
+        <button onClick={toggleSidebar} className="text-gray-400 hover:text-white transition-colors p-2 -ml-2 rounded-xl hover:bg-white/5">
           <Menu size={24} />
         </button>
       </div>
