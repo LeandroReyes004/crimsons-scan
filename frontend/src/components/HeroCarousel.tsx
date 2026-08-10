@@ -47,7 +47,7 @@ export default function HeroCarousel({ mangas }: { mangas: Manga[] }) {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
   return (
-    <section className="relative w-full rounded-3xl overflow-hidden bg-[#111114] border border-white/5 shadow-2xl min-h-[350px]">
+    <section className="relative w-full rounded-2xl overflow-hidden bg-[#0a0a0c] border border-pink-900/30 shadow-2xl min-h-[380px] md:min-h-[420px]">
       {carouselItems.map((item, idx) => {
         const coverUrl = item.cover_r2_key ? `${API_URL}/api/cover/${item.id}` : '/portada.jpg';
         const isActive = idx === currentIndex;
@@ -55,27 +55,29 @@ export default function HeroCarousel({ mangas }: { mangas: Manga[] }) {
         return (
           <div 
             key={item.id} 
-            className={`absolute inset-0 flex flex-col md:flex-row transition-opacity duration-1000 ease-in-out ${
+            className={`absolute inset-0 flex transition-opacity duration-1000 ease-in-out ${
               isActive ? 'opacity-100 z-10 pointer-events-auto' : 'opacity-0 z-0 pointer-events-none'
             }`}
           >
-            {/* Image Background for Mobile / Overlay */}
-            <div className="absolute inset-0 z-0 overflow-hidden opacity-30 md:opacity-20 blur-xl">
-              <img src={coverUrl} alt="" className="w-full h-full object-cover" />
+            {/* Full Image Background with Gradient Mask */}
+            <div className="absolute inset-0 z-0">
+              <img src={coverUrl} alt="" className="w-full h-full object-cover object-top md:object-center" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#0a0a0c] via-[#0a0a0c]/90 md:via-[#0a0a0c]/70 to-transparent z-10" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a0c] via-transparent to-transparent z-10" />
             </div>
             
-            <div className="relative z-10 p-8 md:p-10 flex-1 flex flex-col justify-center">
-              <span className={`bg-rose-500 text-white text-[10px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-[0_0_15px_rgba(244,63,94,0.5)] w-max mb-4 transition-all duration-700 delay-100 ${
+            <div className="relative z-20 p-8 md:p-12 w-full md:w-2/3 flex flex-col justify-center">
+              <span className={`bg-[#9d174d] text-white text-[10px] font-bold uppercase tracking-widest px-2.5 py-1 rounded-sm w-max mb-5 transition-all duration-700 delay-100 ${
                 isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               }`}>
-                NUEVO
+                ESTRENO
               </span>
-              <h2 className={`text-3xl md:text-5xl font-extrabold text-white leading-tight mb-4 tracking-tight drop-shadow-md transition-all duration-700 delay-200 line-clamp-2 ${
+              <h2 className={`font-['Playfair_Display',_serif] text-4xl md:text-6xl text-white leading-tight mb-4 tracking-tight drop-shadow-[0_2px_10px_rgba(0,0,0,0.8)] transition-all duration-700 delay-200 line-clamp-2 italic ${
                 isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               }`}>
                 {item.titulo}
               </h2>
-              <p className={`text-gray-300 text-sm md:text-base max-w-lg mb-8 line-clamp-2 leading-relaxed transition-all duration-700 delay-300 ${
+              <p className={`text-gray-300/90 text-sm md:text-base max-w-lg mb-8 line-clamp-2 leading-relaxed transition-all duration-700 delay-300 drop-shadow-md ${
                 isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               }`}>
                 {stripHtml(item.descripcion || '') || 'El proyecto más esperado ya está aquí. ¡Acompáñanos en esta increíble historia llena de emociones!'}
@@ -83,20 +85,12 @@ export default function HeroCarousel({ mangas }: { mangas: Manga[] }) {
               
               <Link 
                 href={item.ultimo_capitulo_id ? `/manga/reader/${item.slug ?? item.id}/chapter/${item.ultimo_capitulo_id}` : `/manga/reader/${item.slug ?? item.id}`} 
-                className={`flex items-center justify-center gap-2 bg-gradient-to-r from-rose-500 to-rose-600 hover:from-rose-400 hover:to-rose-500 text-white font-bold py-3 px-8 rounded-full shadow-[0_10px_25px_rgba(225,29,72,0.4)] transition-all active:scale-95 w-max duration-700 delay-500 ${
+                className={`flex items-center justify-center gap-2 bg-gradient-to-r from-[#9d174d] to-[#be185d] hover:from-[#be185d] hover:to-[#db2777] text-white text-sm font-bold py-3 px-8 rounded-md shadow-[0_4px_15px_rgba(157,23,77,0.5)] transition-all active:scale-95 w-max duration-700 delay-500 border border-white/10 ${
                   isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
                 }`}
               >
-                LEE AHORA <ArrowRight size={18}/>
+                Leer ahora <ArrowRight size={16} className="ml-1 opacity-80"/>
               </Link>
-            </div>
-            
-            {/* Image on Right for Desktop */}
-            <div className={`hidden md:block relative z-10 w-1/3 shrink-0 transition-transform duration-1000 ease-out ${
-              isActive ? 'scale-100 opacity-100' : 'scale-105 opacity-0'
-            }`}>
-              <div className="absolute inset-0 bg-gradient-to-r from-[#111114] to-transparent z-10" />
-              <img src={coverUrl} alt={item.titulo} className="w-full h-full object-cover object-center" />
             </div>
           </div>
         );
