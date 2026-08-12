@@ -15,7 +15,7 @@ const MENU_ITEMS = [
   { name: 'Calendario', href: '/calendario', icon: Calendar },
   { name: 'Ranking', href: '/ranking', icon: Trophy },
   { divider: true, key: 'div-2' },
-  { name: 'Favoritos', href: '/favoritos', icon: Heart, badge: 'Próximamente', disabled: true },
+  { name: 'Favoritos', href: '/favoritos', icon: Heart },
   { name: 'Historial', href: '/historial', icon: Clock, badge: 'Próximamente', disabled: true },
   { name: 'Lectura', href: '/lectura', icon: BookOpen, badge: 'Nuevo' },
   { divider: true, key: 'div-3' },
