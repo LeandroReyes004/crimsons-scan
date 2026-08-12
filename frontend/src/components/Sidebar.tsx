@@ -5,8 +5,17 @@ import {
   Home, Compass, Flame, Sparkles, Calendar, Trophy, 
   LayoutList, Heart, Clock, BookOpen, Users, Coffee
 } from 'lucide-react';
+type MenuItem = {
+  name?: string;
+  href?: string;
+  icon?: any;
+  badge?: string;
+  disabled?: boolean;
+  divider?: boolean;
+  key?: string;
+};
 
-const MENU_ITEMS = [
+const MENU_ITEMS: MenuItem[] = [
   { name: 'Inicio', href: '/', icon: Home },
   { name: 'Explorar', href: '/catalogo', icon: Compass },
   { divider: true, key: 'div-1' },
