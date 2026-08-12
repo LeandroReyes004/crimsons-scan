@@ -27,7 +27,7 @@ export default function FavoritosPage() {
 
   useEffect(() => {
     // Comprobar autenticación
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('crimson_token');
     if (!token) {
       setIsAuthenticated(false);
       setLoading(false);
@@ -47,7 +47,7 @@ export default function FavoritosPage() {
       .then(r => {
         if (!r.ok) {
           if (r.status === 401) {
-            localStorage.removeItem('token');
+            localStorage.removeItem('crimson_token');
             setIsAuthenticated(false);
           }
           throw new Error('No autorizado');
