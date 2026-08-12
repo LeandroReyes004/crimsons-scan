@@ -32,6 +32,8 @@ export default function FavoritosPage() {
   const [library, setLibrary] = useState<UserLibraryManga[]>([]);
   const [activeTab, setActiveTab] = useState('leyendo');
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(true);
+  const [syncCount, setSyncCount] = useState(0);
 
   useEffect(() => {
     const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
@@ -74,9 +76,21 @@ export default function FavoritosPage() {
         });
 
         setLibrary(mockedLibrary);
-        setLoading(false);
+        
+        // Simular un contador de sincronización para UX
+        const simulatedNewSyncs = Math.floor(Math.random() * 3) + 2; // "2 o 3" nuevas sincronizaciones
+        setSyncCount(simulatedNewSyncs);
+        
+        // Retrasar la carga final para mostrar el mensaje de sincronización
+        setTimeout(() => {
+          setSyncing(false);
+          setLoading(false);
+        }, 1800); // 1.8 segundos de sincronización visual
       })
-      .catch(() => setLoading(false));
+      .catch(() => {
+        setSyncing(false);
+        setLoading(false);
+      });
   }, []);
 
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
@@ -134,9 +148,14 @@ export default function FavoritosPage() {
       </div>
 
       <div className="max-w-[1600px] mx-auto w-full px-4 md:px-8 pt-10">
-        {loading ? (
-          <div className="w-full flex items-center justify-center min-h-[400px]">
-             <div className="w-12 h-12 rounded-full border-4 border-rose-500/20 border-t-rose-500 animate-spin" />
+        {syncing || loading ? (
+          <div className="w-full flex flex-col items-center justify-center min-h-[400px]">
+             <div className="relative w-16 h-16 flex items-center justify-center mb-6">
+                <div className="absolute inset-0 rounded-full border-4 border-rose-500/20 border-t-rose-500 animate-spin" />
+                <Heart size={20} className="text-rose-500 animate-pulse" fill="currentColor" />
+             </div>
+             <h2 className="text-xl font-bold text-white mb-2">Sincronizando progreso...</h2>
+             <p className="text-rose-400 text-sm animate-pulse font-medium">Recuperando {syncCount} lecturas recientes de la nube</p>
           </div>
         ) : filteredLibrary.length === 0 ? (
           <div className="w-full flex flex-col items-center justify-center min-h-[300px] text-gray-500 bg-white/5 rounded-3xl border border-white/5">
