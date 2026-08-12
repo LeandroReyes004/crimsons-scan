@@ -14,7 +14,6 @@ const MENU_ITEMS = [
   { name: 'Novedades', href: '/novedades', icon: Sparkles, badge: 'Próximamente', disabled: true },
   { name: 'Calendario', href: '/calendario', icon: Calendar },
   { name: 'Ranking', href: '/ranking', icon: Trophy },
-  { name: 'Géneros', href: '/generos', icon: LayoutList },
   { divider: true, key: 'div-2' },
   { name: 'Favoritos', href: '/favoritos', icon: Heart, badge: 'Próximamente', disabled: true },
   { name: 'Historial', href: '/historial', icon: Clock, badge: 'Próximamente', disabled: true },
