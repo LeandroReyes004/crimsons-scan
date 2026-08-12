@@ -14,11 +14,7 @@ const MENU_ITEMS = [
   { name: 'Ranking', href: '/ranking', icon: Trophy },
   { divider: true, key: 'div-2' },
   { name: 'Favoritos', href: '/favoritos', icon: Heart },
-  { name: 'Historial', href: '/historial', icon: Clock, badge: 'Próximamente', disabled: true },
   { name: 'Lectura', href: '/lectura', icon: BookOpen, badge: 'Nuevo' },
-  { divider: true, key: 'div-3' },
-  { name: 'Comunidad', href: '/comunidad', icon: Users, badge: 'Próximamente', disabled: true },
-  { name: 'Donaciones', href: '/donaciones', icon: Coffee, badge: 'Próximamente', disabled: true },
 ];
 
 export default function Sidebar() {
