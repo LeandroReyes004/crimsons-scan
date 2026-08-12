@@ -96,7 +96,7 @@ export default function HeroCarousel({ mangas }: { mangas: Manga[] }) {
               </div>
 
               {/* Title */}
-              <h2 className={`font-black text-4xl md:text-6xl lg:text-7xl text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-300 leading-tight mb-4 tracking-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)] transition-all duration-700 delay-200 line-clamp-2 ${
+              <h2 className={`font-black text-3xl md:text-5xl lg:text-6xl text-transparent bg-clip-text bg-gradient-to-b from-white to-gray-300 leading-tight mb-4 tracking-tight drop-shadow-[0_4px_20px_rgba(0,0,0,0.8)] transition-all duration-700 delay-200 line-clamp-2 ${
                 isActive ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'
               }`}>
                 {item.titulo}
