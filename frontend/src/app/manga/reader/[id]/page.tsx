@@ -255,15 +255,15 @@ export default function MangaDetailPage() {
                 )}
                 {/* Favorito */}
                 <button
-                  onClick={() => toggle(id)}
+                  onClick={() => toggle(manga.id)}
                   className={`flex items-center gap-2 font-bold px-4 py-2.5 rounded-xl transition border text-sm active:scale-95 ${
-                    isFav(id)
+                    isFav(manga.id)
                       ? 'bg-rose-600/20 border-rose-500/40 text-rose-400'
                       : 'bg-white/5 border-white/10 text-gray-400 hover:border-rose-500/40 hover:text-rose-400'
                   }`}
                 >
-                  <Heart size={14} fill={isFav(id) ? 'currentColor' : 'none'}/>
-                  {isFav(id) ? 'En favoritos' : 'Favorito'}
+                  <Heart size={14} fill={isFav(manga.id) ? 'currentColor' : 'none'}/>
+                  {isFav(manga.id) ? 'En favoritos' : 'Favorito'}
                 </button>
               </div>
             )}
