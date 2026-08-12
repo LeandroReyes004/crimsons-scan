@@ -12,7 +12,7 @@ const MENU_ITEMS = [
   { divider: true, key: 'div-1' },
   { name: 'Tendencias', href: '/tendencias', icon: Flame, badge: 'Próximamente', disabled: true },
   { name: 'Novedades', href: '/novedades', icon: Sparkles, badge: 'Próximamente', disabled: true },
-  { name: 'Calendario', href: '/calendario', icon: Calendar, badge: 'Próximamente', disabled: true },
+  { name: 'Calendario', href: '/calendario', icon: Calendar },
   { name: 'Ranking', href: '/ranking', icon: Trophy, badge: 'Próximamente', disabled: true },
   { name: 'Géneros', href: '/generos', icon: LayoutList, badge: 'Próximamente', disabled: true },
   { divider: true, key: 'div-2' },
