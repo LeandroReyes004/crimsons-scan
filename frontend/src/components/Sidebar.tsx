@@ -13,7 +13,7 @@ const MENU_ITEMS = [
   { name: 'Tendencias', href: '/tendencias', icon: Flame, badge: 'Próximamente', disabled: true },
   { name: 'Novedades', href: '/novedades', icon: Sparkles, badge: 'Próximamente', disabled: true },
   { name: 'Calendario', href: '/calendario', icon: Calendar },
-  { name: 'Ranking', href: '/ranking', icon: Trophy, badge: 'Próximamente', disabled: true },
+  { name: 'Ranking', href: '/ranking', icon: Trophy },
   { name: 'Géneros', href: '/generos', icon: LayoutList, badge: 'Próximamente', disabled: true },
   { divider: true, key: 'div-2' },
   { name: 'Favoritos', href: '/favoritos', icon: Heart, badge: 'Próximamente', disabled: true },
