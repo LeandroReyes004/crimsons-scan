@@ -68,15 +68,15 @@ export default function RankingPage() {
     const isBronze = rank === 3;
     
     const colors = isGold 
-      ? { badge: 'from-yellow-400 to-amber-600', shadow: 'shadow-[0_0_30px_rgba(251,191,36,0.4)]', border: 'border-yellow-500/50', size: 'h-80 md:h-96 scale-100 z-30' }
+      ? { badge: 'from-yellow-400 to-amber-600', shadow: 'shadow-[0_0_30px_rgba(251,191,36,0.4)]', border: 'border-yellow-500/50', size: 'w-48 md:w-56 lg:w-64 aspect-[2/3] scale-100 z-30' }
       : isSilver
-      ? { badge: 'from-gray-300 to-gray-500', shadow: 'shadow-[0_0_20px_rgba(156,163,175,0.3)]', border: 'border-gray-400/50', size: 'h-64 md:h-72 scale-95 opacity-90 hover:opacity-100 z-20 mt-8 md:mt-12' }
-      : { badge: 'from-amber-700 to-amber-900', shadow: 'shadow-[0_0_20px_rgba(180,83,9,0.3)]', border: 'border-amber-700/50', size: 'h-56 md:h-64 scale-90 opacity-80 hover:opacity-100 z-10 mt-12 md:mt-20' };
+      ? { badge: 'from-gray-300 to-gray-500', shadow: 'shadow-[0_0_20px_rgba(156,163,175,0.3)]', border: 'border-gray-400/50', size: 'w-40 md:w-48 lg:w-56 aspect-[2/3] scale-95 opacity-90 hover:opacity-100 z-20 mb-4 md:mb-8' }
+      : { badge: 'from-amber-700 to-amber-900', shadow: 'shadow-[0_0_20px_rgba(180,83,9,0.3)]', border: 'border-amber-700/50', size: 'w-32 md:w-40 lg:w-48 aspect-[2/3] scale-90 opacity-80 hover:opacity-100 z-10 mb-8 md:mb-12' };
 
     return (
       <Link 
         href={manga.ultimo_capitulo_id ? `/manga/reader/${manga.slug ?? manga.id}/chapter/${manga.ultimo_capitulo_id}` : `/manga/reader/${manga.slug ?? manga.id}`}
-        className={`relative w-full max-w-[280px] rounded-2xl overflow-hidden transition-all duration-500 group flex flex-col justify-end bg-black ${colors.size} ${colors.shadow} border ${colors.border}`}
+        className={`relative rounded-2xl overflow-hidden transition-all duration-500 group flex flex-col justify-end bg-black shrink-0 ${colors.size} ${colors.shadow} border ${colors.border}`}
       >
         <div className="absolute inset-0 z-0">
           <div className="w-full h-full bg-cover bg-center transition-transform duration-700 group-hover:scale-110" style={{ backgroundImage: `url('${coverUrl}')` }} />
