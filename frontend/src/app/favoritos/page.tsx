@@ -10,6 +10,7 @@ interface Manga {
   tipo: string;
   cover_r2_key: string | null; 
   ultimo_capitulo_id: string | null; 
+  ultimo_capitulo?: number | string | null;
 }
 
 export default function FavoritosPage() {
@@ -115,9 +116,9 @@ export default function FavoritosPage() {
                     <h3 className="text-white font-bold text-sm leading-tight line-clamp-2 drop-shadow-md group-hover:-translate-y-1 transition-transform duration-300">
                       {manga.titulo}
                     </h3>
-                    {manga.ultimo_capitulo_id && (
+                    {manga.ultimo_capitulo && (
                       <span className="text-rose-400 text-xs font-bold mt-1.5 group-hover:-translate-y-1 transition-transform duration-300">
-                        Último: Cap. {manga.ultimo_capitulo_id}
+                        Último: Cap. {manga.ultimo_capitulo}
                       </span>
                     )}
                   </div>
