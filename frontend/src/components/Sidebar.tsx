@@ -10,8 +10,6 @@ const MENU_ITEMS = [
   { name: 'Inicio', href: '/', icon: Home },
   { name: 'Explorar', href: '/catalogo', icon: Compass },
   { divider: true, key: 'div-1' },
-  { name: 'Tendencias', href: '/tendencias', icon: Flame, badge: 'Próximamente', disabled: true },
-  { name: 'Novedades', href: '/novedades', icon: Sparkles, badge: 'Próximamente', disabled: true },
   { name: 'Calendario', href: '/calendario', icon: Calendar },
   { name: 'Ranking', href: '/ranking', icon: Trophy },
   { divider: true, key: 'div-2' },
