@@ -115,6 +115,19 @@ export default function FavoritosPage() {
             <p className="text-gray-400 font-medium text-sm md:text-base">Retoma tus lecturas exactamente donde las dejaste.</p>
           </div>
 
+          {/* Banner de Advertencia (Demo Mode) */}
+          <div className="bg-rose-500/10 border border-rose-500/30 rounded-xl p-4 flex flex-col md:flex-row items-start md:items-center gap-3">
+            <div className="bg-rose-500/20 p-2 rounded-full shrink-0">
+              <BellDot className="text-rose-500" size={20} />
+            </div>
+            <div>
+              <h4 className="text-rose-400 font-bold text-sm">Modo Demostración (Diseño UI)</h4>
+              <p className="text-gray-400 text-xs mt-0.5">
+                El progreso, los capítulos (Ej: "Cap 35") y el estado de lectura ("Leyendo", "Completado") que ves en estas tarjetas son <strong>datos falsos generados al azar</strong>. Esto es solo para que puedas visualizar y aprobar cómo se verá el diseño final. ¡Tu progreso real se mostrará cuando conectemos el sistema de cuentas de usuario!
+              </p>
+            </div>
+          </div>
+
           {/* Pestañas de Estado (Filtros) */}
           <div className="flex items-center gap-2 md:gap-4 overflow-x-auto hide-scrollbar">
             {TABS.map(tab => {
