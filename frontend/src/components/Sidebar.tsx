@@ -48,8 +48,15 @@ export default function Sidebar() {
             return <div key={item.key || `div-${index}`} className="h-px bg-gray-200 dark:bg-white/5 my-3 mx-2" />;
           }
 
-          const isActive = pathname === item.href;
           const Icon = item.icon!;
+          
+          // Lógica inteligente para Favoritos
+          let href = item.href!;
+          if (item.name === 'Favoritos') {
+            href = pathname.startsWith('/adulto') ? '/adulto/favoritos' : '/favoritos';
+          }
+
+          const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
 
           if (item.disabled) {
             return (
@@ -73,7 +80,7 @@ export default function Sidebar() {
           return (
             <Link 
               key={item.name} 
-              href={item.href!}
+              href={href}
               className={`group flex items-center gap-3 px-4 py-2.5 mx-1 rounded-xl transition-all duration-300 relative ${
                 isActive 
                   ? 'bg-rose-50 dark:bg-gradient-to-r dark:from-rose-500/10 dark:to-transparent' 
