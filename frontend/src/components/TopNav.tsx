@@ -99,8 +99,9 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
             )}
           </div>
         ) : (
-          <Link href="/login" className="hidden sm:flex items-center justify-center border border-rose-500/50 text-rose-500 hover:bg-rose-500 hover:text-white text-sm font-bold px-6 py-2 rounded-full transition-all">
-            Iniciar sesión
+          <Link href="/login" className="flex items-center justify-center border border-rose-500/50 text-rose-500 hover:bg-rose-500 hover:text-white text-xs sm:text-sm font-bold px-4 py-1.5 sm:px-6 sm:py-2 rounded-full transition-all">
+            <span className="sm:hidden">Entrar</span>
+            <span className="hidden sm:inline">Iniciar sesión</span>
           </Link>
         )}
 
