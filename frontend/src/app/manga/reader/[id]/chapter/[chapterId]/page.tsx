@@ -94,7 +94,11 @@ export default function ChapterReaderPage() {
     let cancelled = false;
     setLoading(true);
     setError(null);
-    fetch(`${API}/api/chapters/${chapterId}/pages`)
+    fetch(`${API}/api/chapters/${chapterId}/pages`, {
+      headers: {
+        ...(localStorage.getItem('crimson_token') ? { 'Authorization': `Bearer ${localStorage.getItem('crimson_token')}` } : {})
+      }
+    })
       .then(r => r.json())
       .then(d => {
         if (cancelled) return;
