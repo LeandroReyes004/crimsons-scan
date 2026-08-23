@@ -2640,7 +2640,7 @@ export default {
 
       // ⚙️ GET /api/admin/settings
       if (pathname === '/api/admin/settings' && method === 'GET') {
-        const admin = await getSuperAdmin(request, env);
+        const admin = await requireSuperAdmin(request, env);
         if (!admin) return err('No autorizado', 403);
         const st = await env.DB.prepare('SELECT discord_webhook_url, telegram_chat_id FROM ajustes_globales WHERE id = 1').first();
         return json({
@@ -2651,7 +2651,7 @@ export default {
 
       // ⚙️ PUT /api/admin/settings
       if (pathname === '/api/admin/settings' && method === 'PUT') {
-        const admin = await getSuperAdmin(request, env);
+        const admin = await requireSuperAdmin(request, env);
         if (!admin) return err('No autorizado', 403);
         const { discord_webhook_url, telegram_chat_id } = await request.json();
         await env.DB.prepare('UPDATE ajustes_globales SET discord_webhook_url = ?, telegram_chat_id = ? WHERE id = 1')

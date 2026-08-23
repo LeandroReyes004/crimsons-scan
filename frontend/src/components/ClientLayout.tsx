@@ -38,9 +38,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
   };
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex min-h-screen relative">
       {/* Sidebar - Desktop collapsible */}
-      <div className={`hidden md:block shrink-0 transition-all duration-300 ease-in-out ${sidebarOpen ? 'w-64' : 'w-0 overflow-hidden opacity-0'}`}>
+      <div className={`hidden md:block shrink-0 transition-all duration-300 ease-in-out sticky top-0 h-screen z-40 ${sidebarOpen ? 'w-64' : 'w-0 overflow-hidden opacity-0'}`}>
         <div className="w-64 h-full">
           <Sidebar />
         </div>
