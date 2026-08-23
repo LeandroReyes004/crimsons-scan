@@ -5,7 +5,8 @@ import Sidebar from '@/components/Sidebar';
 import TopNav from '@/components/TopNav';
 import Footer from '@/components/Footer';
 import LateralAds from '@/components/LateralAds';
-import GlobalPopunders from '@/components/GlobalPopunders';
+import GlobalAds from '@/components/GlobalAds';
+
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
@@ -72,7 +73,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         <Footer />
       </div>
       <LateralAds />
-      <GlobalPopunders />
+      <GlobalAds />
+
     </div>
   );
 }

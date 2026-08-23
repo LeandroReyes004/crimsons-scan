@@ -9,6 +9,7 @@ import CanvasPageRenderer from '@/components/CanvasReader';
 import ReaderControls from '@/components/ReaderControls';
 import AdPopUnder from '@/components/AdPopUnder';
 import NovelReader from '@/components/NovelReader';
+import NativeAd from '@/components/NativeAd';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
@@ -271,19 +272,23 @@ export default function ChapterReaderPage() {
           {capInfo?.manga_tipo?.toLowerCase() === 'novela' ? (
             novelText ? <NovelReader text={novelText} /> : null
           ) : (
-            visiblePages.map((page) => {
+            visiblePages.map((page, index) => {
             const fp = typeof window !== 'undefined' ? localStorage.getItem('crimson_fp') || 'unknown' : 'unknown';
             const userStr = typeof window !== 'undefined' ? localStorage.getItem('crimson_user') : null;
             const user = userStr ? JSON.parse(userStr) : null;
             const uid = user ? `${user.username}-${fp.slice(0,8)}` : fp.slice(0,12);
 
             return (
-              <div key={page.id} className="relative w-full flex justify-center animate-in fade-in duration-300">
-                <CanvasPageRenderer
-                  imageUrl={page.image_url}
-                  scrambleMap={page.scramble_map}
-                  userId={uid}
-                />
+              <div key={page.id} className="w-full flex flex-col items-center">
+                <div className="relative w-full flex justify-center animate-in fade-in duration-300">
+                  <CanvasPageRenderer
+                    imageUrl={page.image_url}
+                    scrambleMap={page.scramble_map}
+                    userId={uid}
+                  />
+                </div>
+                {/* Mostrar el Native Banner cada 5 páginas */}
+                {(index + 1) % 5 === 0 && <NativeAd />}
               </div>
             );
           }))}
