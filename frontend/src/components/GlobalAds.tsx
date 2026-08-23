@@ -11,16 +11,7 @@ export default function GlobalAds() {
         strategy="afterInteractive"
       />
 
-      {/* 2. MONETAG: Vignette Banner 
-          Nota: En Next.js, los scripts inyectados de Monetag se traducen 
-          pasando el data-zone directamente al componente Script. 
-      */}
-      <Script
-        id="monetag-vignette"
-        src="https://n6wxm.com/vignette.min.js"
-        data-zone="11634536"
-        strategy="afterInteractive"
-      />
+
     </>
   );
 }
