@@ -7,7 +7,7 @@ import { ChevronLeft, ChevronRight, Layers, AlignJustify, BookOpen } from 'lucid
 import { Turnstile } from '@marsidev/react-turnstile';
 import CanvasPageRenderer from '@/components/CanvasReader';
 import ReaderControls from '@/components/ReaderControls';
-import AdPopUnder from '@/components/AdPopUnder';
+
 import NovelReader from '@/components/NovelReader';
 import NativeAd from '@/components/NativeAd';
 
@@ -337,7 +337,7 @@ export default function ChapterReaderPage() {
         />
       )}
 
-      {capInfo?.es_adulto && <AdPopUnder />}
+
     </div>
   );
 }

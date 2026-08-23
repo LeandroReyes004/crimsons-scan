@@ -10,18 +10,48 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
   const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const [notifOpen, setNotifOpen] = useState(false);
+  const notifRef = useRef<HTMLDivElement>(null);
+  const [notificaciones, setNotificaciones] = useState<any[]>([]);
+  
+  // Search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [results, setResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [showResults, setShowResults] = useState(false);
+  const searchRef = useRef<HTMLDivElement>(null);
+
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
 
-  const isAdultMode = pathname === '/adulto';
-  
-  const toggleAdultMode = () => {
-    if (isAdultMode) {
-      router.push('/');
+  // Adult mode state with persistence
+  const [isAdultMode, setIsAdultMode] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('crimson_adult_mode') === 'true';
+    if (pathname === '/adulto' && !saved) {
+      setIsAdultMode(true);
+      localStorage.setItem('crimson_adult_mode', 'true');
+    } else if (pathname === '/' && saved) {
+      // Si va al inicio explícitamente, quizás quiera apagarlo, pero si queremos persistencia total,
+      // solo lo apagamos si hace toggle. Por ahora respetamos el localStorage a menos que fuerce la ruta.
+      setIsAdultMode(saved);
     } else {
+      setIsAdultMode(saved);
+    }
+  }, [pathname]);
+
+  const toggleAdultMode = () => {
+    const newState = !isAdultMode;
+    setIsAdultMode(newState);
+    localStorage.setItem('crimson_adult_mode', String(newState));
+    if (newState) {
       router.push('/adulto');
+    } else {
+      router.push('/');
     }
   };
 
@@ -33,10 +63,102 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         setDropdownOpen(false);
       }
+      if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+        setShowResults(false);
+      }
+      if (notifRef.current && !notifRef.current.contains(e.target as Node)) {
+        setNotifOpen(false);
+      }
     };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
+
+  // ── Notificaciones ──
+  const fetchNotificaciones = async () => {
+    if (!user) return;
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/api/notificaciones`, {
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('crimson_token')}` }
+      });
+      const data = await res.json();
+      if (data.notificaciones) setNotificaciones(data.notificaciones);
+    } catch(e) {}
+  };
+
+  useEffect(() => {
+    if (mounted && user) {
+      fetchNotificaciones();
+      const interval = setInterval(fetchNotificaciones, 3 * 60 * 1000);
+      return () => clearInterval(interval);
+    }
+  }, [user, mounted]);
+
+  const handleMarcarLeidas = async () => {
+    if (!user || notificaciones.length === 0) return;
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/api/notificaciones/marcar-leidas`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${localStorage.getItem('crimson_token')}` }
+      });
+      setNotificaciones([]);
+    } catch(e) {}
+  };
+
+  // Optimize search: fetch once per mode, filter locally
+  const [allMangas, setAllMangas] = useState<any[]>([]);
+  const [mangasFetched, setMangasFetched] = useState(false);
+
+  // Reset catalog if adult mode changes
+  useEffect(() => {
+    setMangasFetched(false);
+    setAllMangas([]);
+  }, [isAdultMode]);
+
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setResults([]);
+      setShowResults(false);
+      return;
+    }
+
+    const fetchMangas = async () => {
+      if (!mangasFetched) {
+        setIsSearching(true);
+        try {
+          const endpoint = isAdultMode ? '/api/mangas/adulto' : '/api/mangas';
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}${endpoint}`, {
+            cache: 'no-store'
+          });
+          const data = await res.json();
+          setAllMangas(data.mangas || []);
+          setMangasFetched(true);
+        } catch (err) {
+          console.error("Error fetching catalog for search:", err);
+        }
+        setIsSearching(false);
+      }
+    };
+
+    const timer = setTimeout(() => {
+      fetchMangas();
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery, isAdultMode, mangasFetched]);
+
+  // Local filtering
+  useEffect(() => {
+    if (mangasFetched && searchQuery.trim()) {
+      const lower = searchQuery.toLowerCase();
+      const filtered = allMangas.filter((m: any) => 
+        m.titulo.toLowerCase().includes(lower) || 
+        (m.generos && m.generos.toLowerCase().includes(lower))
+      ).slice(0, 5); // Limit to top 5 results
+      setResults(filtered);
+      setShowResults(true);
+    }
+  }, [searchQuery, allMangas, mangasFetched]);
 
   const handleLogout = () => {
     logout();
@@ -55,15 +177,50 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
 
       {/* Search Bar */}
       <div className="flex-1 max-w-xl">
-        <div className="relative group">
+        <div className="relative group" ref={searchRef}>
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <Search size={16} className="text-gray-500 group-focus-within:text-rose-500 transition-colors" />
           </div>
           <input 
             type="text" 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            onFocus={() => { if (results.length > 0) setShowResults(true); }}
             placeholder="Buscar manhwa, autor o género..." 
             className="w-full bg-gray-100 dark:bg-[#111114] border border-transparent dark:border-white/5 text-gray-900 dark:text-white text-sm rounded-full pl-11 pr-4 py-2.5 focus:outline-none focus:border-rose-500/50 focus:ring-1 focus:ring-rose-500/50 transition-all placeholder:text-gray-500 dark:placeholder:text-gray-600"
           />
+
+          {/* Search Dropdown */}
+          {showResults && (
+            <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-[#151518] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl py-2 z-50 overflow-hidden">
+              {isSearching ? (
+                <div className="px-4 py-3 text-sm text-gray-500 text-center">Buscando...</div>
+              ) : results.length > 0 ? (
+                results.map(m => (
+                  <Link 
+                    key={m.id} 
+                    href={`/manga/reader/${m.slug ?? m.id}`}
+                    onClick={() => { setShowResults(false); setSearchQuery(''); }}
+                    className="flex items-center gap-3 px-4 py-2 hover:bg-gray-50 dark:hover:bg-white/5 transition"
+                  >
+                    <div className="w-10 h-14 rounded-md overflow-hidden bg-gray-200 dark:bg-white/10 shrink-0">
+                      <img 
+                        src={m.cover_r2_key ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/api/cover/${m.id}` : '/portada.jpg'} 
+                        alt={m.titulo} 
+                        className="w-full h-full object-cover" 
+                      />
+                    </div>
+                    <div className="flex flex-col overflow-hidden">
+                      <span className="text-sm font-bold text-gray-900 dark:text-white truncate">{m.titulo}</span>
+                      <span className="text-xs text-gray-500 capitalize">{m.tipo}</span>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="px-4 py-3 text-sm text-gray-500 text-center">No se encontraron resultados.</div>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -121,10 +278,55 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
             </button>
           )}
 
-          <button className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors relative">
-            <Bell size={20} />
-            <span className="absolute -top-1 -right-1 w-2.5 h-2.5 bg-rose-500 rounded-full border-2 border-white dark:border-[#0a0a0c]"></span>
-          </button>
+          {user && (
+            <div className="relative" ref={notifRef}>
+              <button 
+                onClick={() => {
+                  if (!notifOpen) {
+                    setNotifOpen(true);
+                    handleMarcarLeidas();
+                  } else {
+                    setNotifOpen(false);
+                  }
+                }}
+                className="text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors relative"
+              >
+                <Bell size={20} />
+                {notificaciones.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 bg-rose-500 rounded-full border-2 border-white dark:border-[#0a0a0c] text-[9px] font-bold text-white flex items-center justify-center">
+                    {notificaciones.length > 9 ? '9+' : notificaciones.length}
+                  </span>
+                )}
+              </button>
+
+              {notifOpen && (
+                <div className="absolute right-0 top-full mt-3 w-80 max-h-96 overflow-y-auto bg-white dark:bg-[#151518] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl py-2 z-50">
+                  <div className="px-4 py-2 border-b border-gray-100 dark:border-white/5 mb-1 flex justify-between items-center">
+                    <p className="text-sm font-bold text-gray-900 dark:text-white">Notificaciones</p>
+                  </div>
+                  {notificaciones.length > 0 ? (
+                    notificaciones.map(n => (
+                      <Link 
+                        key={n.id} 
+                        href={n.url}
+                        onClick={() => setNotifOpen(false)}
+                        className="block px-4 py-3 hover:bg-gray-50 dark:hover:bg-white/5 transition border-b border-gray-50 dark:border-white/5 last:border-0"
+                      >
+                        <p className="text-sm text-gray-900 dark:text-gray-200">{n.mensaje}</p>
+                        <span className="text-[10px] text-gray-500 mt-1 block">
+                          {new Date(n.created_at).toLocaleDateString()}
+                        </span>
+                      </Link>
+                    ))
+                  ) : (
+                    <div className="px-4 py-6 text-center text-gray-500 text-sm">
+                      No hay notificaciones nuevas
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
           
           {mounted && (
             <button 

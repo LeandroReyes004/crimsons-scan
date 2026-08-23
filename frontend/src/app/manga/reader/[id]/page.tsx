@@ -6,7 +6,7 @@ import Link from 'next/link';
 import { BookOpen, ChevronLeft, Play, Eye, Tag, Clock, Heart, LogIn, LogOut, User, Send, MessageCircle, Layers } from 'lucide-react';
 import { useFavorites } from '@/lib/favorites';
 import { getUser, login, logout, authHeaders } from '@/lib/auth';
-import AdPopUnder from '@/components/AdPopUnder';
+
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
@@ -135,7 +135,7 @@ export default function MangaDetailPage() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0c] text-white font-sans">
-      {!!manga.es_adulto && <AdPopUnder />}
+
 
 
 

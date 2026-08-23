@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { Search, BookOpen, FileText, Eye, Filter, X, ChevronLeft, ShieldAlert, Compass, ChevronDown, ListFilter } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import AdPopUnder from '@/components/AdPopUnder';
+
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
@@ -61,7 +61,7 @@ function CatalogoContent() {
   useEffect(() => {
     setLoading(true);
     const endpoint = isAdultMode ? `${API}/api/mangas/adulto` : `${API}/api/mangas`;
-    fetch(endpoint)
+    fetch(endpoint, { cache: 'no-store' })
       .then(r => r.json())
       .then(d => {
         const allMangas: Manga[] = d.mangas || [];
@@ -128,7 +128,7 @@ function CatalogoContent() {
 
   return (
     <div className="min-h-screen bg-[#050505] text-white font-sans overflow-x-hidden pb-24">
-      {isAdultMode && <AdPopUnder />}
+
 
       {/* Header Fijo */}
       <header className="sticky top-0 z-50 bg-[#050505]/90 backdrop-blur-xl border-b border-white/5 h-16 px-4 md:px-8 flex items-center justify-between shadow-2xl">

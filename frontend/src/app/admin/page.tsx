@@ -1613,7 +1613,7 @@ function SectionUsuarios() {
           )}
           {/* v2.0 — sin campo contraseña: el usuario la configura por email */}
           <div className="mb-4 flex items-start gap-2 bg-blue-50 dark:bg-blue-500/10 border border-blue-200 dark:border-blue-500/20 rounded-xl px-4 py-3 text-xs text-blue-700 dark:text-blue-300">
-            <span className="mt-0.5">ðŸ“§</span>
+            <span className="mt-0.5">📧</span>
             <span>Se enviará un email al usuario con un link para que configure su propia contraseña. El link expira en 48 hs.</span>
           </div>
           <form onSubmit={handleCreate} className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -2778,7 +2778,7 @@ function SectionScans() {
 // ============================================================
 //  SECCIÓN: CONFIGURACIÓN DEL SCAN (webhook Discord)
 // ============================================================
-const DEFAULT_DISCORD_TEMPLATE = 'ðŸ“– **{{manga}}** — Capítulo {{capitulo}}{{titulo}}\n\n[ðŸ‘ Leer ahora]({{url}})';
+const DEFAULT_DISCORD_TEMPLATE = '📖 **{{manga}}** — Capítulo {{capitulo}}{{titulo}}\n\n[👁 Leer ahora]({{url}})';
 
 function previewTemplate(tpl: string) {
   return (tpl || DEFAULT_DISCORD_TEMPLATE)
@@ -3189,7 +3189,7 @@ function SectionConfig({ scanId }: { scanId: string }) {
                 <button onClick={handleTest} disabled={testing}
                   className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-500 text-white px-5 py-2.5 rounded-xl text-sm font-bold disabled:opacity-50 transition">
                   {testing ? <Loader2 size={16} className="animate-spin"/> : null}
-                  {testing ? 'Enviando...' : 'ðŸ§ª Probar'}
+                  {testing ? 'Enviando...' : '🧪 Probar'}
                 </button>
               )}
             </div>

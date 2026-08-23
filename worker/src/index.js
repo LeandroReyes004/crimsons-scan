@@ -72,6 +72,21 @@ function buildDiscordBody(template, vars) {
   return JSON.stringify({ embeds: [embed] });
 }
 
+// ── Notificaciones (Bulk Insert) ───────────────────────────
+async function notifyMangaFollowers(env, manga_id, manga_titulo, capitulo_num, url) {
+  try {
+    const msj = `¡Nuevo capítulo de ${manga_titulo} (${capitulo_num})!`;
+    await env.DB.prepare(`
+      INSERT INTO notificaciones (id, usuario_id, manga_id, mensaje, url, leido)
+      SELECT lower(hex(randomblob(16))), usuario_id, ?, ?, ?, 0
+      FROM marcadores
+      WHERE manga_id = ?
+    `).bind(manga_id, msj, url, manga_id).run();
+  } catch(e) {
+    console.error('Error bulk insert notificaciones:', e);
+  }
+}
+
 // ── JWT (Web Crypto nativo — sin dependencias) ─────────────
 async function signJWT(payload, secret) {
   const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
@@ -402,6 +417,8 @@ export default {
               url: mangaUrl,
             }),
           });
+          // Disparar notificaciones a los seguidores
+          await notifyMangaFollowers(env, cap.manga_id, cap.manga_titulo, cap.numero, mangaUrl);
         } catch {}
       }
     })());
@@ -680,6 +697,29 @@ export default {
         const object = await env.R2.get(u.avatar_url);
         if (!object) return err('Imagen no encontrada', 404);
         return new Response(object.body, { headers: { 'Content-Type': contentType(u.avatar_url), 'Cache-Control': 'no-cache', 'ETag': object.httpEtag, ...CORS } });
+      }
+
+      // ── GET /api/notificaciones ───────────────────────────
+      if (pathname === '/api/notificaciones' && method === 'GET') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autenticado', 401);
+        const { results } = await env.DB.prepare(
+          `SELECT id, manga_id, mensaje, url, leido, created_at 
+           FROM notificaciones 
+           WHERE usuario_id = ? AND leido = 0
+           ORDER BY created_at DESC LIMIT 20`
+        ).bind(user.id).all();
+        return json({ notificaciones: results });
+      }
+
+      // ── POST /api/notificaciones/marcar-leidas ────────────
+      if (pathname === '/api/notificaciones/marcar-leidas' && method === 'POST') {
+        const user = await getUser(request, env);
+        if (!user) return err('No autenticado', 401);
+        await env.DB.prepare(
+          `UPDATE notificaciones SET leido = 1 WHERE usuario_id = ? AND leido = 0`
+        ).bind(user.id).run();
+        return json({ success: true });
       }
 
       // ── GET /api/marcadores ───────────────────────────────
@@ -1530,7 +1570,6 @@ export default {
               const globalTelegram = globalSettings?.telegram_chat_id || env.TELEGRAM_GLOBAL_CHAT_ID;
               
               const coverUrl = `https://crimson-api.leandro-reyes1025.workers.dev/api/cover/${manga_id}`;
-              const secretLink = `${env.FRONTEND_URL}/leer/${secret_token}`;
               
               const vars = {
                 manga: scanData?.manga_titulo || '',
@@ -1579,6 +1618,8 @@ export default {
             } catch (e) {
               console.error('Error notificaciones:', e);
             }
+            // -- App Notifications --
+            await notifyMangaFollowers(env, manga_id, scanData?.manga_titulo || '', numero, secretLink);
           })());
         }
 
@@ -1674,6 +1715,8 @@ export default {
                 console.error('Error notificaciones cron:', e);
               }
             } catch {}
+            // -- App Notifications --
+            await notifyMangaFollowers(env, capForWh.manga_id, capForWh.manga_titulo, capForWh.numero, secretLink);
           })());
         }
 

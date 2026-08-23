@@ -91,7 +91,7 @@ export default function Home() {
     setUser(getUser());
     refreshUser().then(u => { if (u) setUser(u); });
     const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
-    fetch(`${API}/api/mangas`)
+    fetch(`${API}/api/mangas`, { next: { revalidate: 60 } })
       .then(r => r.json())
       .then(d => setMangas(d.mangas || []))
       .catch(() => {});
