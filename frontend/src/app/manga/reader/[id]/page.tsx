@@ -137,33 +137,7 @@ export default function MangaDetailPage() {
     <div className="min-h-screen bg-[#0a0a0c] text-white font-sans">
       {!!manga.es_adulto && <AdPopUnder />}
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-[#0a0a0c]/90 backdrop-blur-md border-b border-white/5 h-14 px-4 sm:px-6 flex items-center gap-3">
-        <Link href="/" className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-white/5 transition">
-          <ChevronLeft size={20}/>
-        </Link>
-        <img src="/logo.png" alt="CrimsonScan" className="h-8 w-auto object-contain" />
-        <div className="ml-auto flex items-center gap-2">
-          {user ? (
-            <>
-              <Link href="/perfil" className="flex items-center gap-2 px-2 py-1 rounded-full hover:bg-white/5 transition">
-                <div className="w-7 h-7 rounded-full overflow-hidden bg-gradient-to-br from-rose-600/60 to-orange-500/60 flex items-center justify-center relative shrink-0">
-                  <img src={`${API}/api/avatar/${user.id}`} alt="" className="w-full h-full object-cover" onError={e => { e.currentTarget.style.display='none'; }}/>
-                  <span className="absolute text-[10px] font-black text-white">{user.username.charAt(0).toUpperCase()}</span>
-                </div>
-                <span className="hidden sm:block text-xs font-semibold text-gray-300">{user.username}</span>
-              </Link>
-              <button onClick={handleLogout} className="p-1.5 rounded-full text-gray-500 hover:text-rose-400 hover:bg-rose-500/10 transition" title="Cerrar sesión">
-                <LogOut size={15}/>
-              </button>
-            </>
-          ) : (
-            <button onClick={() => setLoginOpen(true)} className="flex items-center gap-1.5 text-xs font-bold text-white bg-rose-600 hover:bg-rose-500 transition px-3 py-1.5 rounded-full">
-              <LogIn size={12}/> Iniciar sesión
-            </button>
-          )}
-        </div>
-      </header>
+
 
       {/* Fondo degradado superior */}
       <div className="h-36 sm:h-48 bg-gradient-to-b from-rose-900/25 via-rose-900/10 to-transparent pointer-events-none"/>
