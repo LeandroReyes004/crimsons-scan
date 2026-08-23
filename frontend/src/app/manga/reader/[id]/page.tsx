@@ -155,7 +155,9 @@ export default function MangaDetailPage() {
                 <img
                   src={coverUrl}
                   alt={manga.titulo}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover pointer-events-none select-none"
+                  onContextMenu={(e) => e.preventDefault()}
+                  onDragStart={(e) => e.preventDefault()}
                   onError={e => { e.currentTarget.style.display = 'none'; }}
                 />
               ) : (

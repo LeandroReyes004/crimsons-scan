@@ -281,7 +281,12 @@ export default function ChapterReaderPage() {
             const uid = user ? `${user.username}-${fp.slice(0,8)}` : fp.slice(0,12);
 
             return (
-              <div key={page.id} className="relative w-full flex justify-center animate-in fade-in duration-300">
+              <div 
+                key={page.id} 
+                className="relative w-full flex justify-center animate-in fade-in duration-300 pointer-events-none select-none"
+                onContextMenu={(e) => e.preventDefault()}
+                onDragStart={(e) => e.preventDefault()}
+              >
                 <CanvasPageRenderer
                   imageUrl={page.image_url}
                   scrambleMap={page.scramble_map}
