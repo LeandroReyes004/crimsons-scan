@@ -378,8 +378,8 @@ export default {
             FROM mangas WHERE views_mes > 0
           `).bind(pastMes, ts).run();
           
-          // Reinicio de vistas mensuales activado tras la auditoría de métricas (fix)
-          await env.DB.prepare('UPDATE mangas SET views_mes = 0').run();
+          // A petición del usuario: NO se cortan (resetean) las vistas mensuales.
+          // await env.DB.prepare('UPDATE mangas SET views_mes = 0').run();
 
           // ── Generar PDF Reporte Mensual ──
           try {
@@ -400,7 +400,7 @@ export default {
 
             // Create PDF
             const pdfDoc = await PDFDocument.create();
-            const page = pdfDoc.addPage([595, 842]); // A4 size
+            let page = pdfDoc.addPage([595, 842]); // A4 size
             const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
             const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
             const { width, height } = page.getSize();
@@ -420,7 +420,7 @@ export default {
             page.drawText(`Publicaron Capítulos:`, { x: 50, y, size: 14, font: fontBold, color: rgb(0.1, 0.6, 0.1) });
             y -= 25;
             for (const user of publicaron) {
-              if (y < 50) { page.addPage([595, 842]); y = height - 50; }
+              if (y < 50) { page = pdfDoc.addPage([595, 842]); y = height - 50; }
               page.drawText(`• ${user.username} (${user.rol}): ${user.chapters} capítulos`, { x: 70, y, size: 12, font });
               y -= 20;
             }
@@ -429,7 +429,7 @@ export default {
             page.drawText(`No Publicaron (Inactivos):`, { x: 50, y, size: 14, font: fontBold, color: rgb(0.8, 0.1, 0.1) });
             y -= 25;
             for (const user of noPublicaron) {
-              if (y < 50) { page.addPage([595, 842]); y = height - 50; }
+              if (y < 50) { page = pdfDoc.addPage([595, 842]); y = height - 50; }
               page.drawText(`• ${user.username} (${user.rol})`, { x: 70, y, size: 12, font });
               y -= 20;
             }
