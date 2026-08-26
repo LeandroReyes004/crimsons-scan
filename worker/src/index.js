@@ -1,3 +1,4 @@
+import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 // ============================================================
 //  Crimson Scan — Cloudflare Worker
 //  DB: D1  |  Storage: R2  |  Imágenes: HMAC stateless (sin KV)
@@ -377,8 +378,71 @@ export default {
             FROM mangas WHERE views_mes > 0
           `).bind(pastMes, ts).run();
           
-          // A petición del usuario: NO se cortan (resetean) las vistas mensuales.
-          // await env.DB.prepare('UPDATE mangas SET views_mes = 0').run();
+          // Reinicio de vistas mensuales activado tras la auditoría de métricas (fix)
+          await env.DB.prepare('UPDATE mangas SET views_mes = 0').run();
+
+          // ── Generar PDF Reporte Mensual ──
+          try {
+            const startDate = `${pastMes}-01 00:00:00`;
+            const endDate = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}-01 00:00:00`;
+            
+            const totalViewsRow = await env.DB.prepare('SELECT SUM(views_mes) as total FROM revenue_historial WHERE mes = ?').bind(pastMes).first();
+            const totalViews = totalViewsRow?.total || 0;
+            
+            const { results: activity } = await env.DB.prepare(`
+              SELECT u.username, u.rol, COUNT(c.id) as chapters
+              FROM usuarios u
+              LEFT JOIN capitulos c ON u.id = c.uploader_id AND c.fecha_publicacion >= ? AND c.fecha_publicacion < ?
+              WHERE u.rol IN ('uploader', 'admin_scan', 'admin')
+              GROUP BY u.id
+              ORDER BY chapters DESC, u.username ASC
+            `).bind(startDate, endDate).all();
+
+            // Create PDF
+            const pdfDoc = await PDFDocument.create();
+            const page = pdfDoc.addPage([595, 842]); // A4 size
+            const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+            const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+            const { width, height } = page.getSize();
+            let y = height - 50;
+
+            page.drawText(`Reporte Mensual Crimson Scan - ${pastMes}`, { x: 50, y, size: 20, font: fontBold, color: rgb(0.88, 0.11, 0.25) });
+            y -= 40;
+            page.drawText(`Vistas Totales del Mes: ${totalViews}`, { x: 50, y, size: 14, font });
+            y -= 40;
+
+            page.drawText(`Actividad de Uploaders/Scans:`, { x: 50, y, size: 16, font: fontBold });
+            y -= 30;
+
+            const publicaron = activity.filter(a => a.chapters > 0);
+            const noPublicaron = activity.filter(a => a.chapters === 0);
+
+            page.drawText(`Publicaron Capítulos:`, { x: 50, y, size: 14, font: fontBold, color: rgb(0.1, 0.6, 0.1) });
+            y -= 25;
+            for (const user of publicaron) {
+              if (y < 50) { page.addPage([595, 842]); y = height - 50; }
+              page.drawText(`• ${user.username} (${user.rol}): ${user.chapters} capítulos`, { x: 70, y, size: 12, font });
+              y -= 20;
+            }
+            y -= 15;
+
+            page.drawText(`No Publicaron (Inactivos):`, { x: 50, y, size: 14, font: fontBold, color: rgb(0.8, 0.1, 0.1) });
+            y -= 25;
+            for (const user of noPublicaron) {
+              if (y < 50) { page.addPage([595, 842]); y = height - 50; }
+              page.drawText(`• ${user.username} (${user.rol})`, { x: 70, y, size: 12, font });
+              y -= 20;
+            }
+
+            const pdfBytes = await pdfDoc.save();
+            const fileName = `reportes/${pastMes}.pdf`;
+            
+            await putWithRetry(env, fileName, pdfBytes, { httpMetadata: { contentType: 'application/pdf' } });
+            console.log(`[PDF] Reporte generado y subido a R2: ${fileName}`);
+          } catch (pdfErr) {
+            console.error("Error generando PDF de reporte:", pdfErr);
+          }
+
         } catch (e) {
           console.error("Error guardando historial de revenue. Abortando reset:", e);
         }
@@ -749,6 +813,52 @@ export default {
         } else {
           await env.DB.prepare('INSERT INTO marcadores (usuario_id, manga_id) VALUES (?, ?)').bind(user.id, mangaId).run();
           return json({ message: 'Marcador añadido', is_bookmarked: true });
+        }
+      }
+
+      // ── GET /api/admin/reportes ─────────────────────────────
+      if (pathname === '/api/admin/reportes' && method === 'GET') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('No tenés permisos', 403);
+        
+        try {
+          const list = await env.R2.list({ prefix: 'reportes/' });
+          const reportes = list.objects.map(obj => ({
+            key: obj.key,
+            size: obj.size,
+            uploaded: obj.uploaded
+          })).sort((a, b) => new Date(b.uploaded) - new Date(a.uploaded));
+          
+          return json({ reportes });
+        } catch (e) {
+          return err('Error al listar reportes: ' + e.message, 500);
+        }
+      }
+
+      // ── GET /api/admin/reportes/:filename ───────────────────
+      const reporteRoute = pathname.match(/^\/api\/admin\/reportes\/(.+)$/);
+      if (reporteRoute && method === 'GET') {
+        const admin = await requireAdmin(request, env);
+        if (!admin) return err('No tenés permisos', 403);
+        
+        try {
+          const filename = decodeURIComponent(reporteRoute[1]);
+          // Proteccion contra directory traversal
+          if (filename.includes('..') || filename.includes('/')) return err('Archivo no válido', 400);
+          
+          const object = await env.R2.get(`reportes/${filename}`);
+          if (!object) return err('Reporte no encontrado', 404);
+          
+          return new Response(object.body, { 
+            headers: { 
+              'Content-Type': 'application/pdf', 
+              'Cache-Control': 'no-cache', 
+              'ETag': object.httpEtag, 
+              ...CORS 
+            } 
+          });
+        } catch (e) {
+          return err('Error al obtener reporte', 500);
         }
       }
 
