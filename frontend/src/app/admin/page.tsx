@@ -382,12 +382,12 @@ function SectionDashboard() {
       </div>
 
       {/* Uploaders Metrics */}
-      {data?.uploaders && data.uploaders.length > 0 && (
-        <div>
-          <h3 className="font-bold dark:text-white mb-4 flex items-center gap-2">
-            <BarChart2 size={16} className="text-emerald-500"/> Métricas de Uploaders
-          </h3>
-          <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
+      <div>
+        <h3 className="font-bold dark:text-white mb-4 flex items-center gap-2">
+          <BarChart2 size={16} className="text-emerald-500"/> Métricas de Uploaders
+        </h3>
+        <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
+          {data?.uploaders && data.uploaders.length > 0 ? (
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="bg-gray-50 dark:bg-white/5 text-gray-500 font-semibold uppercase tracking-widest text-[10px]">
@@ -411,9 +411,13 @@ function SectionDashboard() {
                 ))}
               </tbody>
             </table>
-          </div>
+          ) : (
+            <div className="p-6 text-center text-gray-500 text-sm">
+              No hay métricas de uploaders aún. Cuando un usuario suba capítulos aparecerá aquí.
+            </div>
+          )}
         </div>
-      )}
+      </div>
 
       {user?.is_superadmin && <GlobalSettings />}
     </div>
