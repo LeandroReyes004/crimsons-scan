@@ -19,7 +19,7 @@ const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'config' | 'revenue' | 'seguridad' | 'soporte';
 
 // ── Tipos ──────────────────────────────────────────────────
-interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; }
+interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; uploaders?: { username: string; rol: string; total_chapters: number }[]; }
 interface Manga { id: string; titulo: string; tipo: string; estado: string; cover_r2_key: string | null; views_total: number; oculto?: number; fecha_actualizacion: string; scan_nombre?: string; descripcion?: string | null; es_adulto?: number; scan_id?: string | null; generos?: string; joint_scan_id?: string | null; joint_status?: string | null; joint_scan_nombre?: string | null; }
 interface Capitulo { id: string; numero: number; titulo: string; estado: string; manga_titulo: string; manga_id: string; uploader_username: string; notas_admin: string | null; fecha_subida: string; num_paginas?: number; }
 interface Usuario { id: string; username: string; email: string; rol: string; activo: number; fecha_registro: string; ultimo_acceso: string | null; scan_id?: string; scan_nombre?: string; cuenta_pendiente?: number | boolean; }
@@ -380,6 +380,40 @@ function SectionDashboard() {
           )) ?? <p className="text-gray-400 text-sm p-5">No hay proyectos aún.</p>}
         </div>
       </div>
+
+      {/* Uploaders Metrics */}
+      {data?.uploaders && data.uploaders.length > 0 && (
+        <div>
+          <h3 className="font-bold dark:text-white mb-4 flex items-center gap-2">
+            <BarChart2 size={16} className="text-emerald-500"/> Métricas de Uploaders
+          </h3>
+          <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="bg-gray-50 dark:bg-white/5 text-gray-500 font-semibold uppercase tracking-widest text-[10px]">
+                  <th className="px-5 py-3">Uploader</th>
+                  <th className="px-5 py-3">Rol</th>
+                  <th className="px-5 py-3 text-right">Capítulos Subidos</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+                {data.uploaders.map((up, i) => (
+                  <tr key={i} className="hover:bg-gray-50 dark:hover:bg-white/2 transition-colors">
+                    <td className="px-5 py-3 font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                      <div className="w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold text-[10px]">
+                        {up.username.substring(0, 2).toUpperCase()}
+                      </div>
+                      {up.username}
+                    </td>
+                    <td className="px-5 py-3 text-gray-500 capitalize">{up.rol}</td>
+                    <td className="px-5 py-3 text-right font-bold text-gray-900 dark:text-gray-200 tabular-nums">{up.total_chapters}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {user?.is_superadmin && <GlobalSettings />}
     </div>

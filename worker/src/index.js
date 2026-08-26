@@ -2098,20 +2098,22 @@ export default {
         const admin = await requireSupport(request, env);
         if (!admin) return err('No autorizado', 401);
 
-        let mangas, capitulos, usuarios, pendientes;
+        let mangas, capitulos, usuarios, pendientes, uploaders_result;
         if (isScanAdmin(admin) && admin.scan_id) {
-          [mangas, capitulos, usuarios, pendientes] = await Promise.all([
+          [mangas, capitulos, usuarios, pendientes, uploaders_result] = await Promise.all([
             env.DB.prepare('SELECT COUNT(*) as total FROM mangas WHERE scan_id = ?').bind(admin.scan_id).first(),
             env.DB.prepare("SELECT COUNT(*) as total FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.estado = 'publicado' AND m.scan_id = ?").bind(admin.scan_id).first(),
             env.DB.prepare('SELECT COUNT(*) as total FROM usuarios WHERE scan_id = ?').bind(admin.scan_id).first(),
             env.DB.prepare("SELECT COUNT(*) as total FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.estado = 'borrador' AND m.scan_id = ?").bind(admin.scan_id).first(),
+            env.DB.prepare("SELECT u.username, u.rol, COUNT(c.id) as total_chapters FROM capitulos c JOIN usuarios u ON c.uploader_id = u.id JOIN mangas m ON c.manga_id = m.id WHERE m.scan_id = ? GROUP BY u.id ORDER BY total_chapters DESC").bind(admin.scan_id).all(),
           ]);
         } else {
-          [mangas, capitulos, usuarios, pendientes] = await Promise.all([
+          [mangas, capitulos, usuarios, pendientes, uploaders_result] = await Promise.all([
             env.DB.prepare('SELECT COUNT(*) as total FROM mangas').first(),
             env.DB.prepare("SELECT COUNT(*) as total FROM capitulos WHERE estado = 'publicado'").first(),
             env.DB.prepare("SELECT COUNT(*) as total FROM usuarios WHERE rol != 'lector'").first(),
             env.DB.prepare("SELECT COUNT(*) as total FROM capitulos WHERE estado = 'borrador'").first(),
+            env.DB.prepare("SELECT u.username, u.rol, COUNT(c.id) as total_chapters FROM capitulos c JOIN usuarios u ON c.uploader_id = u.id GROUP BY u.id ORDER BY total_chapters DESC").all(),
           ]);
         }
 
@@ -2120,6 +2122,7 @@ export default {
           capitulos:  capitulos.total,
           scanners:   usuarios.total,
           pendientes: pendientes.total,
+          uploaders:  uploaders_result.results || [],
         });
       }
 
