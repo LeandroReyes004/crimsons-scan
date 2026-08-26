@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useAuth } from '@/lib/auth';
+import { getToken, authHeaders } from '@/lib/auth';
 
 interface Reporte {
   key: string;
@@ -9,17 +9,21 @@ interface Reporte {
 }
 
 export default function AdminReportes() {
-  const { token, user } = useAuth();
   const [reportes, setReportes] = useState<Reporte[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   useEffect(() => {
-    if (!token) return;
+    const token = getToken();
+    if (!token) {
+      setLoading(false);
+      setError('No autenticado');
+      return;
+    }
     
     // Solo admin y admin_scan pueden ver esto, el worker lo valida.
     fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/reportes`, {
-      headers: { 'Authorization': `Bearer ${token}` }
+      headers: authHeaders()
     })
       .then(res => {
         if (!res.ok) throw new Error('No tienes permisos o ocurrió un error');
@@ -33,12 +37,13 @@ export default function AdminReportes() {
         setError(err.message);
         setLoading(false);
       });
-  }, [token]);
+  }, []);
 
   const descargarReporte = async (filename: string) => {
     try {
+      const token = getToken();
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/admin/reportes/${encodeURIComponent(filename.replace('reportes/', ''))}`, {
-        headers: { 'Authorization': `Bearer ${token}` }
+        headers: token ? { 'Authorization': `Bearer ${token}` } : {}
       });
       if (!res.ok) throw new Error('Error al descargar');
       
@@ -76,7 +81,7 @@ export default function AdminReportes() {
               No hay reportes generados todavía. El primero se generará automáticamente el primer día del mes a las 00:00.
             </div>
           ) : (
-            <div className="space-y-3">
+             <div className="space-y-3">
               {reportes.map((rep, idx) => {
                 const filename = rep.key.split('/').pop();
                 const mes = filename?.replace('.pdf', '');
