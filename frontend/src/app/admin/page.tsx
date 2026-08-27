@@ -396,7 +396,17 @@ function SectionDashboard() {
 // ============================================================
 function SectionActividad() {
   const [mes, setMes] = useState<string>(''); // Vacio = Todo el historial
-  const { data, loading, refetch } = useAPI<Stats>(`/api/admin/stats${mes ? '?mes=' + mes : ''}`, [mes]);
+  const [scanId, setScanId] = useState<string>(''); // Vacio = Todos los scans
+  const { data: scansData } = useAPI<any>('/api/scans');
+  const currentUser = getUser();
+  const isSuperAdmin = currentUser?.is_superadmin;
+
+  const queryParams = new URLSearchParams();
+  if (mes) queryParams.append('mes', mes);
+  if (scanId) queryParams.append('scan_id', scanId);
+  const qs = queryParams.toString() ? `?${queryParams.toString()}` : '';
+
+  const { data, loading, refetch } = useAPI<Stats>(`/api/admin/stats${qs}`, [mes, scanId]);
 
   // Generar lista de meses para el filtro (ej. ultimos 12 meses)
   const mesesOpciones = useMemo(() => {
@@ -424,7 +434,7 @@ function SectionActividad() {
         </button>
       </div>
 
-      <div className="flex items-center gap-4 bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5">
+      <div className="flex flex-wrap items-center gap-4 bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5">
         <div className="flex flex-col gap-1 w-64">
           <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Filtrar por Mes</label>
           <select 
@@ -438,6 +448,22 @@ function SectionActividad() {
             ))}
           </select>
         </div>
+
+        {isSuperAdmin && (
+          <div className="flex flex-col gap-1 w-64">
+            <label className="text-xs font-bold text-gray-500 uppercase tracking-wide flex items-center gap-1"><Layers size={11}/> Filtrar por Scan</label>
+            <select 
+              value={scanId} 
+              onChange={(e) => setScanId(e.target.value)}
+              className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-4 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"
+            >
+              <option value="">Todos los Scans</option>
+              {scansData?.scans?.map((s: any) => (
+                <option key={s.id} value={s.id}>{s.nombre}</option>
+              ))}
+            </select>
+          </div>
+        )}
       </div>
 
       <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
