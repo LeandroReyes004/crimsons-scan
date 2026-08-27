@@ -2208,6 +2208,24 @@ export default {
         const admin = await requireSupport(request, env);
         if (!admin) return err('No autorizado', 401);
 
+        const url = new URL(request.url);
+        const mes = url.searchParams.get('mes'); // Formato: YYYY-MM
+        let fechaInicio = null;
+        let fechaFin = null;
+        let filterUploaders = "";
+        let paramsUploaders = [];
+
+        if (mes && /^\d{4}-\d{2}$/.test(mes)) {
+          fechaInicio = `${mes}-01 00:00:00`;
+          const year = parseInt(mes.split('-')[0]);
+          const month = parseInt(mes.split('-')[1]);
+          const nextMonthDate = new Date(year, month, 1);
+          const nextMonth = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
+          fechaFin = `${nextMonth}-01 00:00:00`;
+          filterUploaders = " AND c.fecha_publicacion >= ? AND c.fecha_publicacion < ?";
+          paramsUploaders.push(fechaInicio, fechaFin);
+        }
+
         let mangas, capitulos, usuarios, pendientes, uploaders_result;
         if (isScanAdmin(admin) && admin.scan_id) {
           [mangas, capitulos, usuarios, pendientes, uploaders_result] = await Promise.all([
@@ -2215,7 +2233,7 @@ export default {
             env.DB.prepare("SELECT COUNT(*) as total FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.estado = 'publicado' AND m.scan_id = ?").bind(admin.scan_id).first(),
             env.DB.prepare('SELECT COUNT(*) as total FROM usuarios WHERE scan_id = ?').bind(admin.scan_id).first(),
             env.DB.prepare("SELECT COUNT(*) as total FROM capitulos c JOIN mangas m ON c.manga_id = m.id WHERE c.estado = 'borrador' AND m.scan_id = ?").bind(admin.scan_id).first(),
-            env.DB.prepare("SELECT u.username, u.rol, COUNT(c.id) as total_chapters FROM capitulos c JOIN usuarios u ON c.uploader_id = u.id JOIN mangas m ON c.manga_id = m.id WHERE m.scan_id = ? GROUP BY u.id ORDER BY total_chapters DESC").bind(admin.scan_id).all(),
+            env.DB.prepare(`SELECT u.username, u.rol, COUNT(c.id) as total_chapters FROM capitulos c JOIN usuarios u ON c.uploader_id = u.id JOIN mangas m ON c.manga_id = m.id WHERE m.scan_id = ?${filterUploaders} GROUP BY u.id ORDER BY total_chapters DESC`).bind(admin.scan_id, ...paramsUploaders).all(),
           ]);
         } else {
           [mangas, capitulos, usuarios, pendientes, uploaders_result] = await Promise.all([
@@ -2223,7 +2241,7 @@ export default {
             env.DB.prepare("SELECT COUNT(*) as total FROM capitulos WHERE estado = 'publicado'").first(),
             env.DB.prepare("SELECT COUNT(*) as total FROM usuarios WHERE rol != 'lector'").first(),
             env.DB.prepare("SELECT COUNT(*) as total FROM capitulos WHERE estado = 'borrador'").first(),
-            env.DB.prepare("SELECT u.username, u.rol, COUNT(c.id) as total_chapters FROM capitulos c JOIN usuarios u ON c.uploader_id = u.id GROUP BY u.id ORDER BY total_chapters DESC").all(),
+            env.DB.prepare(`SELECT u.username, u.rol, COUNT(c.id) as total_chapters FROM capitulos c JOIN usuarios u ON c.uploader_id = u.id WHERE 1=1${filterUploaders} GROUP BY u.id ORDER BY total_chapters DESC`).bind(...paramsUploaders).all(),
           ]);
         }
 

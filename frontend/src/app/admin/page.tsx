@@ -16,7 +16,7 @@ import { toWebP } from '@/lib/webp';
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787';
 
-type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'config' | 'revenue' | 'seguridad' | 'soporte';
+type Section = 'dashboard' | 'mangas' | 'revision' | 'usuarios' | 'scans' | 'config' | 'revenue' | 'seguridad' | 'soporte' | 'actividad';
 
 // ── Tipos ──────────────────────────────────────────────────
 interface Stats { mangas: number; capitulos: number; scanners: number; pendientes: number; uploaders?: { username: string; rol: string; total_chapters: number }[]; }
@@ -248,6 +248,7 @@ export default function AdminPage() {
         <nav className="flex-1 p-3 flex flex-col gap-1 mt-2">
           {([
             { id: 'dashboard', icon: <LayoutDashboard size={16}/>, label: 'Dashboard', show: true },
+            { id: 'actividad', icon: <TrendingUp size={16}/>,      label: 'Rendimiento', show: true },
             { id: 'mangas',    icon: <BookOpen size={16}/>,        label: 'Proyectos', show: true },
             { id: 'revision',  icon: <Clock size={16}/>,           label: 'Agenda',    show: true },
             { id: 'scans',     icon: <Layers size={16}/>,          label: 'Scans',     show: !!user.is_superadmin },
@@ -304,6 +305,7 @@ export default function AdminPage() {
 
         <main className="flex-1 overflow-y-auto p-4 sm:p-8">
           {section === 'dashboard' && <SectionDashboard />}
+          {section === 'actividad' && <SectionActividad />}
           {section === 'mangas'    && <SectionMangas />}
           {section === 'revision'  && <SectionRevision />}
           {section === 'scans'     && <SectionScans />}
@@ -381,45 +383,101 @@ function SectionDashboard() {
         </div>
       </div>
 
-      {/* Uploaders Metrics */}
-      <div>
-        <h3 className="font-bold dark:text-white mb-4 flex items-center gap-2">
-          <BarChart2 size={16} className="text-emerald-500"/> Métricas de Uploaders
-        </h3>
-        <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
-          {data?.uploaders && data.uploaders.length > 0 ? (
-            <table className="w-full text-left text-sm">
-              <thead>
-                <tr className="bg-gray-50 dark:bg-white/5 text-gray-500 font-semibold uppercase tracking-widest text-[10px]">
-                  <th className="px-5 py-3">Uploader</th>
-                  <th className="px-5 py-3">Rol</th>
-                  <th className="px-5 py-3 text-right">Capítulos Subidos</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-white/5">
-                {data.uploaders.map((up, i) => (
-                  <tr key={i} className="hover:bg-gray-50 dark:hover:bg-white/2 transition-colors">
-                    <td className="px-5 py-3 font-semibold text-gray-900 dark:text-white flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold text-[10px]">
-                        {up.username.substring(0, 2).toUpperCase()}
-                      </div>
-                      {up.username}
-                    </td>
-                    <td className="px-5 py-3 text-gray-500 capitalize">{up.rol}</td>
-                    <td className="px-5 py-3 text-right font-bold text-gray-900 dark:text-gray-200 tabular-nums">{up.total_chapters}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          ) : (
-            <div className="p-6 text-center text-gray-500 text-sm">
-              No hay métricas de uploaders aún. Cuando un usuario suba capítulos aparecerá aquí.
-            </div>
-          )}
+
+
+      {user?.is_superadmin && <GlobalSettings />}
+    </div>
+  );
+}
+
+
+// ============================================================
+//  SECCIÓN: ACTIVIDAD / RENDIMIENTO
+// ============================================================
+function SectionActividad() {
+  const [mes, setMes] = useState<string>(''); // Vacio = Todo el historial
+  const { data, loading, refetch } = useAPI<Stats>(`/api/admin/stats${mes ? '?mes=' + mes : ''}`, [mes]);
+
+  // Generar lista de meses para el filtro (ej. ultimos 12 meses)
+  const mesesOpciones = useMemo(() => {
+    const list = [];
+    const d = new Date();
+    for (let i = 0; i < 12; i++) {
+      const year = d.getFullYear();
+      const monthStr = String(d.getMonth() + 1).padStart(2, '0');
+      const label = d.toLocaleString('es-ES', { month: 'long', year: 'numeric' });
+      list.push({ value: `${year}-${monthStr}`, label: label.charAt(0).toUpperCase() + label.slice(1) });
+      d.setMonth(d.getMonth() - 1);
+    }
+    return list;
+  }, []);
+
+  return (
+    <div className="flex flex-col gap-8 animate-in fade-in duration-300">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-extrabold dark:text-white">Rendimiento de Uploaders</h2>
+          <p className="text-gray-500 text-sm mt-1">Capítulos publicados históricamente o por mes</p>
+        </div>
+        <button onClick={refetch} className="flex items-center gap-2 text-sm text-gray-500 hover:text-rose-500 transition-colors">
+          <RefreshCw size={15}/> Actualizar
+        </button>
+      </div>
+
+      <div className="flex items-center gap-4 bg-white dark:bg-[#111114] p-4 rounded-2xl border border-gray-100 dark:border-white/5">
+        <div className="flex flex-col gap-1 w-64">
+          <label className="text-xs font-bold text-gray-500 uppercase tracking-wide">Filtrar por Mes</label>
+          <select 
+            value={mes} 
+            onChange={(e) => setMes(e.target.value)}
+            className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-4 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none transition"
+          >
+            <option value="">Todo el historial (Acumulado)</option>
+            {mesesOpciones.map(m => (
+              <option key={m.value} value={m.value}>{m.label}</option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {user?.is_superadmin && <GlobalSettings />}
+      <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
+        {loading ? (
+          <div className="flex justify-center py-12"><Loader2 className="animate-spin text-rose-500" size={32}/></div>
+        ) : data?.uploaders && data.uploaders.length > 0 ? (
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="bg-gray-50 dark:bg-white/5 text-gray-500 font-semibold uppercase tracking-widest text-[10px]">
+                <th className="px-5 py-3">Uploader</th>
+                <th className="px-5 py-3">Rol</th>
+                <th className="px-5 py-3 text-right">Capítulos Subidos</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100 dark:divide-white/5">
+              {data.uploaders.map((up, i) => (
+                <tr key={i} className="hover:bg-gray-50 dark:hover:bg-white/2 transition-colors">
+                  <td className="px-5 py-3 font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                    <div className="w-8 h-8 rounded-full bg-emerald-500/10 text-emerald-500 flex items-center justify-center font-bold text-xs border border-emerald-500/20">
+                      {up.username.substring(0, 2).toUpperCase()}
+                    </div>
+                    {up.username}
+                  </td>
+                  <td className="px-5 py-3 text-gray-500 capitalize">
+                    <span className="bg-gray-100 dark:bg-white/5 px-2.5 py-1 rounded-lg text-xs font-semibold">{up.rol}</span>
+                  </td>
+                  <td className="px-5 py-3 text-right font-black text-lg text-gray-900 dark:text-emerald-400 tabular-nums">
+                    {up.total_chapters}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        ) : (
+          <div className="p-12 text-center text-gray-500 flex flex-col items-center gap-3">
+            <BarChart2 size={32} className="text-gray-300 dark:text-gray-700" />
+            <p className="text-sm font-semibold">No hay actividad registrada en este período.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
