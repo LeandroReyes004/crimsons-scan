@@ -5,6 +5,7 @@ import { Search, Bell, Moon, Sun, UserCircle, Settings, LogOut, Menu, Flame } fr
 import { getUser, logout } from '@/lib/auth';
 import { useTheme } from 'next-themes';
 import { usePathname, useRouter } from 'next/navigation';
+import { calculateUserRank } from '@/utils/ranking';
 
 export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }) {
   const [user, setUser] = useState<ReturnType<typeof getUser>>(null);
@@ -29,6 +30,25 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
 
   // Adult mode state with persistence
   const [isAdultMode, setIsAdultMode] = useState(false);
+
+  // Smart Navbar state
+  const [isVisible, setIsVisible] = useState(true);
+  const [lastScrollY, setLastScrollY] = useState(0);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      if (currentScrollY > lastScrollY && currentScrollY > 80) {
+        setIsVisible(false);
+      } else if (currentScrollY < lastScrollY) {
+        setIsVisible(true);
+      }
+      setLastScrollY(currentScrollY);
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [lastScrollY]);
 
   useEffect(() => {
     const saved = localStorage.getItem('crimson_adult_mode') === 'true';
@@ -166,17 +186,26 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
     setDropdownOpen(false);
   };
 
+  const isCatalogo = pathname === '/catalogo';
+
   return (
-    <header className="sticky top-0 z-40 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 py-4 px-6 md:px-10 flex items-center justify-between">
-      {/* Menu Toggle */}
-      <div className="flex items-center mr-4">
-        <button onClick={toggleSidebar} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 -ml-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5">
+    <header className={`sticky top-0 z-50 bg-white/80 dark:bg-[#0a0a0c]/80 backdrop-blur-xl border-b border-gray-200 dark:border-white/5 py-4 px-6 md:px-10 flex items-center justify-between gap-2 md:gap-4 transition-transform duration-300 ease-in-out ${isVisible ? 'translate-y-0' : '-translate-y-full'} ${isCatalogo ? 'hidden md:flex' : ''}`}>
+      {/* Menu Toggle & Logo */}
+      <div className="flex items-center shrink-0 gap-2 md:gap-4">
+        <button onClick={toggleSidebar} className="text-gray-500 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white transition-colors p-2 -ml-2 rounded-xl hover:bg-gray-100 dark:hover:bg-white/5 shrink-0">
           <Menu size={24} />
         </button>
+        <Link href="/" className="flex items-center shrink-0">
+          <img src="/logo.png" alt="Logo" className="h-8 w-auto object-contain drop-shadow-[0_0_8px_rgba(225,29,72,0.4)]" />
+          {/* Opcional: Texto por si la imagen tarda en cargar */}
+          <span className="text-rose-600 dark:text-rose-500 font-black text-lg md:text-xl ml-3 tracking-wider drop-shadow-md">
+            CRIMSON <span className="hidden sm:inline">SCAN</span>
+          </span>
+        </Link>
       </div>
 
       {/* Search Bar */}
-      <div className="flex-1 max-w-xl">
+      <div className="flex-1 min-w-0 max-w-2xl px-2">
         <div className="relative group" ref={searchRef}>
           <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
             <Search size={16} className="text-gray-500 group-focus-within:text-rose-500 transition-colors" />
@@ -225,7 +254,7 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
       </div>
 
       {/* Actions */}
-      <div className="flex items-center gap-4 sm:gap-6 ml-4">
+      <div className="flex items-center shrink-0 gap-2 md:gap-4">
         {user ? (
           <div className="relative" ref={dropdownRef}>
             <button onClick={() => setDropdownOpen(o => !o)} className="flex items-center gap-2 hover:opacity-80 transition">
@@ -236,9 +265,16 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
             </button>
             {dropdownOpen && (
               <div className="absolute right-0 top-full mt-3 w-48 bg-white dark:bg-[#151518] border border-gray-200 dark:border-white/10 rounded-2xl shadow-2xl py-2 z-50 overflow-hidden">
-                <div className="px-4 py-2 border-b border-gray-100 dark:border-white/5 mb-1">
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-white/5 mb-1 flex flex-col gap-1">
                   <p className="text-sm font-bold text-gray-900 dark:text-white truncate">{user.display_name || user.username}</p>
-                  <p className="text-[10px] text-gray-500 uppercase tracking-wider">{user.rol}</p>
+                  <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                    <span className="text-[10px] text-gray-500 uppercase tracking-wider">{user.rol}</span>
+                    {user.capitulos_leidos !== undefined && (
+                      <span className={`text-[9px] px-1.5 py-0.5 rounded-md ${calculateUserRank(user.capitulos_leidos).color}`}>
+                        {calculateUserRank(user.capitulos_leidos).name}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <Link href="/perfil" onClick={() => setDropdownOpen(false)} className="flex items-center gap-3 px-4 py-2 text-sm text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white hover:bg-gray-50 dark:hover:bg-white/5 transition">
                   <UserCircle size={16} className="text-gray-400"/> Mi Perfil
@@ -264,7 +300,8 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
 
         <div className="flex items-center gap-3 border-l border-gray-200 dark:border-white/10 pl-4 sm:pl-6">
           {/* Adult Toggle */}
-          {mounted && (
+          {/* Adult Toggle */}
+          {mounted ? (
             <button 
               onClick={toggleAdultMode}
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold transition-all border ${
@@ -276,6 +313,8 @@ export default function TopNav({ toggleSidebar }: { toggleSidebar?: () => void }
               <Flame size={14} className={isAdultMode ? 'text-white' : 'text-rose-500'} />
               <span>+18</span>
             </button>
+          ) : (
+            <div className="w-[68px] h-[30px] rounded-full bg-gray-200 dark:bg-white/10 animate-pulse" />
           )}
 
           {user && (

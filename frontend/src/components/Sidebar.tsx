@@ -1,4 +1,5 @@
 'use client';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { 
@@ -28,6 +29,15 @@ const MENU_ITEMS: MenuItem[] = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    window.dispatchEvent(new Event('close-sidebar'));
+  }, [pathname]);
 
   return (
     <aside className="h-full w-full bg-white/95 dark:bg-[#0a0a0c]/95 backdrop-blur-xl border-r border-gray-200 dark:border-white/5 flex flex-col shadow-2xl">
@@ -53,13 +63,20 @@ export default function Sidebar() {
 
           const Icon = item.icon!;
           
-          // Lógica inteligente para Favoritos
           let href = item.href!;
-          if (item.name === 'Favoritos') {
-            href = pathname.startsWith('/adulto') ? '/adulto/favoritos' : '/favoritos';
+          const isAdultMode = mounted 
+            ? pathname.startsWith('/adulto') || (typeof window !== 'undefined' && window.location.search.includes('adulto=1'))
+            : pathname.startsWith('/adulto');
+          
+          if (isAdultMode) {
+            if (item.name === 'Inicio') href = '/adulto';
+            else if (item.name === 'Explorar') href = '/catalogo?adulto=1';
+            else if (item.name === 'Calendario') href = '/calendario?adulto=1';
+            else if (item.name === 'Ranking') href = '/ranking?adulto=1';
+            // Favoritos y Lectura se mantienen en sus rutas base (globales)
           }
 
-          const isActive = pathname === href || (href !== '/' && pathname.startsWith(href));
+          const isActive = pathname === href || (href !== '/' && href !== '/adulto' && pathname.startsWith(href.split('?')[0]));
 
           if (item.disabled) {
             return (

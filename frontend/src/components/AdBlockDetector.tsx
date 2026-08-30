@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
-const EXCLUDED = ['/admin', '/uploader'];
+const EXCLUDED = ['/admin', '/admin-dev', '/uploader', '/login', '/register'];
 
 // Clases que todos los bloqueadores (incluido Brave) ocultan via CSS
 const BAIT_CLASSES = 'adsbox ad-banner pub_300x250 pub_300x250m text-ad textAd text_ad text_ads ad-unit';

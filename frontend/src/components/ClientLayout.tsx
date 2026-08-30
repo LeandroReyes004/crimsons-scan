@@ -29,13 +29,26 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
   const toggleSidebar = () => {
     if (window.innerWidth < 768) {
-      setMobileSidebarOpen(!mobileSidebarOpen);
+      setMobileSidebarOpen(prev => !prev);
     } else {
-      const newState = !sidebarOpen;
-      setSidebarOpen(newState);
-      localStorage.setItem('sidebarOpen', String(newState));
+      setSidebarOpen(prev => {
+        const newState = !prev;
+        localStorage.setItem('sidebarOpen', String(newState));
+        return newState;
+      });
     }
   };
+
+  useEffect(() => {
+    const handleToggle = () => toggleSidebar();
+    const handleClose = () => { if (window.innerWidth < 768) setMobileSidebarOpen(false); };
+    window.addEventListener('toggle-sidebar', handleToggle);
+    window.addEventListener('close-sidebar', handleClose);
+    return () => {
+      window.removeEventListener('toggle-sidebar', handleToggle);
+      window.removeEventListener('close-sidebar', handleClose);
+    };
+  }, []);
 
   return (
     <div className="flex min-h-screen relative">

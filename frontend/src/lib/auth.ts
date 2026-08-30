@@ -26,6 +26,7 @@ export interface CrimsonUser {
   scan_contrato_firmado?: number;
   scan_contrato_version?: number;
   global_contrato_version?: number;
+  capitulos_leidos?: number;
 }
 
 export async function login(username: string, password: string): Promise<CrimsonUser> {

@@ -592,9 +592,14 @@ export default function UploaderPage() {
       {/* Header */}
       <header className="sticky top-0 z-40 bg-white dark:bg-[#0d0d10] border-b border-gray-200 dark:border-white/5 h-14 px-4 flex items-center justify-between shadow-sm gap-2">
         <div className="flex items-center gap-2 min-w-0">
-          {view !== 'mangas' && (
+          {view === 'mangas' ? (
+            <button onClick={() => router.push('/admin-dev')}
+              className="p-2 rounded-lg text-gray-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition shrink-0" title="Volver al Admin">
+              <ChevronLeft size={18}/>
+            </button>
+          ) : (
             <button onClick={() => { setView(view === 'upload' || view === 'batch' || view === 'edit' || view === 'drive' ? 'chapters' : 'mangas'); resetUpload(); setBatchChapters([]); setBatchDone(false); setEditingCap(null); setDriveUrl(''); }}
-              className="p-2 rounded-lg text-gray-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition shrink-0">
+              className="p-2 rounded-lg text-gray-500 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition shrink-0" title="Atrás">
               <ChevronLeft size={18}/>
             </button>
           )}
@@ -608,10 +613,10 @@ export default function UploaderPage() {
         </div>
         <div className="flex items-center gap-1 shrink-0">
           {(user.is_superadmin || user.rol === 'admin' || user.rol === 'admin_scan') && (
-            <Link href="/admin" className="text-xs text-gray-500 hover:text-rose-500 transition px-2 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 hidden sm:flex items-center gap-1">Admin</Link>
+            <Link href="/admin-dev" className="text-xs font-bold text-gray-500 hover:text-rose-500 transition px-2 py-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-500/10 flex items-center gap-1">Admin</Link>
           )}
           <button onClick={() => { logout(); router.push('/'); }}
-            className="p-2 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition">
+            className="p-2 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition" title="Cerrar sesión">
             <LogOut size={16}/>
           </button>
         </div>
@@ -656,12 +661,12 @@ export default function UploaderPage() {
         {/* ── Lista de capítulos ── */}
         {view === 'chapters' && selectedManga && (
           <div className="animate-in fade-in duration-300">
-            <div className="flex items-center justify-between mb-5 gap-3">
-              <div className="min-w-0">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-5 gap-4">
+              <div className="min-w-0 w-full sm:w-auto">
                 <h2 className="text-lg font-extrabold dark:text-white truncate">{selectedManga.titulo}</h2>
                 <p className="text-gray-500 text-sm">{capitulos.length} capítulos</p>
               </div>
-              <div className="flex gap-2 shrink-0">
+              <div className="flex flex-wrap sm:flex-nowrap gap-2 shrink-0 w-full sm:w-auto justify-end sm:justify-start">
                 {user && (user.is_superadmin || user.scan_nombre?.toLowerCase().includes('crimson')) && (
                   <button onClick={() => { resetUpload(); setView('drive'); }}
                     className="flex items-center gap-1.5 bg-white dark:bg-[#111114] border border-gray-200 dark:border-white/10 hover:border-blue-300 dark:hover:border-blue-500/30 text-gray-600 dark:text-gray-300 px-3 py-2.5 rounded-xl text-sm font-bold transition active:scale-95">
@@ -687,28 +692,30 @@ export default function UploaderPage() {
             ) : (
               <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 overflow-hidden">
                 {capitulos.map((cap, i) => (
-                  <div key={cap.id} className={`flex items-center gap-3 px-4 py-3.5 ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
+                  <div key={cap.id} className={`flex flex-wrap sm:flex-nowrap items-center gap-3 px-4 py-3.5 ${i !== 0 ? 'border-t border-gray-100 dark:border-white/5' : ''}`}>
                     <div className={`p-2 rounded-xl shrink-0 ${cap.estado === 'publicado' ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-500' : cap.estado === 'rechazado' ? 'bg-red-50 dark:bg-red-500/10 text-red-500' : 'bg-amber-50 dark:bg-amber-500/10 text-amber-500'}`}>
                       {cap.estado === 'publicado' ? <CheckCircle size={15}/> : cap.estado === 'rechazado' ? <XCircle size={15}/> : <Clock size={15}/>}
                     </div>
-                    <div className="flex-1 min-w-0">
+                    <div className="flex-1 min-w-0 w-full sm:w-auto">
                       <p className="font-semibold text-sm dark:text-white truncate">Cap. {cap.numero}{cap.titulo ? ` — ${cap.titulo}` : ''}</p>
                       <p className="text-xs text-gray-400">{cap.num_paginas ?? 0} pág · {new Date(cap.fecha_subida).toLocaleDateString('es')}</p>
                       {cap.estado === 'rechazado' && cap.notas_admin && (
                         <div className="flex items-start gap-1 mt-1 text-red-500 text-xs"><AlertCircle size={10} className="mt-0.5 shrink-0"/><span className="truncate">{cap.notas_admin}</span></div>
                       )}
                     </div>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${cap.estado === 'publicado' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : cap.estado === 'programado' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : cap.estado === 'rechazado' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'}`}>{cap.estado}</span>
-                    <button onClick={() => openEdit(cap)}
-                      className="p-2 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition shrink-0 active:scale-90">
-                      <Edit3 size={14}/>
-                    </button>
-                    {(user?.rol === 'admin' || user?.rol === 'admin_scan' || user?.is_superadmin) && (
-                      <button onClick={() => deleteChapter(cap)} disabled={deletingCapId === cap.id}
-                        className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition shrink-0 active:scale-90 disabled:opacity-50">
-                        {deletingCapId === cap.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
+                    <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-end shrink-0">
+                      <span className={`text-xs font-bold px-2 py-0.5 rounded-full shrink-0 ${cap.estado === 'publicado' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400' : cap.estado === 'programado' ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-500/20 dark:text-indigo-400' : cap.estado === 'rechazado' ? 'bg-red-100 text-red-700 dark:bg-red-500/20 dark:text-red-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400'}`}>{cap.estado}</span>
+                      <button onClick={() => openEdit(cap)}
+                        className="p-2 rounded-lg text-gray-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-500/10 transition shrink-0 active:scale-90">
+                        <Edit3 size={14}/>
                       </button>
-                    )}
+                      {(user?.rol === 'admin' || user?.rol === 'admin_scan' || user?.is_superadmin) && (
+                        <button onClick={() => deleteChapter(cap)} disabled={deletingCapId === cap.id}
+                          className="p-2 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 transition shrink-0 active:scale-90 disabled:opacity-50">
+                          {deletingCapId === cap.id ? <Loader2 size={14} className="animate-spin"/> : <Trash2 size={14}/>}
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
@@ -795,7 +802,7 @@ export default function UploaderPage() {
                 <div className="bg-white dark:bg-[#111114] rounded-2xl border border-gray-100 dark:border-white/5 p-4">
                   <p className="text-xs font-bold text-gray-400 uppercase tracking-wide mb-3">Capítulo de: <span className="text-rose-500">{selectedManga.titulo}</span></p>
                   <div className="flex flex-col gap-3">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div className="flex flex-col gap-1">
                         <label className="text-xs font-bold text-gray-500">Número *</label>
                         <input type="number" step="0.1" inputMode="decimal" value={capNumero} onChange={e => { setCapNumero(e.target.value); setDupError(''); }}

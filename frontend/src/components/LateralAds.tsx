@@ -7,7 +7,7 @@ import AdsterraSkyscraper from './AdsterraSkyscraper';
 import { getUser } from '@/lib/auth';
 
 // Páginas donde no mostramos la barra de anuncios
-const EXCLUDED = ['/admin', '/uploader', '/manga/reader'];
+const EXCLUDED = ['/admin', '/admin-dev', '/uploader', '/manga/reader', '/login', '/register'];
 
 export default function LateralAds() {
   const [closed, setClosed]   = useState(false);
@@ -48,14 +48,14 @@ export default function LateralAds() {
 
   return (
     <div
-      className={`fixed bottom-0 left-0 right-0 z-50 h-[100px] overflow-hidden bg-[#0a0a0c]/95 backdrop-blur-md border-t border-white/10 flex justify-center items-start transition-transform duration-300 ${
+      className={`fixed bottom-0 left-0 right-0 z-40 h-[100px] overflow-hidden bg-white/95 dark:bg-[#0a0a0c]/95 backdrop-blur-md border-t border-gray-200 dark:border-white/10 flex justify-center items-start transition-transform duration-300 ${
         visible ? 'translate-y-0' : 'translate-y-full'
       }`}
     >
       <button
         onClick={() => setClosed(true)}
         aria-label="Cerrar anuncio"
-        className="absolute top-1.5 right-2 text-gray-500 hover:text-white transition-colors z-10"
+        className="absolute top-1.5 right-2 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white transition-colors z-10"
       >
         <X size={12} />
       </button>

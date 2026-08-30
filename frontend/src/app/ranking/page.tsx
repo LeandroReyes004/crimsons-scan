@@ -106,7 +106,7 @@ export default function RankingPage() {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-[#050505] overflow-hidden pb-20">
+    <div className="relative min-h-screen w-full bg-gray-50 dark:bg-[#050505] overflow-hidden pb-20 transition-colors duration-300">
       
       {/* Fondo del Podio */}
       <div className="absolute top-0 left-0 right-0 h-[600px] z-0 pointer-events-none overflow-hidden">
@@ -116,7 +116,7 @@ export default function RankingPage() {
             style={{ backgroundImage: `url('${top3[0].cover_r2_key ? `${API_URL}/api/cover/${top3[0].id}` : '/portada.jpg'}')` }}
           />
         )}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/40 via-[#0a0a0c]/80 to-[#050505] z-10" />
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-50/40 via-white/80 to-gray-50 dark:from-[#050505]/40 dark:via-[#0a0a0c]/80 dark:to-[#050505] z-10 transition-colors duration-300" />
       </div>
 
       <div className="relative z-20 max-w-[1200px] mx-auto w-full px-4 md:px-8 pt-12 flex flex-col gap-10">
@@ -124,11 +124,11 @@ export default function RankingPage() {
         {/* Cabecera */}
         <header className="flex flex-col items-center text-center gap-6">
           <div className="flex flex-col items-center gap-2">
-            <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight drop-shadow-lg flex items-center gap-4">
+            <h1 className="text-4xl md:text-6xl font-black text-gray-900 dark:text-white tracking-tight drop-shadow-sm dark:drop-shadow-lg flex items-center gap-4 transition-colors duration-300">
               <Trophy className="text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.5)]" size={48} />
               El <span className="text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-amber-600">Podio</span>
             </h1>
-            <p className="text-gray-400 font-medium text-sm md:text-lg">Las obras más leídas y aclamadas por la comunidad.</p>
+            <p className="text-gray-600 dark:text-gray-400 font-medium text-sm md:text-lg transition-colors duration-300">Las obras más leídas y aclamadas por la comunidad.</p>
           </div>
 
           {/* Filtros Contextuales (Píldoras) */}
@@ -142,7 +142,7 @@ export default function RankingPage() {
                   className={`px-5 py-2 rounded-full text-sm font-bold transition-all duration-300 ${
                     isActive
                       ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-[0_0_15px_rgba(225,29,72,0.4)] border border-rose-400/30'
-                      : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/5'
+                      : 'bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/5 shadow-sm dark:shadow-none'
                   }`}
                 >
                   {f}
@@ -159,7 +159,7 @@ export default function RankingPage() {
         ) : (
           <>
             {/* El Podio Visual (Top 3) */}
-            <div className="flex flex-row items-end justify-center gap-2 md:gap-6 lg:gap-10 pb-10 border-b border-white/5">
+            <div className="flex flex-row items-end justify-center gap-2 md:gap-6 lg:gap-10 pb-10 border-b border-gray-200 dark:border-white/5 transition-colors duration-300">
               {top3[1] && <div className="flex-1 flex justify-end"><PodiumCard manga={top3[1]} rank={2} /></div>}
               {top3[0] && <div className="flex-none"><PodiumCard manga={top3[0]} rank={1} /></div>}
               {top3[2] && <div className="flex-1 flex justify-start"><PodiumCard manga={top3[2]} rank={3} /></div>}
@@ -181,11 +181,11 @@ export default function RankingPage() {
                   <Link 
                     key={manga.id}
                     href={manga.ultimo_capitulo_id ? `/manga/reader/${manga.slug ?? manga.id}/chapter/${manga.ultimo_capitulo_id}` : `/manga/reader/${manga.slug ?? manga.id}`}
-                    className="group relative flex items-center gap-4 p-3 pr-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-transparent hover:border-white/10 transition-all duration-300"
+                    className="group relative flex items-center gap-4 p-3 pr-4 rounded-2xl bg-white dark:bg-[#111111] hover:bg-gray-50 dark:hover:bg-white/10 border border-gray-200 dark:border-transparent hover:border-gray-300 dark:hover:border-white/10 shadow-sm dark:shadow-none transition-all duration-300"
                   >
                     {/* Número y Tendencia */}
                     <div className="flex flex-col items-center justify-center w-12 md:w-16 shrink-0">
-                      <span className="text-2xl md:text-3xl font-black text-gray-500 group-hover:text-white transition-colors">
+                      <span className="text-2xl md:text-3xl font-black text-gray-400 dark:text-gray-500 group-hover:text-gray-900 dark:group-hover:text-white transition-colors duration-300">
                         {realRank}
                       </span>
                       {trend.type === 'up' && <span className="flex items-center text-[10px] font-bold text-emerald-500"><TrendingUp size={12} className="mr-0.5" />{trend.val}</span>}
@@ -200,7 +200,7 @@ export default function RankingPage() {
 
                     {/* Info */}
                     <div className="flex-1 flex flex-col justify-center min-w-0">
-                      <h3 className="text-white font-bold text-sm md:text-base truncate group-hover:text-rose-400 transition-colors">
+                      <h3 className="text-gray-900 dark:text-white font-bold text-sm md:text-base truncate group-hover:text-rose-500 dark:group-hover:text-rose-400 transition-colors duration-300">
                         {manga.titulo}
                       </h3>
                       <div className="flex items-center gap-2 mt-1">
@@ -208,7 +208,7 @@ export default function RankingPage() {
                           <Flame size={12} className="mr-1" /> {(manga.views_total || 0).toLocaleString()}
                         </span>
                         {tags.map(tag => (
-                          <span key={tag} className="hidden md:inline-block text-[10px] font-medium text-gray-400 bg-white/5 px-2 py-0.5 rounded-full border border-white/10">
+                          <span key={tag} className="hidden md:inline-block text-[10px] font-medium text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-white/5 px-2 py-0.5 rounded-full border border-gray-200 dark:border-white/10 transition-colors duration-300">
                             {tag}
                           </span>
                         ))}

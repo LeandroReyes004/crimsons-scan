@@ -4,7 +4,7 @@ import { PDFDocument, rgb, StandardFonts } from 'pdf-lib';
 //  DB: D1  |  Storage: R2  |  Imágenes: HMAC stateless (sin KV)
 // ============================================================
 
-const ALLOWED_ORIGINS = ['https://scancrimson.com', 'https://www.scancrimson.com', 'http://localhost:8081'];
+const ALLOWED_ORIGINS = ['https://scancrimson.com', 'https://www.scancrimson.com', 'http://localhost:8081', 'http://localhost:3000', 'http://10.0.0.103:3000'];
 
 const BASE_CORS = {
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
@@ -17,7 +17,7 @@ const BASE_CORS = {
 function makeCORS(origin) {
   return {
     ...BASE_CORS,
-    'Access-Control-Allow-Origin': ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
+    'Access-Control-Allow-Origin': origin || '*',
   };
 }
 
@@ -682,7 +682,7 @@ export default {
         const user = await getUser(request, env);
         if (!user) return err('No autenticado', 401);
         const profile = await env.DB.prepare(
-          `SELECT id, username, display_name, email, rol, avatar_url, color_acento, bio, fecha_registro, is_superadmin, scan_id,
+          `SELECT id, username, display_name, email, rol, avatar_url, color_acento, bio, fecha_registro, is_superadmin, scan_id, capitulos_leidos,
             (SELECT COUNT(*) FROM comentarios WHERE usuario_id = u.id) as total_comentarios
            FROM usuarios u WHERE u.id = ?`
         ).bind(user.id).first();
@@ -1206,6 +1206,7 @@ export default {
             await env.DB.prepare('INSERT INTO historial_lectura (usuario_id, manga_id, capitulo_id) VALUES (?, ?, ?)')
               .bind(user.id, cap.manga_id, cap.id).run();
           }
+          await env.DB.prepare('UPDATE usuarios SET capitulos_leidos = COALESCE(capitulos_leidos, 0) + 1 WHERE id = ?').bind(user.id).run();
         }
 
         return json({
@@ -1513,6 +1514,7 @@ export default {
               await env.DB.prepare('INSERT INTO historial_lectura (usuario_id, manga_id, capitulo_id) VALUES (?, ?, ?)')
                 .bind(user.id, cap.manga_id, cap.id).run();
             }
+            await env.DB.prepare('UPDATE usuarios SET capitulos_leidos = COALESCE(capitulos_leidos, 0) + 1 WHERE id = ?').bind(user.id).run();
           }
         }
 
@@ -2209,17 +2211,23 @@ export default {
         if (!admin) return err('No autorizado', 401);
 
         const url = new URL(request.url);
-        const mes = url.searchParams.get('mes'); // Formato: YYYY-MM
+        const rango = url.searchParams.get('rango') || url.searchParams.get('mes');
         const filterScanId = url.searchParams.get('scan_id');
         let fechaInicio = null;
         let fechaFin = null;
         let filterUploaders = "";
         let paramsUploaders = [];
 
-        if (mes && /^\d{4}-\d{2}$/.test(mes)) {
-          fechaInicio = `${mes}-01 00:00:00`;
-          const year = parseInt(mes.split('-')[0]);
-          const month = parseInt(mes.split('-')[1]);
+        if (rango === 'semana') {
+          const pastWeek = new Date();
+          pastWeek.setDate(pastWeek.getDate() - 7);
+          fechaInicio = pastWeek.toISOString().slice(0, 19).replace('T', ' '); // Formato: YYYY-MM-DD HH:MM:SS
+          filterUploaders = " AND c.fecha_publicacion >= ?";
+          paramsUploaders.push(fechaInicio);
+        } else if (rango && /^\d{4}-\d{2}$/.test(rango)) {
+          fechaInicio = `${rango}-01 00:00:00`;
+          const year = parseInt(rango.split('-')[0]);
+          const month = parseInt(rango.split('-')[1]);
           const nextMonthDate = new Date(year, month, 1);
           const nextMonth = `${nextMonthDate.getFullYear()}-${String(nextMonthDate.getMonth() + 1).padStart(2, '0')}`;
           fechaFin = `${nextMonth}-01 00:00:00`;

@@ -58,7 +58,7 @@ export default function CalendarioPage() {
     : '/portada.jpg';
 
   return (
-    <div className="relative min-h-screen w-full bg-[#050505] overflow-hidden pb-20">
+    <div className="relative min-h-screen w-full bg-gray-50 dark:bg-[#050505] overflow-hidden pb-20 transition-colors duration-300">
       
       {/* Fondo Inmersivo a Gran Escala */}
       <div className="fixed inset-0 z-0 pointer-events-none">
@@ -67,8 +67,8 @@ export default function CalendarioPage() {
           style={{ backgroundImage: `url('${bgImage}')` }}
         />
         {/* Capas de oscurecimiento y desenfoque para no distraer */}
-        <div className="absolute inset-0 bg-black/70 backdrop-blur-3xl" />
-        <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/80 via-[#0a0a0c]/80 to-[#050505] z-10" />
+        <div className="absolute inset-0 bg-white/70 dark:bg-black/70 backdrop-blur-3xl transition-colors duration-300" />
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-50/80 via-white/80 to-gray-50 dark:from-[#050505]/80 dark:via-[#0a0a0c]/80 dark:to-[#050505] z-10 transition-colors duration-300" />
       </div>
 
       <div className="relative z-20 max-w-[1600px] mx-auto w-full px-4 md:px-8 pt-12 flex flex-col gap-8">
@@ -80,10 +80,10 @@ export default function CalendarioPage() {
               <CalendarIcon size={28} className="text-rose-500" />
             </div>
             <div>
-              <h1 className="text-3xl md:text-5xl font-black text-white tracking-tight drop-shadow-md">
+              <h1 className="text-3xl md:text-5xl font-black text-gray-900 dark:text-white tracking-tight drop-shadow-sm dark:drop-shadow-md transition-colors duration-300">
                 Calendario de <span className="text-transparent bg-clip-text bg-gradient-to-r from-rose-500 to-pink-500">Estrenos</span>
               </h1>
-              <p className="text-gray-400 font-medium text-sm md:text-base mt-1">Descubre los capítulos que salen esta semana.</p>
+              <p className="text-gray-500 dark:text-gray-400 font-medium text-sm md:text-base mt-1">Descubre los capítulos que salen esta semana.</p>
             </div>
           </div>
         </header>
@@ -101,8 +101,8 @@ export default function CalendarioPage() {
                   isActive
                     ? isSub 
                       ? 'bg-gradient-to-r from-rose-600 to-pink-600 text-white shadow-[0_0_15px_rgba(225,29,72,0.4)] border border-rose-400/30'
-                      : 'bg-white text-black shadow-lg shadow-white/10'
-                    : 'bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white border border-white/5'
+                      : 'bg-gray-900 dark:bg-white text-white dark:text-black shadow-lg shadow-black/10 dark:shadow-white/10'
+                    : 'bg-white dark:bg-white/5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-white/10 hover:text-gray-900 dark:hover:text-white border border-gray-200 dark:border-white/5 shadow-sm dark:shadow-none'
                 }`}
               >
                 {isSub && <Heart size={14} className={isActive ? 'text-white' : 'text-rose-500'} fill={isActive ? 'currentColor' : 'none'} />}
@@ -118,10 +118,10 @@ export default function CalendarioPage() {
              <div className="w-12 h-12 rounded-full border-4 border-rose-500/20 border-t-rose-500 animate-spin" />
           </div>
         ) : filteredMangas.length === 0 ? (
-          <div className="w-full flex flex-col items-center justify-center min-h-[400px] bg-white/5 rounded-3xl border border-white/5">
-            <Filter size={48} className="text-gray-600 mb-4" />
-            <h3 className="text-xl font-bold text-gray-300">No hay estrenos para este filtro</h3>
-            <p className="text-gray-500 mt-2">Vuelve pronto o revisa otro día.</p>
+          <div className="w-full flex flex-col items-center justify-center min-h-[400px] bg-white dark:bg-[#111111] rounded-3xl border border-gray-200 dark:border-white/5 shadow-md dark:shadow-none transition-colors duration-300">
+            <Filter size={48} className="text-gray-400 dark:text-gray-600 mb-4" />
+            <h3 className="text-xl font-bold text-gray-800 dark:text-gray-300">No hay estrenos para este filtro</h3>
+            <p className="text-gray-500 dark:text-gray-500 mt-2">Vuelve pronto o revisa otro día.</p>
           </div>
         ) : (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4 md:gap-6">
@@ -133,7 +133,7 @@ export default function CalendarioPage() {
                 <Link 
                   key={m.id}
                   href={m.ultimo_capitulo_id ? `/manga/reader/${m.slug ?? m.id}/chapter/${m.ultimo_capitulo_id}` : `/manga/reader/${m.slug ?? m.id}`}
-                  className="group relative w-full aspect-[2/3] rounded-2xl overflow-hidden border border-white/10 bg-black/40 shadow-xl hover:shadow-[0_15px_40px_rgba(225,29,72,0.3)] hover:-translate-y-2 transition-all duration-500 flex flex-col justify-end"
+                  className="group relative w-full aspect-[2/3] rounded-2xl overflow-hidden border border-gray-200 dark:border-white/10 bg-white dark:bg-black/40 shadow-lg dark:shadow-xl hover:shadow-[0_15px_40px_rgba(225,29,72,0.3)] hover:-translate-y-2 transition-all duration-500 flex flex-col justify-end"
                 >
                   {/* Portada */}
                   <div className="absolute inset-0 z-0">

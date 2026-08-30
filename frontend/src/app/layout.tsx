@@ -4,6 +4,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/ThemeProvider';
 import LateralAds from '@/components/LateralAds';
 import AdBlockDetector from '@/components/AdBlockDetector';
+import GlobalAdScript from '@/components/GlobalAdScript';
 
 import ClientLayout from '@/components/ClientLayout';
 
@@ -47,11 +48,7 @@ export default function RootLayout({
       <head>
         <meta name="profiton-domain-verification" content="fc1082b69f555d513ea15de2bdef8e83f88a19279fe8bdff6d1676431b3aed7a" />
         {/* Aquí inyectamos el script de Monetag exactamente como lo piden para el bot */}
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(s){s.dataset.zone='11634536',s.src='https://n6wxm.com/vignette.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`,
-          }}
-        />
+        <GlobalAdScript />
       </head>
       <body className="min-h-full flex flex-col font-sans transition-colors duration-300 dark:bg-[#0a0a0c] dark:text-white bg-slate-50 text-slate-900 pb-28">
         <ThemeProvider

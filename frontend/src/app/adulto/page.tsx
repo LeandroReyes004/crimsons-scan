@@ -203,22 +203,22 @@ export default function AdultoPage() {
         <aside className="w-full lg:w-[320px] xl:w-[380px] shrink-0 flex flex-col gap-6">
           
           {/* TOP 5 SEMANAL */}
-          <div className="bg-[#111114] border border-white/5 rounded-3xl p-6 shadow-xl">
-            <h3 className="text-sm font-black flex items-center gap-2 text-white mb-6 tracking-widest uppercase">
+          <div className="bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 rounded-3xl p-6 shadow-xl">
+            <h3 className="text-sm font-black flex items-center gap-2 text-gray-900 dark:text-white mb-6 tracking-widest uppercase">
               <Flame className="text-orange-500" size={16} fill="currentColor"/> TOP 5 SEMANAL
             </h3>
             
             <div className="flex flex-col gap-4">
               {masLeidos.slice(0, 5).map((m, idx) => (
                 <Link key={m.id} href={`/manga/reader/${m.slug ?? m.id}`} className="flex items-center gap-4 group">
-                  <span className={`text-xl font-black w-4 text-center ${idx === 0 ? 'text-rose-500' : idx === 1 ? 'text-orange-400' : idx === 2 ? 'text-amber-400' : 'text-gray-600'}`}>
+                  <span className={`text-xl font-black w-4 text-center ${idx === 0 ? 'text-rose-500' : idx === 1 ? 'text-orange-400' : idx === 2 ? 'text-amber-400' : 'text-gray-300 dark:text-gray-600'}`}>
                     {idx + 1}
                   </span>
-                  <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 border border-white/10 shadow-md">
+                  <div className="w-12 h-16 rounded-lg overflow-hidden shrink-0 border border-gray-200 dark:border-white/10 shadow-md">
                     <img src={m.cover_r2_key ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8787'}/api/cover/${m.id}` : '/portada.jpg'} alt={m.titulo} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                   </div>
                   <div className="flex flex-col flex-1 overflow-hidden">
-                    <h4 className="text-sm font-bold text-white truncate group-hover:text-rose-400 transition-colors">{m.titulo}</h4>
+                    <h4 className="text-sm font-bold text-gray-900 dark:text-white truncate group-hover:text-rose-500 dark:group-hover:text-rose-400 transition-colors">{m.titulo}</h4>
                     <div className="flex items-center gap-1.5 mt-1">
                       <Sparkles size={10} className="text-yellow-500" fill="currentColor"/>
                       <span className="text-[10px] text-gray-400 font-semibold">{m.views_total >= 1000 ? (m.views_total/1000).toFixed(1) + 'K' : m.views_total}</span>
@@ -231,9 +231,9 @@ export default function AdultoPage() {
           </div>
 
           {/* CALENDARIO */}
-          <div className="bg-[#111114] border border-white/5 rounded-3xl p-6 shadow-xl">
-            <h3 className="text-sm font-black flex items-center gap-2 text-white mb-6 tracking-widest uppercase">
-              <Calendar className="text-sky-400" size={16} fill="currentColor"/> CALENDARIO
+          <div className="bg-white dark:bg-[#111114] border border-gray-100 dark:border-white/5 rounded-3xl p-6 shadow-xl">
+            <h3 className="text-sm font-black flex items-center gap-2 text-gray-900 dark:text-white mb-6 tracking-widest uppercase">
+              <Calendar className="text-sky-500 dark:text-sky-400" size={16} fill="currentColor"/> CALENDARIO
             </h3>
             
             <div className="flex flex-col gap-3">
@@ -241,9 +241,9 @@ export default function AdultoPage() {
                 const m = recientes[idx % (recientes.length || 1)];
                 if (!m) return null;
                 return (
-                  <div key={day} className="flex items-center gap-4 text-sm group cursor-pointer hover:bg-white/5 p-2 rounded-xl transition-colors -mx-2">
-                    <span className={`font-black w-8 text-center ${idx === 0 ? 'text-rose-500' : 'text-gray-500'}`}>{day}</span>
-                    <span className="text-gray-300 font-medium truncate flex-1 group-hover:text-white transition-colors">{m.titulo}</span>
+                  <div key={day} className="flex items-center gap-4 text-sm group cursor-pointer hover:bg-gray-50 dark:hover:bg-white/5 p-2 rounded-xl transition-colors -mx-2">
+                    <span className={`font-black w-8 text-center ${idx === 0 ? 'text-rose-500' : 'text-gray-400 dark:text-gray-500'}`}>{day}</span>
+                    <span className="text-gray-700 dark:text-gray-300 font-medium truncate flex-1 group-hover:text-gray-900 dark:group-hover:text-white transition-colors">{m.titulo}</span>
                     {m.ultimo_capitulo != null && (
                       <span className="text-gray-500 text-xs font-semibold whitespace-nowrap">Cap. {m.ultimo_capitulo}</span>
                     )}

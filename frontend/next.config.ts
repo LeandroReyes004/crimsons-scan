@@ -2,7 +2,8 @@ import type { NextConfig } from "next";
 
 const BUILD_ID = Date.now().toString();
 
-const WORKER = "https://crimson-api.leandro-reyes1025.workers.dev";
+const isDev = process.env.NODE_ENV === 'development';
+const WORKER = isDev ? "http://10.0.0.103:8787" : "https://crimson-api.leandro-reyes1025.workers.dev";
 const AD_SCRIPTS = "https://static.cloudflareinsights.com https://*.effectivecpmnetwork.com https://*.highperformanceformat.com https://*.adsterra.com";
 
 const CSP = [
@@ -19,8 +20,10 @@ const CSP = [
 ].join("; ");
 
 const nextConfig: NextConfig = {
+  // Permitir acceder desde el celular a Next.js (IP local)
+  allowedDevOrigins: ['10.0.0.103'],
   env: {
-    NEXT_PUBLIC_API_URL: "https://crimson-api.leandro-reyes1025.workers.dev",
+    NEXT_PUBLIC_API_URL: isDev ? "http://10.0.0.103:8787" : "https://crimson-api.leandro-reyes1025.workers.dev",
     NEXT_PUBLIC_BUILD_ID: BUILD_ID,
   },
   images: {

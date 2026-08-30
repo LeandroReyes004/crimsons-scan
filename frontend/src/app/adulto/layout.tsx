@@ -11,10 +11,13 @@ export default function AdultoLayout({
       <Script id="aclib-run" strategy="afterInteractive">
         {`
           const initAclib = setInterval(() => {
-            if (typeof aclib !== 'undefined') {
+            if (typeof aclib !== 'undefined' && typeof aclib.runAutoTag === 'function') {
               aclib.runAutoTag({
                   zoneId: 'i0wqo2yu4z',
               });
+              clearInterval(initAclib);
+            } else if (typeof aclib !== 'undefined' && typeof aclib.runAutoTag !== 'function') {
+              // Si aclib existe pero runAutoTag no (p. ej. bloqueado por Brave Shields), cancelamos el intervalo.
               clearInterval(initAclib);
             }
           }, 300);
