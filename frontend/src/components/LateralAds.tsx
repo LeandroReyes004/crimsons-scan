@@ -12,15 +12,15 @@ const EXCLUDED = ['/admin', '/admin-dev', '/uploader', '/manga/reader', '/login'
 export default function LateralAds() {
   const [closed, setClosed]   = useState(false);
   const [visible, setVisible] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [hideAds, setHideAds] = useState(false);
   const [mounted, setMounted] = useState(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   const pathname = usePathname();
 
   useEffect(() => {
     const u = getUser();
-    if (u && (u.is_superadmin || ['admin', 'admin_scan', 'uploader'].includes(u.rol))) {
-      setIsAdmin(true);
+    if (u && (u.is_superadmin || ['admin', 'admin_scan', 'uploader', 'vip', 'donador'].includes(u.rol))) {
+      setHideAds(true);
     }
     setMounted(true);
 
@@ -44,7 +44,7 @@ export default function LateralAds() {
   }, []);
 
   if (!mounted || closed) return null;
-  if (isAdmin || EXCLUDED.some(p => pathname?.startsWith(p))) return null;
+  if (hideAds || EXCLUDED.some(p => pathname?.startsWith(p))) return null;
 
   return (
     <div

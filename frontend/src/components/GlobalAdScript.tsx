@@ -1,15 +1,28 @@
 'use client';
 
 import { usePathname } from 'next/navigation';
-
+import { useState, useEffect } from 'react';
 import Script from 'next/script';
 
 const EXCLUDED = ['/admin', '/admin-dev', '/uploader', '/login', '/register'];
 
 export default function GlobalAdScript() {
   const pathname = usePathname();
+  const [hideAds, setHideAds] = useState(false);
+  const [mounted, setMounted] = useState(false);
 
-  if (EXCLUDED.some(p => pathname?.startsWith(p))) {
+  useEffect(() => {
+    import('@/lib/auth').then(({ getUser }) => {
+      const u = getUser();
+      if (u && (u.is_superadmin || ['admin', 'admin_scan', 'uploader', 'vip', 'donador'].includes(u.rol))) {
+        setHideAds(true);
+      }
+      setMounted(true);
+    });
+  }, []);
+
+  if (!mounted) return null;
+  if (hideAds || EXCLUDED.some(p => pathname?.startsWith(p))) {
     return null;
   }
 

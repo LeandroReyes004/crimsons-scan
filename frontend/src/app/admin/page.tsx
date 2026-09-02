@@ -1755,6 +1755,8 @@ function SectionUsuarios() {
                 className="bg-gray-50 dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-xl text-sm dark:text-white focus:border-rose-500 outline-none">
                 <option value="uploader">Uploader / Ayudante</option>
                 <option value="lector">Lector</option>
+                <option value="vip">Lector VIP</option>
+                <option value="donador">Donador</option>
                 {!isSoporte && <option value="admin_scan">Admin de Scan</option>}
                 {isSuperAdmin && <option value="admin">Admin</option>}
                 {isSuperAdmin && <option value="soporte">Soporte</option>}
@@ -1839,6 +1841,8 @@ function SectionUsuarios() {
                         <option value="admin_scan">Admin Scan</option>
                         <option value="admin">Admin</option>
                         <option value="soporte">Soporte</option>
+                        <option value="vip">VIP</option>
+                        <option value="donador">Donador</option>
                       </select>
                       <button onClick={() => handleChangeRol(u.id)} disabled={editRolLoad}
                         className="p-1.5 rounded-lg bg-rose-600 text-white hover:bg-rose-500 transition">
@@ -3168,6 +3172,8 @@ function SectionConfig({ scanId }: { scanId: string }) {
                     <select value={newRol} onChange={e => setNewRol(e.target.value)} className="bg-white dark:bg-black/30 border border-gray-200 dark:border-white/10 px-3 py-2.5 rounded-lg text-sm dark:text-white focus:border-rose-500 outline-none">
                       <option value="uploader">Uploader</option>
                       <option value="admin_scan">Admin Scan</option>
+                      <option value="vip">Lector VIP</option>
+                      <option value="donador">Donador</option>
                     </select>
                   </div>
                   <div className="flex gap-2">

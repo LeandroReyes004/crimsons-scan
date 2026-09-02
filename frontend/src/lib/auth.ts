@@ -18,7 +18,7 @@ export interface CrimsonUser {
   id: string;
   username: string;
   display_name?: string | null;
-  rol: 'lector' | 'uploader' | 'admin' | 'admin_scan' | 'soporte';
+  rol: 'lector' | 'uploader' | 'admin' | 'admin_scan' | 'soporte' | 'vip' | 'donador';
   avatar_url?: string;
   is_superadmin?: boolean;
   scan_id?: string | null;
